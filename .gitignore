@@ -1,0 +1,7 @@
+.env
+requirements.txt
+*.db
+*.db-journal
+**/__pycache__
+**/logs
+compose.yaml

@@ -14,9 +14,11 @@
     --accent-light: #f0f0f0;
     --text-primary: #ffffff;
     --text-secondary: #a0a0a0;
-    --glass-bg: rgba(255, 255, 255, 0.05);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --shadow-glow: 0 0 30px rgba(255, 255, 255, 0.1);
+    --glass-bg: rgba(255, 255, 255, 0.08);
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --glass-backdrop: blur(20px);
+    --shadow-glow: 0 0 30px rgba(255, 255, 255, 0.15);
     --shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.3);
 }
 
@@ -55,9 +57,10 @@ body::before {
 
 /* Хедер */
 .header {
-    background: rgba(10, 10, 10, 0.8);
-    backdrop-filter: blur(20px);
+    background: rgba(10, 10, 10, 0.7);
+    backdrop-filter: var(--glass-backdrop);
     border-bottom: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
     position: fixed;
     top: 0;
     left: 0;
@@ -121,12 +124,16 @@ body::before {
     border-radius: 12px;
     display: block;
     white-space: nowrap;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
 }
 
 .nav-link:hover {
     color: var(--text-primary);
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .nav-link.active {
@@ -166,10 +173,13 @@ body::before {
     padding: 12px;
     border-radius: 12px;
     transition: all 0.3s ease;
+    backdrop-filter: var(--glass-backdrop);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .burger:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
     box-shadow: var(--shadow-glow);
 }
 
@@ -323,14 +333,14 @@ body::before {
 
 /* Секции */
 section {
-    padding: 100px 0;
+    padding: 80px 0;
     position: relative;
 }
 
 .section-title {
     text-align: center;
     font-size: clamp(2rem, 4vw, 3rem);
-    margin-bottom: 60px;
+    margin-bottom: 40px;
     color: var(--text-primary);
     position: relative;
     font-weight: 700;
@@ -365,13 +375,15 @@ section {
 }
 
 .about-content {
-    max-width: 800px;
+    max-width: 900px;
     margin: 0 auto;
+    position: relative;
+    z-index: 1;
 }
 
 .about-text h3 {
     font-size: clamp(1.5rem, 3vw, 2rem);
-    margin: 40px 0 20px;
+    margin: 30px 0 15px;
     color: var(--text-primary);
     font-weight: 600;
     opacity: 0;
@@ -379,12 +391,13 @@ section {
 }
 
 .about-text p {
-    font-size: clamp(1rem, 2vw, 1.2rem);
-    margin-bottom: 24px;
-    line-height: 1.8;
+    font-size: clamp(1.05rem, 2vw, 1.2rem);
+    margin-bottom: 20px;
+    line-height: 1.7;
     color: var(--text-secondary);
     opacity: 0;
     transform: translateY(20px);
+    max-width: none;
 }
 
 .features-list {
@@ -395,53 +408,79 @@ section {
 
 .features-list li {
     font-size: 1.1rem;
-    margin-bottom: 16px;
-    padding: 20px;
+    margin-bottom: 12px;
+    padding: 16px 20px;
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     border-radius: 16px;
     border-left: 4px solid #ffffff;
-    backdrop-filter: blur(10px);
+    backdrop-filter: var(--glass-backdrop);
     transition: all 0.3s ease;
     opacity: 0;
     transform: translateX(-20px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .features-list li:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.12);
     border-color: rgba(255, 255, 255, 0.3);
     transform: translateX(0);
-    box-shadow: var(--shadow-glow);
+    box-shadow: var(--glass-shadow);
 }
 
 /* Секция "Поддержка" */
 .support {
     background: var(--next-primary-dark);
+    position: relative;
+    overflow: hidden;
+}
+
+.support::before {
+    content: '';
+    position: absolute;
+    top: -60%;
+    left: -60%;
+    width: 220%;
+    height: 220%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.03) 0%, transparent 70%);
+    animation: supportRotate 15s linear infinite;
+}
+
+@keyframes supportRotate {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.1); }
+    100% { transform: rotate(360deg) scale(1); }
 }
 
 .support-content {
-    max-width: 700px;
+    max-width: 800px;
     margin: 0 auto;
     text-align: center;
+    position: relative;
+    z-index: 1;
 }
 
 .support-content p {
     font-size: clamp(1.1rem, 2vw, 1.3rem);
-    margin-bottom: 40px;
+    margin-bottom: 30px;
     color: var(--text-secondary);
     opacity: 0;
     transform: translateY(20px);
+    max-width: none;
+    line-height: 1.7;
 }
 
 .contact-info {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
-    padding: 40px;
+    padding: 30px;
     border-radius: 20px;
-    backdrop-filter: blur(20px);
-    box-shadow: var(--shadow-soft);
+    backdrop-filter: var(--glass-backdrop);
+    box-shadow: var(--glass-shadow);
     opacity: 0;
     transform: translateY(20px);
+    position: relative;
+    z-index: 1;
 }
 
 .contact-item {
@@ -475,6 +514,7 @@ section {
     margin: 0 auto;
     overflow: hidden;
     border-radius: 20px;
+    z-index: 1;
 }
 
 .team-track {
@@ -487,12 +527,13 @@ section {
     text-align: center;
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
-    padding: 40px;
+    padding: 30px;
     border-radius: 20px;
-    backdrop-filter: blur(20px);
+    backdrop-filter: var(--glass-backdrop);
     transition: all 0.3s ease;
     opacity: 0;
     transform: scale(0.9);
+    box-shadow: var(--glass-shadow);
 }
 
 .team-member.active {
@@ -548,13 +589,15 @@ section {
     align-items: center;
     justify-content: center;
     font-size: 1.2rem;
+    backdrop-filter: var(--glass-backdrop);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .team-btn:hover {
     background: #ffffff;
     border-color: #ffffff;
     color: var(--primary-dark);
-    box-shadow: var(--shadow-glow);
+    box-shadow: var(--glass-shadow);
 }
 
 .team-indicators {
@@ -603,16 +646,17 @@ section {
     cursor: pointer;
     transition: all 0.3s ease;
     font-size: 0.95rem;
-    backdrop-filter: blur(10px);
+    backdrop-filter: var(--glass-backdrop);
     text-decoration: none;
     display: inline-block;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .privacy-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.12);
     color: var(--text-primary);
     border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: var(--shadow-glow);
+    box-shadow: var(--glass-shadow);
 }
 
 .privacy-btn:active {
@@ -634,7 +678,7 @@ section {
 }
 
 .modal-content {
-    background: var(--secondary-dark);
+    background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     margin: 10% auto;
     padding: 40px;
@@ -642,8 +686,8 @@ section {
     width: 90%;
     max-width: 400px;
     position: relative;
-    backdrop-filter: blur(20px);
-    box-shadow: var(--shadow-soft);
+    backdrop-filter: var(--glass-backdrop);
+    box-shadow: var(--glass-shadow);
     animation: slideIn 0.3s ease;
 }
 
@@ -690,19 +734,20 @@ section {
 .form-group input {
     width: 100%;
     padding: 16px;
-    background: var(--glass-bg);
+    background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--glass-border);
     border-radius: 12px;
     font-size: 1rem;
     color: var(--text-primary);
     transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
+    backdrop-filter: var(--glass-backdrop);
 }
 
 .form-group input:focus {
     outline: none;
     border-color: #ffffff;
     box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .form-group input::placeholder {
@@ -791,6 +836,15 @@ section {
         margin: 20% auto;
         padding: 30px 24px;
     }
+    
+    /* Скрываем осколки на мобильных для лучшей производительности */
+    .glass-shards {
+        display: none;
+    }
+    
+    .glass-shards-large {
+        display: none;
+    }
 }
 
 @media (max-width: 480px) {
@@ -825,6 +879,381 @@ section {
     .team-photo {
         width: 120px;
         height: 120px;
+    }
+}
+
+/* Осколки стекла */
+.glass-shards {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.shard {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0.3;
+    filter: blur(0.5px);
+}
+
+.shard-group-1 {
+    top: 20%;
+    left: 10%;
+}
+
+.shard-group-1 .shard:nth-child(1) {
+    top: 0;
+    left: 0;
+}
+
+.shard-group-1 .shard:nth-child(2) {
+    top: 30px;
+    left: 40px;
+}
+
+.shard-group-1 .shard:nth-child(3) {
+    top: -20px;
+    left: 80px;
+}
+
+.shard-group-2 {
+    top: 60%;
+    right: 15%;
+}
+
+.shard-group-2 .shard:nth-child(1) {
+    top: 0;
+    right: 0;
+}
+
+.shard-group-2 .shard:nth-child(2) {
+    top: 40px;
+    right: 50px;
+}
+
+.shard-group-3 {
+    bottom: 30%;
+    left: 20%;
+}
+
+.shard-group-3 .shard:nth-child(1) {
+    bottom: 0;
+    left: 0;
+}
+
+.shard-group-3 .shard:nth-child(2) {
+    bottom: 35px;
+    left: 45px;
+}
+
+.shard-group-4 {
+    top: 40%;
+    right: 25%;
+}
+
+.shard-group-4 .shard:nth-child(1) {
+    top: 0;
+    right: 0;
+}
+
+.shard-1 {
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-bottom: 25px solid rgba(255, 255, 255, 0.1);
+    animation: float1 8s ease-in-out infinite;
+}
+
+.shard-2 {
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-bottom: 20px solid rgba(255, 255, 255, 0.08);
+    animation: float2 10s ease-in-out infinite;
+    transform: rotate(15deg);
+}
+
+.shard-3 {
+    border-left: 18px solid transparent;
+    border-right: 18px solid transparent;
+    border-bottom: 30px solid rgba(255, 255, 255, 0.06);
+    animation: float3 12s ease-in-out infinite;
+    transform: rotate(-20deg);
+}
+
+.shard-4 {
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 18px solid rgba(255, 255, 255, 0.07);
+    animation: float1 9s ease-in-out infinite;
+    transform: rotate(30deg);
+}
+
+.shard-5 {
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-bottom: 22px solid rgba(255, 255, 255, 0.05);
+    animation: float2 11s ease-in-out infinite;
+    transform: rotate(-15deg);
+}
+
+@keyframes float1 {
+    0%, 100% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+    20% {
+        transform: translate(15px, -10px) rotate(5deg);
+    }
+    40% {
+        transform: translate(-12px, 8px) rotate(-3deg);
+    }
+    60% {
+        transform: translate(18px, 12px) rotate(7deg);
+    }
+    80% {
+        transform: translate(-8px, -15px) rotate(-4deg);
+    }
+}
+
+@keyframes float2 {
+    0%, 100% {
+        transform: translate(0, 0) rotate(45deg);
+    }
+    25% {
+        transform: translate(-12px, 10px) rotate(50deg);
+    }
+    50% {
+        transform: translate(10px, -15px) rotate(40deg);
+    }
+    75% {
+        transform: translate(-18px, 8px) rotate(48deg);
+    }
+}
+
+@keyframes float3 {
+    0%, 100% {
+        transform: translate(0, 0) rotate(-30deg);
+    }
+    15% {
+        transform: translate(12px, 15px) rotate(-25deg);
+    }
+    30% {
+        transform: translate(-18px, -12px) rotate(-35deg);
+    }
+    45% {
+        transform: translate(10px, -8px) rotate(-28deg);
+    }
+    60% {
+        transform: translate(-14px, 10px) rotate(-32deg);
+    }
+    75% {
+        transform: translate(16px, -14px) rotate(-27deg);
+    }
+    90% {
+        transform: translate(-8px, 12px) rotate(-33deg);
+    }
+}
+
+/* Большие осколки стекла по бокам */
+.glass-shards-large {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.shard-large {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0.3;
+    filter: blur(0.3px);
+}
+
+/* для секции About */
+.shard-large-about-left {
+    top: 15%;
+    left: 2%;
+}
+
+.shard-large-about-left .shard-large:nth-child(1) {
+    top: 0;
+    left: 4;
+}
+
+.shard-large-about-left .shard-large:nth-child(2) {
+    top: 60px;
+    left: 80px;
+}
+
+.shard-large-about-right {
+    bottom: 20%;
+    right: 2%;
+}
+
+.shard-large-about-right .shard-large:nth-child(1) {
+    bottom: 0;
+    right: 0;
+}
+
+.shard-large-about-right .shard-large:nth-child(2) {
+    bottom: 70px;
+    right: 90px;
+}
+
+/* для секции Team */
+.shard-large-team-left {
+    bottom: 25%;
+    left: 7%;
+}
+
+.shard-large-team-left .shard-large:nth-child(1) {
+    bottom: 0;
+    left: 0;
+}
+
+.shard-large-team-left .shard-large:nth-child(2) {
+    bottom: 80px;
+    left: 100px;
+}
+
+.shard-large-team-right {
+    top: 20%;
+    right: 7%;
+}
+
+.shard-large-team-right .shard-large:nth-child(1) {
+    top: 0;
+    right: 0;
+}
+
+.shard-large-team-right .shard-large:nth-child(2) {
+    top: 70px;
+    right: 85px;
+}
+
+.shard-large-team-right .shard-large:nth-child(3) {
+    top: -50px;
+    right: 120px;
+}
+
+/* Большие треугольники */
+.shard-large-1 {
+    border-left: 80px solid transparent;
+    border-right: 80px solid transparent;
+    border-bottom: 140px solid rgba(255, 255, 255, 0.2);
+    animation: floatLarge1 18s ease-in-out infinite;
+}
+
+.shard-large-2 {
+    border-left: 70px solid transparent;
+    border-right: 70px solid transparent;
+    border-bottom: 120px solid rgba(255, 255, 255, 0.18);
+    animation: floatLarge2 19s ease-in-out infinite;
+    transform: rotate(-65deg);
+}
+
+.shard-large-3 {
+    border-left: 90px solid transparent;
+    border-right: 90px solid transparent;
+    border-bottom: 160px solid rgba(255, 255, 255, 0.15);
+    animation: floatLarge3 23s ease-in-out infinite;
+    transform: rotate(-30deg);
+}
+
+.shard-large-4 {
+    border-left: 60px solid transparent;
+    border-right: 60px solid transparent;
+    border-bottom: 110px solid rgba(255, 255, 255, 0.17);
+    animation: floatLarge1 19s ease-in-out infinite;
+    transform: rotate(60deg);
+}
+
+.shard-large-5 {
+    border-left: 76px solid transparent;
+    border-right: 76px solid transparent;
+    border-bottom: 130px solid rgba(255, 255, 255, 0.16);
+    animation: floatLarge3 17s ease-in-out infinite;
+    transform: rotate(-15deg);
+}
+
+@keyframes floatLarge1 {
+    0%, 100% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+    15% {
+        transform: translate(35px, -25px) rotate(12deg);
+    }
+    30% {
+        transform: translate(-20px, 15px) rotate(-8deg);
+    }
+    45% {
+        transform: translate(40px, 10px) rotate(15deg);
+    }
+    60% {
+        transform: translate(-30px, -20px) rotate(-10deg);
+    }
+    75% {
+        transform: translate(25px, 25px) rotate(5deg);
+    }
+    90% {
+        transform: translate(-15px, -10px) rotate(-3deg);
+    }
+}
+
+@keyframes floatLarge2 {
+    0%, 100% {
+        transform: translate(0, 0) rotate(45deg);
+    }
+    20% {
+        transform: translate(-30px, 20px) rotate(55deg);
+    }
+    40% {
+        transform: translate(25px, -30px) rotate(35deg);
+    }
+    60% {
+        transform: translate(-40px, 15px) rotate(50deg);
+    }
+    80% {
+        transform: translate(20px, -25px) rotate(40deg);
+    }
+}
+
+@keyframes floatLarge3 {
+    0%, 100% {
+        transform: translate(0, 0) rotate(-30deg);
+    }
+    12% {
+        transform: translate(30px, 25px) rotate(-25deg);
+    }
+    24% {
+        transform: translate(-35px, 20px) rotate(-35deg);
+    }
+    36% {
+        transform: translate(40px, -30px) rotate(-28deg);
+    }
+    48% {
+        transform: translate(-25px, 35px) rotate(-32deg);
+    }
+    60% {
+        transform: translate(35px, -25px) rotate(-27deg);
+    }
+    72% {
+        transform: translate(-30px, -20px) rotate(-33deg);
+    }
+    84% {
+        transform: translate(25px, 30px) rotate(-29deg);
+    }
+    96% {
+        transform: translate(-20px, -25px) rotate(-31deg);
     }
 }
 

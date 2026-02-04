@@ -37,6 +37,14 @@
             padding: 40px;
             margin-bottom: 30px;
             backdrop-filter: blur(20px);
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+        
+        .privacy-section.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
         
         .privacy-section h2 {
@@ -101,9 +109,50 @@
         .contact-info strong {
             color: #ffffff;
         }
+        
+        /* Позиционирование осколков для политики */
+        .glass-shards {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        
+        .glass-shards-large {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        
+        .privacy-container {
+            position: relative;
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
+    <div class="glass-shards">
+        <div class="shard shard-1 shard-group-1"></div>
+        <div class="shard shard-2 shard-group-1"></div>
+        <div class="shard shard-3 shard-group-1"></div>
+        <div class="shard shard-4 shard-group-2"></div>
+        <div class="shard shard-5 shard-group-2"></div>
+    </div>
+    <div class="glass-shards-large">
+        <div class="shard-large shard-large-1 shard-large-about-left"></div>
+        <div class="shard-large shard-large-3 shard-large-about-left"></div>
+        <div class="shard-large shard-large-2 shard-large-about-right"></div>
+        <div class="shard-large shard-large-4 shard-large-about-right"></div>
+    </div>
     <div class="privacy-container">
         <a href="main.html" class="back-btn">
             ← Вернуться на главную
@@ -229,10 +278,44 @@
         
         <div style="text-align: center; margin-top: 60px; padding: 40px; background: var(--glass-bg); border-radius: 20px;">
             <p style="color: var(--text-secondary); font-size: 1rem;">
-                © 2026 Бентум. Все права защищены.<br>
+                2026 Бентум. Все права защищены.<br>
                 Используя наш сервис, вы соглашаетесь с этой политикой конфиденциальности.
             </p>
         </div>
     </div>
+
+    <script>
+        // Анимация появления блоков при скролле
+        function animatePrivacySections() {
+            const sections = document.querySelectorAll('.privacy-section');
+            
+            sections.forEach((section, index) => {
+                const sectionTop = section.getBoundingClientRect().top;
+                const sectionBottom = section.getBoundingClientRect().bottom;
+                
+                if (sectionTop < window.innerHeight && sectionBottom > 0) {
+                    setTimeout(() => {
+                        section.classList.add('visible');
+                    }, index * 100);
+                }
+            });
+        }
+
+        // Запуск анимации при загрузке
+        window.addEventListener('load', () => {
+            setTimeout(animatePrivacySections, 300);
+        });
+
+        // Анимация при скролле
+        window.addEventListener('scroll', animatePrivacySections);
+
+        // Плавное появление страницы
+        document.body.style.opacity = '0';
+        document.body.style.transition = 'opacity 0.5s ease';
+        
+        setTimeout(() => {
+            document.body.style.opacity = '1';
+        }, 100);
+    </script>
 </body>
 </html>
