@@ -14,10 +14,10 @@
     --accent-light: #f0f0f0;
     --text-primary: #ffffff;
     --text-secondary: #a0a0a0;
-    --glass-bg: rgba(255, 255, 255, 0.08);
-    --glass-border: rgba(255, 255, 255, 0.15);
+    --glass-bg: rgba(255, 255, 255, 0.052);
+    --glass-border: rgba(255, 255, 255, 0.20);
     --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    --glass-backdrop: blur(20px);
+    --glass-backdrop: blur(15px);
     --shadow-glow: 0 0 30px rgba(255, 255, 255, 0.15);
     --shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.3);
 }
@@ -83,8 +83,8 @@ body::before {
     transition: transform 0.3s ease;
 }
 
-.logo:hover {
-    transform: scale(1.05);
+.logo:hover .logo-img {
+    transform: translateY(-2px) rotate(2deg);
 }
 
 .logo-img {
@@ -234,22 +234,290 @@ body::before {
     }
 }
 
-.hero-title {
+h1{
+  font-family: "Libre Franklin", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-style: normal;
+}
+
+/* Schedule Section */
+.schedule-section {
+    padding: 120px 0 80px;
+    min-height: 100vh;
+}
+
+.schedule-buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-bottom: 60px;
+    flex-wrap: wrap;
+}
+
+/* Schedule Fullscreen Carousel */
+.schedule-fullscreen-carousel {
+    display: flex;
+    height: calc(100vh - 300px);
+    min-width: 90%;
+    margin: 0 auto;
+    min-height: 600px;
+    position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-radius: 20px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(20px);
+}
+
+.schedule-column {
+    flex: 1;
+    overflow-y: visible;
+    padding: 40px;
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 90%;
+}
+
+.schedule-column#currentWeek {
+    transform: translateX(0);
+    opacity: 1;
+    left: 0;
+}
+
+.schedule-column#nextWeek {
+    transform: translateX(100%);
+    opacity: 0;
+    right: 0;
+}
+
+.schedule-column.swapped-left {
+    transform: translateX(-100%) !important;
+    opacity: 0 !important;
+}
+
+.schedule-column.swapped-right {
+    transform: translateX(0) !important;
+    opacity: 1 !important;
+}
+
+.schedule-toggle-btn {
+    position: fixed;
+    right: 20px;
+    top: 50vh;
+    transform: translateY(-50%) translateX(0);
+    background: var(--accent-color);
+    border: none;
+    border-radius: 30px;
+    width: 40px;
+    height: 130px;
+    font-size: 2rem;
+    color: rgb(75, 75, 75);
+    cursor: pointer;
+    transition: right 0.8s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.schedule-toggle-btn:hover {
+    background: var(--accent-light);
+}
+
+.schedule-toggle-btn.left-position {
+    right: auto;
+    left: 20px;
+}
+
+.toggle-arrow {
+    display: inline-flex;
+}
+
+.schedule-toggle-btn.left-position .toggle-arrow {
+    transform: rotate(180deg);
+}
+
+.schedule-card {
+    background: var(--glass-bg);
+    border-radius: 16px;
+    padding: 30px;
+    border: 1px solid var(--glass-border);
+    width: 95%;
+    margin: 0 auto;
+}
+
+.schedule-card h3 {
+    font-family: "Gudea", sans-serif;
+    font-weight: 700;
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    margin-bottom: 24px;
+    color: var(--text-primary);
+}
+
+.schedule-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.schedule-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 16px;
+    align-items: center;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    margin-top: -11px;
+    border: 1px solid var(--glass-border);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    hyphens: auto
+}
+
+.schedule-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.schedule-item .time {
+    font-family: "Khula", sans-serif;
+    font-weight: 600;
+    color: var(--accent-light);
+    font-size: 0.95rem;
+    white-space: nowrap;
+}
+
+.schedule-item .subject {
+    font-family: "Libre Franklin", sans-serif;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 1.05rem;
+}
+
+.schedule-item .room {
+    font-family: "Khula", sans-serif;
+    font-weight: 400;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+/* Schedule Modal */
+.modal-schedule-content {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.modal-schedule-content .schedule-list {
+    margin-top: 20px;
+}
+
+.modal-schedule-content .schedule-item {
+    margin-bottom: 12px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .schedule-section {
+        padding: 100px 0 60px;
+    }
+    
+    .schedule-buttons {
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .schedule-carousel {
+        padding: 20px;
+    }
+    
+    .schedule-card {
+        padding: 20px;
+    }
+    
+    .schedule-item {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        text-align: center;
+    }
+    
+    .schedule-item .time,
+    .schedule-item .room {
+        white-space: normal;
+    }
+}
+
+p{
+    font-family: "Khula", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+}
+
+h2{
+    font-family: "Gudea", sans-serif;
+    font-weight: 700;
+    font-style: normal;
+}
+
+h3{
+    font-family: "Actor", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+}
+
+h4{
+    font-family: "Actor", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+}
+
+.hero-title{
+    font-family: "Libre Franklin", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 900;
+    font-style: normal;
     font-size: clamp(2.5rem, 5vw, 4rem);
     font-weight: 700;
     margin-bottom: 24px;
-    background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
+    display: inline-block;
+    background-image: linear-gradient(
+        130deg,
+        #b5b5b5 0%,
+        #b5b5b5 46%,
+        rgb(255, 255, 255) 50%,
+        #b5b5b5 54%,
+        #b5b5b5 100%
+    );
+    background-size: 220% 100%;
+    background-position: -120% 0;
+    color: transparent;
     -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
     background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: h1Shine 3.2s ease-in-out infinite;
     letter-spacing: -0.02em;
+}
+
+@keyframes h1Shine {
+    0% {
+        background-position: 100% 0;
+    }
+    100% {
+        background-position: -80% 0;
+    }
 }
 
 .hero-subtitle {
     font-size: clamp(1.1rem, 2vw, 1.4rem);
     color: var(--text-secondary);
     margin-bottom: 40px;
-    max-width: 600px;
+    max-width: 800px;
     margin-left: auto;
     margin-right: auto;
     opacity: 0;
@@ -637,6 +905,140 @@ section {
     gap: 24px;
 }
 
+.privacy-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 120px 24px 40px;
+}
+
+.privacy-header {
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.privacy-title {
+    font-family: "Libre Franklin", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    font-style: normal;
+    hyphens: auto
+}
+
+.privacy-subtitle {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.privacy-section {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 40px;
+    margin-bottom: 70px;
+    margin-top: -50px;
+    backdrop-filter: blur(20px);
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.6s ease;
+}
+
+.privacy-section.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.privacy-section h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+}
+
+.privacy-section p {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+}
+
+.privacy-section ul {
+    margin-left: 20px;
+    margin-bottom: 20px;
+}
+
+.privacy-section li {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    margin-bottom: 40px;
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateX(-5px);
+}
+
+.contact-info {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.contact-info p {
+    margin-bottom: 10px;
+}
+
+.contact-info strong {
+    color: #ffffff;
+}
+
+/* Позиционирование осколков для политики */
+.glass-shards {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.glass-shards-large {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.privacy-container {
+    position: relative;
+    z-index: 1;
+}
+
 .privacy-btn {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
@@ -675,20 +1077,21 @@ section {
     background: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(10px);
     animation: fadeIn 0.3s ease;
+    hyphens: auto
 }
 
 .modal-content {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
-    margin: 10% auto;
-    padding: 40px;
+    margin: 1% auto;
+    padding: 30px;
     border-radius: 20px;
-    width: 90%;
-    max-width: 400px;
+    max-width: 90%;
     position: relative;
     backdrop-filter: var(--glass-backdrop);
     box-shadow: var(--glass-shadow);
     animation: slideIn 0.3s ease;
+    hyphens: auto
 }
 
 .close {

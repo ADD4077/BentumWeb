@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Бентум</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="shortcut icon" href="Assets/shortlogo.png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,900;1,900&display=swap" rel="stylesheet">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Khula:wght@300;400;600;700;800&family=Libre+Franklin:ital@0;1&display=swap" rel="stylesheet">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Actor&family=Khula:wght@300;400;600;700;800&family=Libre+Franklin:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="#" class="logo" onclick="scrollToTop(event)">
+                    <img src="Assets/logo.png" alt="Бентум" class="logo-img">
+                </a>
+                
+                <nav class="nav">
+                    <ul class="nav-list">
+                        <li><a href="#home" class="nav-link">Главная</a></li>
+                        <li><a href="#about" class="nav-link">О проекте</a></li>
+                        <li><a href="#support" class="nav-link">Поддержка</a></li>
+                        <li><a href="#login" class="nav-link login-btn">Войти</a></li>
+                    </ul>
+                </nav>
+                
+                <button class="burger" id="burger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="schedule-section">
+        <div class="container">
+            <h1 class="hero-title">Расписание</h1>
+            
+            <div class="schedule-buttons">
+                <button class="btn btn-primary" style="margin-left: 0;" onclick="openScheduleModal('today')">Сегодня</button>
+                <button class="btn btn-secondary" style="margin-right: 0;" onclick="openScheduleModal('tomorrow')">Завтра</button>
+            </div>
+            
+            <button class="schedule-toggle-btn" id="scheduleToggleBtn" style="margin: 20px auto;">
+                <span class="toggle-arrow">›</span>
+            </button>
+            
+            <div class="schedule-fullscreen-carousel">
+                <div class="schedule-column" id="currentWeek">
+                    <div class="schedule-card">
+                        <h3>Расписание на текущую неделю</h3>
+                        <div class="schedule-list">
+                            <div class="schedule-item">
+                                <span class="time">08:30 - 10:05</span>
+                                <span class="subject">Математика</span>
+                                <span class="room">ауд. 201</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">10:25 - 12:00</span>
+                                <span class="subject">Физика</span>
+                                <span class="room">ауд. 305</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">12:20 - 13:55</span>
+                                <span class="subject">Программирование</span>
+                                <span class="room">лаб. 102</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">14:15 - 15:50</span>
+                                <span class="subject">Английский</span>
+                                <span class="room">ауд. 410</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">16:10 - 17:45</span>
+                                <span class="subject">Физкультура</span>
+                                <span class="room">спортзал</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">18:05 - 19:40</span>
+                                <span class="subject">Химия</span>
+                                <span class="room">лаб. 203</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">20:00 - 21:35</span>
+                                <span class="subject">История</span>
+                                <span class="room">ауд. 115</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">21:55 - 23:30</span>
+                                <span class="subject">Биология</span>
+                                <span class="room">лаб. 301</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">08:30 - 10:05</span>
+                                <span class="subject">География</span>
+                                <span class="room">ауд. 312</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">10:25 - 12:00</span>
+                                <span class="subject">Информатика</span>
+                                <span class="room">лаб. 105</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">12:20 - 13:55</span>
+                                <span class="subject">Экономика</span>
+                                <span class="room">ауд. 415</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">14:15 - 15:50</span>
+                                <span class="subject">Психология</span>
+                                <span class="room">ауд. 220</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">16:10 - 17:45</span>
+                                <span class="subject">Социология</span>
+                                <span class="room">ауд. 118</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">18:05 - 19:40</span>
+                                <span class="subject">Философия</span>
+                                <span class="room">ауд. 310</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">20:00 - 21:35</span>
+                                <span class="subject">Право</span>
+                                <span class="room">ауд. 425</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">21:55 - 23:30</span>
+                                <span class="subject">Литература</span>
+                                <span class="room">ауд. 208</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="schedule-column" id="nextWeek">
+                    <div class="schedule-card">
+                        <h3>Расписание на следующую неделю</h3>
+                        <div class="schedule-list">
+                            <div class="schedule-item">
+                                <span class="time">08:30 - 10:05</span>
+                                <span class="subject">Литература</span>
+                                <span class="room">ауд. 208</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">10:25 - 12:00</span>
+                                <span class="subject">География</span>
+                                <span class="room">ауд. 312</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">12:20 - 13:55</span>
+                                <span class="subject">Информатика</span>
+                                <span class="room">лаб. 105</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">14:15 - 15:50</span>
+                                <span class="subject">Экономика</span>
+                                <span class="room">ауд. 415</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">16:10 - 17:45</span>
+                                <span class="subject">Психология</span>
+                                <span class="room">ауд. 220</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">18:05 - 19:40</span>
+                                <span class="subject">Социология</span>
+                                <span class="room">ауд. 118</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">20:00 - 21:35</span>
+                                <span class="subject">Философия</span>
+                                <span class="room">ауд. 310</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">21:55 - 23:30</span>
+                                <span class="subject">Право</span>
+                                <span class="room">ауд. 425</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">08:30 - 10:05</span>
+                                <span class="subject">Математика</span>
+                                <span class="room">ауд. 201</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">10:25 - 12:00</span>
+                                <span class="subject">Физика</span>
+                                <span class="room">ауд. 305</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">12:20 - 13:55</span>
+                                <span class="subject">Программирование</span>
+                                <span class="room">лаб. 102</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">14:15 - 15:50</span>
+                                <span class="subject">Английский</span>
+                                <span class="room">ауд. 410</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">16:10 - 17:45</span>
+                                <span class="subject">Физкультура</span>
+                                <span class="room">спортзал</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">18:05 - 19:40</span>
+                                <span class="subject">Химия</span>
+                                <span class="room">лаб. 203</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">20:00 - 21:35</span>
+                                <span class="subject">История</span>
+                                <span class="room">ауд. 115</span>
+                            </div>
+                            <div class="schedule-item">
+                                <span class="time">21:55 - 23:30</span>
+                                <span class="subject">Биология</span>
+                                <span class="room">лаб. 301</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Schedule Modals -->
+    <div id="scheduleModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeScheduleModal()">&times;</span>
+            <h2 id="modalTitle">Расписание</h2>
+            <div id="modalContent" class="modal-schedule-content"></div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2026 Бентум. Все права защищены.</p>
+                <a href="privacy.html" class="privacy-btn">Политика конфиденциальности</a>
+            </div>
+        </div>
+    </footer>
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeLoginModal()">&times;</span>
+            <h2>Вход в систему</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="studentCode">Студенческий код:</label>
+                    <input type="text" id="studentCode" name="studentCode" required placeholder="Введите Ваш чёрный код">
+                    <small class="error-message" id="studentCodeError"></small>
+                </div>
+                <div class="form-group">
+                    <label for="studentRedCode">Красный код:</label>
+                    <input type="text" id="studentRedCode" name="studentRedCode" required placeholder="Введите Ваш красный код">
+                    <small class="error-message" id="studentRedCodeError"></small>
+                </div>
+                <button type="submit" class="btn btn-primary">Войти</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

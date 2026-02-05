@@ -220,18 +220,344 @@ loginForm.addEventListener('submit', function(e) {
 function animateOnScroll() {
     const elements = document.querySelectorAll('.about-text h3, .about-text p, .features-list li, .support-content p, .contact-info');
     
-    elements.forEach((element, index) => {
+    elements.forEach(element => {
         const elementTop = element.getBoundingClientRect().top;
         const elementBottom = element.getBoundingClientRect().bottom;
         
         if (elementTop < window.innerHeight && elementBottom > 0) {
-            setTimeout(() => {
-                element.style.opacity = '1';
-                element.style.transform = 'translateY(0) translateX(0)';
-            }, index * 100);
+            element.style.opacity = '1';
+            element.style.transform = 'translateY(0)';
         }
     });
 }
+
+// Schedule Fullscreen Carousel
+let isCurrentWeekVisible = true;
+const scheduleToggleBtn = document.getElementById('scheduleToggleBtn');
+const currentWeekColumn = document.getElementById('currentWeek');
+const nextWeekColumn = document.getElementById('nextWeek');
+
+// JavaScript animation synced with carousel lists
+function animateButtonBehindLists(targetPosition) {
+    const carousel = document.querySelector('.schedule-fullscreen-carousel');
+    if (!carousel || !scheduleToggleBtn) return;
+    
+    const carouselRect = carousel.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    
+    // Calculate visible portion of carousel
+    const visibleTop = Math.max(0, carouselRect.top);
+    const visibleBottom = Math.min(viewportHeight, carouselRect.bottom);
+    const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+    
+    if (visibleHeight > 0) {
+        const buttonTop = visibleTop + (visibleHeight / 2);
+        
+        // Calculate positions behind lists (same as carousel edges)
+        const rightEdge = carouselRect.right - 60; // 60px = button width + margin
+        const leftEdge = carouselRect.left + 20; // 20px margin
+        
+        // Get current button position
+        const currentRect = scheduleToggleBtn.getBoundingClientRect();
+        const currentPos = currentRect.left;
+        
+        // Set target position
+        const targetPos = targetPosition === 'left' ? leftEdge : rightEdge;
+        
+        let startTime = null;
+        const duration = 570; // Slightly faster than carousel lists
+        
+        function animate(timestamp) {
+            if (!startTime) startTime = timestamp;
+            const elapsed = timestamp - startTime;
+            
+            if (elapsed < duration) {
+                const progress = elapsed / duration;
+                // Exact same easing as carousel lists: cubic-bezier(0.4, 0, 0.2, 1)
+                const easeProgress = progress < 0.5 
+                    ? 4 * progress * progress * progress 
+                    : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+                
+                const currentX = currentPos + (targetPos - currentPos) * easeProgress;
+                
+                // Rotate arrow element during button movement
+                const arrowProgress = easeProgress;
+                const arrowRotation = targetPosition === 'left' ? 
+                    180 * arrowProgress : // Rotate to left during movement
+                    180 * (1 - arrowProgress); // Rotate back to right during movement
+                
+                scheduleToggleBtn.style.position = 'fixed';
+                scheduleToggleBtn.style.top = buttonTop + 'px';
+                scheduleToggleBtn.style.left = currentX + 'px';
+                scheduleToggleBtn.style.right = 'auto';
+                scheduleToggleBtn.style.transform = 'translateY(-50%) translateX(0)';
+                scheduleToggleBtn.style.zIndex = '9999';
+                
+                // Rotate only the arrow element
+                const arrowElement = scheduleToggleBtn.querySelector('.toggle-arrow');
+                if (arrowElement) {
+                    arrowElement.style.transform = `rotate(${arrowRotation}deg)`;
+                }
+                
+                requestAnimationFrame(animate);
+            } else {
+                // Set final position
+                scheduleToggleBtn.style.position = 'fixed';
+                scheduleToggleBtn.style.top = buttonTop + 'px';
+                scheduleToggleBtn.style.left = targetPos + 'px';
+                scheduleToggleBtn.style.right = 'auto';
+                scheduleToggleBtn.style.transform = 'translateY(-50%) translateX(0)';
+                scheduleToggleBtn.style.zIndex = '9999';
+                
+                // Set final arrow rotation
+                const arrowElement = scheduleToggleBtn.querySelector('.toggle-arrow');
+                if (arrowElement) {
+                    arrowElement.style.transform = `rotate(${targetPosition === 'left' ? 180 : 0}deg)`;
+                }
+                
+                // Update CSS classes
+                if (targetPosition === 'left') {
+                    scheduleToggleBtn.classList.add('left-position');
+                } else {
+                    scheduleToggleBtn.classList.remove('left-position');
+                }
+            }
+        }
+        
+        requestAnimationFrame(animate);
+    }
+}
+
+// Update button position to align with carousel edges
+function updateButtonPosition() {
+    const carousel = document.querySelector('.schedule-fullscreen-carousel');
+    if (!carousel || !scheduleToggleBtn) return;
+    
+    const carouselRect = carousel.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    
+    // Calculate visible portion of carousel
+    const visibleTop = Math.max(0, carouselRect.top);
+    const visibleBottom = Math.min(viewportHeight, carouselRect.bottom);
+    const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+    
+    if (visibleHeight > 0) {
+        // Center button in visible area
+        const buttonTop = visibleTop + (visibleHeight / 2);
+        
+        // Calculate both positions
+        const buttonRight = window.innerWidth - carouselRect.right + 20; // 20px inside carousel edge
+        const buttonLeft = carouselRect.left + 20; // 20px inside carousel edge
+        
+        // Check current position to determine which side to use
+        const isLeftPosition = scheduleToggleBtn.classList.contains('left-position');
+        
+        scheduleToggleBtn.style.position = 'fixed';
+        scheduleToggleBtn.style.top = buttonTop + 'px';
+        
+        if (isLeftPosition) {
+            // Keep left position
+            scheduleToggleBtn.style.left = buttonLeft + 'px';
+            scheduleToggleBtn.style.right = 'auto';
+        } else {
+            // Keep right position
+            scheduleToggleBtn.style.right = buttonRight + 'px';
+            scheduleToggleBtn.style.left = 'auto';
+        }
+        
+        scheduleToggleBtn.style.transform = 'translateY(-50%) translateX(0)';
+        scheduleToggleBtn.style.zIndex = '9999';
+    }
+}
+
+// Two-stage animation function
+function animateButtonToPosition(targetPosition) {
+    const carousel = document.querySelector('.schedule-fullscreen-carousel');
+    if (!carousel || !scheduleToggleBtn) return;
+    
+    const carouselRect = carousel.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    
+    // Calculate visible portion of carousel
+    const visibleTop = Math.max(0, carouselRect.top);
+    const visibleBottom = Math.min(viewportHeight, carouselRect.bottom);
+    const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+    
+    if (visibleHeight > 0) {
+        const buttonTop = visibleTop + (visibleHeight / 2);
+        
+        // Stage 1: Move to carousel edge
+        const edgePosition = targetPosition === 'left' ? 
+            carouselRect.left + 20 : 
+            carouselRect.right - 60;
+        
+        // Stage 2: Final position
+        const finalPosition = targetPosition === 'left' ? 
+            carouselRect.left + 20 : 
+            carouselRect.right - 60;
+        
+        let startTime = null;
+        const duration1 = 800; // First stage
+        const duration2 = 400; // Second stage
+        
+        function animate(timestamp) {
+            if (!startTime) startTime = timestamp;
+            const elapsed = timestamp - startTime;
+            
+            if (elapsed < duration1) {
+                // Stage 1: Move to edge
+                const progress = elapsed / duration1;
+                const easeProgress = 1 - Math.pow(1 - progress, 3); // Ease out cubic
+                const currentPos = edgePosition + (finalPosition - edgePosition) * easeProgress;
+                
+                scheduleToggleBtn.style.position = 'fixed';
+                scheduleToggleBtn.style.top = buttonTop + 'px';
+                scheduleToggleBtn.style.left = currentPos + 'px';
+                scheduleToggleBtn.style.right = 'auto';
+                scheduleToggleBtn.style.transform = 'translateY(-50%) translateX(0)';
+                scheduleToggleBtn.style.zIndex = '9999';
+                
+                requestAnimationFrame(animate);
+            } else if (elapsed < duration1 + duration2) {
+                // Stage 2: Smooth final movement
+                const progress = (elapsed - duration1) / duration2;
+                const easeProgress = 1 - Math.pow(1 - progress, 2); // Ease out quad
+                
+                scheduleToggleBtn.style.position = 'fixed';
+                scheduleToggleBtn.style.top = buttonTop + 'px';
+                scheduleToggleBtn.style.left = finalPosition + 'px';
+                scheduleToggleBtn.style.right = 'auto';
+                scheduleToggleBtn.style.transform = `translateY(-50%) translateX(${easeProgress * 20}px)`;
+                scheduleToggleBtn.style.zIndex = '9999';
+                
+                requestAnimationFrame(animate);
+            } else {
+                // Set final CSS classes
+                if (targetPosition === 'left') {
+                    scheduleToggleBtn.classList.add('left-position');
+                    scheduleToggleBtn.style.left = '20px';
+                    scheduleToggleBtn.style.right = 'auto';
+                } else {
+                    scheduleToggleBtn.classList.remove('left-position');
+                    scheduleToggleBtn.style.right = '20px';
+                    scheduleToggleBtn.style.left = 'auto';
+                }
+                
+                scheduleToggleBtn.style.transform = 'translateY(-50%) translateX(0)';
+            }
+        }
+        
+        requestAnimationFrame(animate);
+    }
+}
+
+// Update position on scroll, resize and carousel scroll
+window.addEventListener('scroll', updateButtonPosition);
+window.addEventListener('resize', updateButtonPosition);
+
+// Also listen to carousel scroll
+document.addEventListener('DOMContentLoaded', () => {
+    const carousel = document.querySelector('.schedule-fullscreen-carousel');
+    if (carousel) {
+        carousel.addEventListener('scroll', updateButtonPosition);
+        updateButtonPosition(); // Initial position
+    }
+});
+
+function toggleScheduleCarousel() {
+    if (!scheduleToggleBtn || !currentWeekColumn || !nextWeekColumn) return;
+    
+    isCurrentWeekVisible = !isCurrentWeekVisible;
+    
+    if (isCurrentWeekVisible) {
+        // Show current week, hide next week
+        currentWeekColumn.classList.remove('swapped-left');
+        nextWeekColumn.classList.remove('swapped-right');
+        // Animate button to right position
+        animateButtonBehindLists('right');
+    } else {
+        // Show next week, hide current week
+        currentWeekColumn.classList.add('swapped-left');
+        nextWeekColumn.classList.add('swapped-right');
+        // Animate button to left position
+        animateButtonBehindLists('left');
+    }
+    
+    // Update position after animation
+    setTimeout(updateButtonPosition, 100);
+}
+
+if (scheduleToggleBtn) {
+    scheduleToggleBtn.addEventListener('click', toggleScheduleCarousel);
+}
+
+// Schedule Modal Functions
+function openScheduleModal(type) {
+    const modal = document.getElementById('scheduleModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalContent = document.getElementById('modalContent');
+    
+    if (!modal || !modalTitle || !modalContent) return;
+    
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    
+    const dayNames = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+    const monthNames = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+    
+    let title, scheduleData;
+    
+    if (type === 'today') {
+        title = `Расписание на сегодня (${dayNames[today.getDay()]}, ${today.getDate()} ${monthNames[today.getMonth()]})`;
+        scheduleData = [
+            { time: '08:30 - 10:05', subject: 'Математика', room: 'ауд. 201' },
+            { time: '10:25 - 12:00', subject: 'Физика', room: 'ауд. 305' },
+            { time: '12:20 - 13:55', subject: 'Программирование', room: 'лаб. 102' },
+            { time: '14:15 - 15:50', subject: 'Английский', room: 'ауд. 410' }
+        ];
+    } else {
+        title = `Расписание на завтра (${dayNames[tomorrow.getDay()]}, ${tomorrow.getDate()} ${monthNames[tomorrow.getMonth()]})`;
+        scheduleData = [
+            { time: '08:30 - 10:05', subject: 'Химия', room: 'лаб. 203' },
+            { time: '10:25 - 12:00', subject: 'История', room: 'ауд. 115' },
+            { time: '12:20 - 13:55', subject: 'Биология', room: 'лаб. 301' },
+            { time: '14:15 - 15:50', subject: 'Литература', room: 'ауд. 208' }
+        ];
+    }
+    
+    modalTitle.textContent = title;
+    
+    let scheduleHTML = '<div class="schedule-list">';
+    scheduleData.forEach(item => {
+        scheduleHTML += `
+            <div class="schedule-item">
+                <span class="time">${item.time}</span>
+                <span class="subject">${item.subject}</span>
+                <span class="room">${item.room}</span>
+            </div>
+        `;
+    });
+    scheduleHTML += '</div>';
+    
+    modalContent.innerHTML = scheduleHTML;
+    modal.style.display = 'block';
+}
+
+function closeScheduleModal() {
+    const modal = document.getElementById('scheduleModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Close modal when clicking outside
+window.addEventListener('click', (event) => {
+    const scheduleModal = document.getElementById('scheduleModal');
+    if (scheduleModal && event.target === scheduleModal) {
+        closeScheduleModal();
+    }
+});
 
 function initLogo3D() {
     const logo = document.querySelector('.logo');
