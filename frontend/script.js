@@ -231,6 +231,68 @@ function animateOnScroll() {
     });
 }
 
+// Limit scroll to content boundaries
+function initScrollBoundaries() {
+    const carousel = document.querySelector('.schedule-fullscreen-carousel');
+    if (!carousel) return;
+    
+    let isScrolling = false;
+    let maxScroll = 0;
+    
+    function updateMaxScroll() {
+        const activeColumn = document.querySelector('.schedule-column:not(.swapped-left)') || 
+                               document.querySelector('#currentWeek');
+        if (activeColumn) {
+            // Calculate the actual scrollable height
+            const columnHeight = activeColumn.scrollHeight;
+            const carouselHeight = carousel.clientHeight;
+            maxScroll = Math.max(0, columnHeight - carouselHeight);
+        }
+    }
+    
+    function updateBoundaryClasses() {
+        const currentScroll = carousel.scrollTop;
+        const atTop = currentScroll <= 0;
+        const atBottom = currentScroll >= maxScroll;
+        
+        carousel.classList.toggle('at-top', atTop);
+        carousel.classList.toggle('at-bottom', atBottom);
+    }
+    
+    // Initial calculation
+    updateMaxScroll();
+    updateBoundaryClasses();
+    
+    carousel.addEventListener('scroll', () => {
+        if (isScrolling) return;
+        isScrolling = true;
+        
+        requestAnimationFrame(() => {
+            const currentScroll = carousel.scrollTop;
+            
+            // Strict boundary enforcement
+            if (currentScroll > maxScroll) {
+                carousel.scrollTop = maxScroll;
+            } else if (currentScroll < 0) {
+                carousel.scrollTop = 0;
+            }
+            
+            updateBoundaryClasses();
+            isScrolling = false;
+        });
+    });
+    
+    // Update boundaries when switching weeks
+    const originalToggleScheduleCarousel = toggleScheduleCarousel;
+    toggleScheduleCarousel = function() {
+        originalToggleScheduleCarousel();
+        setTimeout(() => {
+            updateMaxScroll();
+            updateBoundaryClasses();
+        }, 150); // Update after animation
+    };
+}
+
 // Schedule Fullscreen Carousel
 let isCurrentWeekVisible = true;
 const scheduleToggleBtn = document.getElementById('scheduleToggleBtn');
@@ -291,7 +353,7 @@ function animateButtonBehindLists(targetPosition) {
                 scheduleToggleBtn.style.left = currentX + 'px';
                 scheduleToggleBtn.style.right = 'auto';
                 scheduleToggleBtn.style.transform = 'translateY(-50%) translateX(0)';
-                scheduleToggleBtn.style.zIndex = '9999';
+                scheduleToggleBtn.style.zIndex = '3';
                 
                 // Rotate only the arrow element
                 const arrowElement = scheduleToggleBtn.querySelector('.toggle-arrow');
@@ -307,7 +369,7 @@ function animateButtonBehindLists(targetPosition) {
                 scheduleToggleBtn.style.left = targetPos + 'px';
                 scheduleToggleBtn.style.right = 'auto';
                 scheduleToggleBtn.style.transform = 'translateY(-50%) translateX(0)';
-                scheduleToggleBtn.style.zIndex = '9999';
+                scheduleToggleBtn.style.zIndex = '3';
                 
                 // Set final arrow rotation
                 const arrowElement = scheduleToggleBtn.querySelector('.toggle-arrow');
@@ -366,7 +428,7 @@ function updateButtonPosition() {
         }
         
         scheduleToggleBtn.style.transform = 'translateY(-50%) translateX(0)';
-        scheduleToggleBtn.style.zIndex = '9999';
+        scheduleToggleBtn.style.zIndex = '3';
     }
 }
 
@@ -415,7 +477,7 @@ function animateButtonToPosition(targetPosition) {
                 scheduleToggleBtn.style.left = currentPos + 'px';
                 scheduleToggleBtn.style.right = 'auto';
                 scheduleToggleBtn.style.transform = 'translateY(-50%) translateX(0)';
-                scheduleToggleBtn.style.zIndex = '9999';
+                scheduleToggleBtn.style.zIndex = '3';
                 
                 requestAnimationFrame(animate);
             } else if (elapsed < duration1 + duration2) {
@@ -428,7 +490,7 @@ function animateButtonToPosition(targetPosition) {
                 scheduleToggleBtn.style.left = finalPosition + 'px';
                 scheduleToggleBtn.style.right = 'auto';
                 scheduleToggleBtn.style.transform = `translateY(-50%) translateX(${easeProgress * 20}px)`;
-                scheduleToggleBtn.style.zIndex = '9999';
+                scheduleToggleBtn.style.zIndex = '3';
                 
                 requestAnimationFrame(animate);
             } else {
@@ -484,7 +546,14 @@ function toggleScheduleCarousel() {
     }
     
     // Update position after animation
-    setTimeout(updateButtonPosition, 100);
+    setTimeout(() => {
+        updateButtonPosition();
+        // Reset scroll to top
+        const carousel = document.querySelector('.schedule-fullscreen-carousel');
+        if (carousel) {
+            carousel.scrollTop = 0;
+        }
+    }, 100);
 }
 
 if (scheduleToggleBtn) {
@@ -619,6 +688,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     setTimeout(animateOnScroll, 500);
+    
+    // Initialize carousel height adjustment
+    setTimeout(adjustCarouselHeight, 200); // Small delay for fonts to load
+    initScrollBoundaries(); // Initialize scroll boundaries
 });
 
 window.addEventListener('scroll', function() {
