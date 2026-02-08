@@ -598,6 +598,14 @@ h4{
     font-style: normal;
 }
 
+.hero-content {
+    text-align: center;
+    position: relative;
+    z-index: 1;
+    transform: translateY(30px);
+    animation: fadeInUp 1s ease forwards;
+}
+
 .hero-title{
     font-family: "Libre Franklin", sans-serif;
     font-optical-sizing: auto;
@@ -641,7 +649,6 @@ h4{
     max-width: 800px;
     margin-left: auto;
     margin-right: auto;
-    opacity: 0;
     animation: fadeInUp 1s ease 0.2s forwards;
 }
 
@@ -650,7 +657,6 @@ h4{
     gap: 20px;
     justify-content: center;
     flex-wrap: wrap;
-    opacity: 0;
     animation: fadeInUp 1s ease 0.4s forwards;
 }
 
