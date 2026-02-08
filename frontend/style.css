@@ -113,6 +113,7 @@ body.theme-light::before {
 
 .logo:hover .logo-img {
     transform: translateY(-2px) rotate(2deg);
+    box-shadow: 0 0 40px rgba(255, 255, 255, 0.473);
 }
 
 .logo-img {
@@ -126,19 +127,6 @@ body.theme-light::before {
 
 body.theme-light .logo-img {
     filter: invert(1);
-}
-
-.logo:hover .logo-img {
-    box-shadow: 0 0 40px rgba(255, 255, 255, 0.473);
-}
-
-/* Навигация */
-.nav {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    max-width: 500px;
-    margin: 0 auto;
 }
 
 .search-container {
@@ -1258,7 +1246,7 @@ body.theme-light .team-indicator.active {
     border: 1px solid var(--glass-border);
     padding: 30px;
     border-radius: 20px;
-    width: 400px;
+    width: 80%;
     max-width: 90vw;
     position: relative;
     backdrop-filter: var(--glass-backdrop);

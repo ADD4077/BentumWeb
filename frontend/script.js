@@ -682,14 +682,15 @@ function openScheduleModal(type) {
     });
     scheduleHTML += '</div>';
     
+    modalTitle.textContent = title;
     modalContent.innerHTML = scheduleHTML;
-    modal.style.display = 'block';
+    modal.classList.add('show');
 }
 
 function closeScheduleModal() {
     const modal = document.getElementById('scheduleModal');
     if (modal) {
-        modal.style.display = 'none';
+        modal.classList.remove('show');
     }
 }
 
