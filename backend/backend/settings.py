@@ -23,9 +23,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-%cc5-crcil(rkw6ftz-+fclo8_3g__c5o4sr=#6if-wmrzv1pv'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+# Разрешенные хосты для продакшена
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+
+# Безопасные настройки сессий
+SESSION_COOKIE_SECURE = False  # Для разработки (HTTP)
+SESSION_COOKIE_HTTPONLY = True  # Только для HTTP
+SESSION_COOKIE_SAMESITE = 'Lax'  # Защита от CSRF
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 
 # Application definition
@@ -42,7 +50,11 @@ INSTALLED_APPS = [
     'api',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+CORS_ALLOW_CREDENTIALS = True  # Разрешить отправку cookie
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -82,7 +94,7 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'database.db',
+        'NAME': BASE_DIR / 'server.db',
     }
 }
 

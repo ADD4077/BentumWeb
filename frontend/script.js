@@ -14,6 +14,55 @@ burger.addEventListener('click', function() {
     navList.classList.toggle('active');
 });
 
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('http://127.0.0.1:8000/api/theme', {
+        credentials: 'include'
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (window.__themeLocked) return;
+        if (!d || !d.success) return;
+        document.body.classList.remove('theme-dark', 'theme-light');
+        document.body.classList.add(d.theme === 'light' ? 'theme-light' : 'theme-dark');
+    })
+    .catch(() => {
+    });
+
+    const loginLink = document.querySelector('.nav-link.login-btn');
+    const startBtn = document.querySelector('.start-btn');
+
+    if (!loginLink && !startBtn) return;
+
+    fetch('http://127.0.0.1:8000/api/dashboard', {
+        credentials: 'include'
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (!data || !data.success) return;
+
+        if (loginLink) {
+            loginLink.textContent = 'Профиль';
+            loginLink.setAttribute('href', 'dashboard.html');
+            loginLink.classList.remove('login-btn');
+
+            loginLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = 'dashboard.html';
+            });
+        }
+
+        if (startBtn) {
+            startBtn.setAttribute('href', 'dashboard.html');
+            startBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = 'dashboard.html';
+            });
+        }
+    })
+    .catch(() => {
+    });
+});
+
 document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', function() {
         burger.classList.remove('active');
@@ -57,7 +106,7 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         
         if (href === '#login') {
             e.preventDefault();
-            document.getElementById('loginModal').style.display = 'block';
+            openLoginModal();
             return;
         }
         
@@ -82,6 +131,7 @@ const indicators = document.querySelectorAll('.team-indicator');
 const totalSlides = teamMembers.length;
 
 function showSlide(index) {
+    if (!teamTrack || !totalSlides) return;
     if (index < 0) currentSlide = totalSlides - 1;
     else if (index >= totalSlides) currentSlide = 0;
     else currentSlide = index;
@@ -111,36 +161,40 @@ indicators.forEach((indicator, index) => {
     });
 });
 
-setInterval(() => {
-    showSlide(currentSlide + 1);
-}, 5000);
+if (teamTrack && totalSlides) {
+    setInterval(() => {
+        showSlide(currentSlide + 1);
+    }, 5000);
+}
 
 // Модальное окно входа
 const loginModal = document.getElementById('loginModal');
 const loginForm = document.getElementById('loginForm');
 
 function openLoginModal() {
-    loginModal.style.display = 'block';
+    if (!loginModal) return;
+    loginModal.classList.add('show');
 }
 
 function closeLoginModal() {
-    loginModal.style.display = 'none';
-    loginForm.reset();
+    if (!loginModal) return;
+    loginModal.classList.remove('show');
+    if (loginForm) loginForm.reset();
 }
 
 window.addEventListener('click', function(event) {
-    if (event.target === loginModal) {
+    if (loginModal && event.target === loginModal) {
         closeLoginModal();
     }
 });
 
 document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape' && loginModal.style.display === 'block') {
+    if (event.key === 'Escape' && loginModal && loginModal.classList.contains('show')) {
         closeLoginModal();
     }
 });
 
-loginForm.addEventListener('submit', function(e) {
+if (loginForm) loginForm.addEventListener('submit', function(e) {
     e.preventDefault();
 
     const studentCodeInput = document.getElementById('studentCode');
@@ -190,13 +244,30 @@ loginForm.addEventListener('submit', function(e) {
         headers: {
             'Content-Type': 'application/json'
         },
+        credentials: 'include',  // Включаем отправку cookie
         body: JSON.stringify(payload)
     })
     .then(response => response.json())
     .then(data => {
+        console.log('Ответ сервера:', data);
+        
         if (data.success) {
-            alert(`Успех: ${data.message}`);
             closeLoginModal();
+            
+            // Небольшая задержка чтобы сессия успела сохраниться
+            setTimeout(() => {
+                // Редирект в личный кабинет
+                if (data.redirect) {
+                    const redirectUrl = data.redirect.replace('/api/dashboard', 'dashboard.html');
+                    console.log('Редирект на:', redirectUrl);
+                    window.location.href = redirectUrl;
+                } else {
+                    // Fallback: редирект с student_code
+                    const fallbackUrl = `dashboard.html?student_code=${payload.studentCode}`;
+                    console.log('Fallback редирект на:', fallbackUrl);
+                    window.location.href = fallbackUrl;
+                }
+            }, 500);
         } else {
             alert(`Ошибка: ${data.detail || 'Неизвестная ошибка'}`);
         }
@@ -210,6 +281,8 @@ loginForm.addEventListener('submit', function(e) {
 ['studentCode', 'studentRedCode'].forEach(id => {
     const input = document.getElementById(id);
     const error = document.getElementById(id + 'Error');
+
+    if (!input || !error) return;
 
     input.addEventListener('input', () => {
         input.classList.remove('error');
@@ -699,14 +772,58 @@ window.addEventListener('scroll', function() {
     updateActiveNavLink();
     
     const header = document.querySelector('.header');
+    if (!header) return;
+
+    const isLightTheme = document.body.classList.contains('theme-light');
     
     if (window.scrollY > 100) {
-        header.style.background = 'rgba(10, 10, 10, 0.95)';
-        header.style.boxShadow = '0 4px 30px rgba(0, 0, 0, 0.3)';
+        header.style.background = isLightTheme
+            ? 'rgba(246, 247, 249, 0.95)'
+            : 'rgba(10, 10, 10, 0.95)';
+        header.style.boxShadow = isLightTheme
+            ? '0 4px 30px rgba(0, 0, 0, 0.12)'
+            : '0 4px 30px rgba(0, 0, 0, 0.3)';
     } else {
-        header.style.background = 'rgba(10, 10, 10, 0.8)';
-        header.style.boxShadow = '0 2px 20px rgba(0, 0, 0, 0.1)';
+        header.style.background = isLightTheme
+            ? 'rgba(246, 247, 249, 0.75)'
+            : 'rgba(10, 10, 10, 0.8)';
+        header.style.boxShadow = isLightTheme
+            ? '0 2px 20px rgba(0, 0, 0, 0.08)'
+            : '0 2px 20px rgba(0, 0, 0, 0.1)';
     }
+});
+
+// Also update header when theme changes
+const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+            const header = document.querySelector('.header');
+            if (!header) return;
+            
+            const isLightTheme = document.body.classList.contains('theme-light');
+            
+            if (window.scrollY > 100) {
+                header.style.background = isLightTheme
+                    ? 'rgba(246, 247, 249, 0.95)'
+                    : 'rgba(10, 10, 10, 0.95)';
+                header.style.boxShadow = isLightTheme
+                    ? '0 4px 30px rgba(0, 0, 0, 0.12)'
+                    : '0 4px 30px rgba(0, 0, 0, 0.3)';
+            } else {
+                header.style.background = isLightTheme
+                    ? 'rgba(246, 247, 249, 0.75)'
+                    : 'rgba(10, 10, 10, 0.8)';
+                header.style.boxShadow = isLightTheme
+                    ? '0 2px 20px rgba(0, 0, 0, 0.08)'
+                    : '0 2px 20px rgba(0, 0, 0, 0.1)';
+            }
+        }
+    });
+});
+
+observer.observe(document.body, {
+    attributes: true,
+    attributeFilter: ['class']
 });
 
 window.addEventListener('load', function() {

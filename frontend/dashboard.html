@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет - Бентум</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="shortcut icon" href="Assets/shortlogo.png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,900;1,900&display=swap" rel="stylesheet">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Khula:wght@300;400;600;700;800&family=Libre+Franklin:ital@0;1&display=swap" rel="stylesheet">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Actor&family=Khula:wght@300;400;600;700;800&family=Libre+Franklin:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="main.html" class="logo" onclick="scrollToTop(event)">
+                    <img src="Assets/logo.png" alt="Бентум" class="logo-img">
+                </a>
+                
+                <nav class="nav dashboard">
+                    <div class="search-container">
+                        <div class="search-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.35-4.35"></path>
+                            </svg>
+                        </div>
+                        <input type="text" class="search-input" placeholder="Поиск...">
+                    </div>
+                </nav>
+                
+                <div class="logout-section">
+                    <a href="#" class="nav-link logout-btn" onclick="logout()">Выйти</a>
+                </div>
+                
+                <button class="burger" id="burger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section id="dashboard" class="dashboard-section">
+            <div class="container">
+                <div class="dashboard-content">
+                    <div class="user-info-card">
+                        <h2>Информация о пользователе</h2>
+                        <div class="user-details">
+                            <div class="detail-item">
+                                <span class="detail-label">ФИО:</span>
+                                <span class="detail-value" id="user-fullname">Загрузка...</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Факультет:</span>
+                                <span class="detail-value" id="user-faculty">Загрузка...</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Студенческий код:</span>
+                                <span class="detail-value" id="user-student-code">Загрузка...</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Дата регистрации:</span>
+                                <span class="detail-value" id="user-created-at">Загрузка...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h1 class="dashboard-title">Личный кабинет</h1>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="simple-dashboard-footer">
+        <div class="container">
+            <div class="simple-footer-content">
+                <div class="simple-footer-left">
+                    <div class="footer-item">
+                        <a href="schedule.html" class="footer-icon-link">
+                            <svg class="footer-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                            </svg>
+                            <span class="footer-text">Расписание</span>
+                        </a>
+                    </div>
+                    
+                    <div class="footer-item">
+                        <a href="#" class="footer-icon-link">
+                            <svg class="footer-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.2-.1 1.32-.95 3.08-1.5 4.8-1.5s3.48.55 4.8 1.5c.05.05.1.1.2.1s.15-.05.2-.1c1.32-.95 3.08-1.5 4.8-1.5s3.48.55 4.8 1.5c.05.05.1.1.2.1s.15-.05.2-.1c.05-.05.1-.1.1-.15V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5s4.15.65 5.5 1.5v10.5z"/>
+                            </svg>
+                            <span class="footer-text">Литература</span>
+                        </a>
+                    </div>
+                    
+                    <div class="footer-item">
+                        <div class="footer-logo-wrapper" id="footer-logo-wrapper">
+                        <a href="main.html" class="footer-logo" id="footer-logo">
+                            <img src="Assets/logo.png" alt="Бентум" class="footer-logo-small">
+                        </a>
+                        </div>
+                    </div>
+                    
+                    <div class="footer-item">
+                        <a href="#" class="footer-icon-link">
+                            <svg class="footer-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                            </svg>
+                            <span class="footer-text">Новости</span>
+                        </a>
+                    </div>
+                    
+                    <div class="footer-item">
+                        <a href="#" class="footer-icon-link">
+                            <svg class="footer-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M15.5 8.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm4.5 4.5c0 1.1-.9 2-2 2h-12c-1.1 0-2-.9-2-2v-8c0-1.1.9-2 2-2h12c1.1 0 2 .9 2 2v8zm-8-4.5c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5.67 1.5 1.5 1.5 1.5-.67 1.5-1.5z"/>
+                            </svg>
+                            <span class="footer-text">Игры</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <div class="copyright-section">
+        <p>&copy; 2026 Бентум. Все права защищены.</p>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        window.__themeLocked = true;
+
+        // Получаем student_code из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const studentCode = urlParams.get('student_code');
+
+        // Загружаем данные пользователя
+        function loadUserData() {
+            const url = studentCode
+                ? `http://127.0.0.1:8000/api/dashboard?student_code=${studentCode}`
+                : 'http://127.0.0.1:8000/api/dashboard';
+
+            fetch(url, {
+                credentials: 'include'  // Включаем отправку cookie
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('user-fullname').textContent = data.user.fullname;
+                        document.getElementById('user-faculty').textContent = data.user.faculty;
+                        document.getElementById('user-student-code').textContent = data.user.student_code;
+                        document.getElementById('user-created-at').textContent = new Date(data.user.created_at).toLocaleDateString('ru-RU');
+                    } else {
+                        alert(`Ошибка: ${data.detail || 'Неизвестная ошибка'}`);
+                        window.location.href = 'main.html';
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка запроса:', error);
+                    alert('Сервер недоступен.');
+                    window.location.href = 'main.html';
+                });
+        }
+
+        // Функции навигации
+        function logout() {
+            fetch('http://127.0.0.1:8000/api/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = 'main.html';
+                } else {
+                    alert(`Ошибка: ${data.detail || 'Неизвестная ошибка'}`);
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка выхода:', error);
+                alert('Ошибка при выходе из системы.');
+            });
+        }
+
+        function goToSchedule() {
+            window.location.href = 'schedule.html';
+        }
+
+        function goToMain() {
+            window.location.href = 'main.html';
+        }
+
+        // Загружаем данные при загрузке страницы
+        function applyTheme(theme) {
+            document.body.classList.remove('theme-dark', 'theme-light');
+            document.body.classList.add(theme === 'light' ? 'theme-light' : 'theme-dark');
+        }
+
+        function persistTheme(theme) {
+            return fetch('http://127.0.0.1:8000/api/theme', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ theme })
+            }).then(r => r.json());
+        }
+
+        function initThemeLongPress() {
+            const logo = document.getElementById('footer-logo');
+            const switchOverlay = document.getElementById('theme-switch-overlay');
+            const switchWrap = document.getElementById('theme-switch');
+            const switchBtn = document.getElementById('theme-switch-btn');
+            if (!logo || !switchWrap || !switchBtn) return;
+
+            let pressTimer = null;
+            let visible = false;
+            let longPressTriggered = false;
+
+            function show() {
+                visible = true;
+                switchWrap.style.display = 'block';
+                if (switchOverlay) switchOverlay.style.display = 'block';
+
+                const rect = logo.getBoundingClientRect();
+                const left = rect.left + rect.width / 2;
+                switchWrap.style.left = `${left}px`;
+            }
+
+            function hide() {
+                visible = false;
+                switchWrap.style.display = 'none';
+                if (switchOverlay) switchOverlay.style.display = 'none';
+            }
+
+            function startPress(e) {
+                if (pressTimer) clearTimeout(pressTimer);
+                longPressTriggered = false;
+                pressTimer = setTimeout(() => {
+                    longPressTriggered = true;
+                    show();
+                }, 450);
+            }
+
+            function endPress() {
+                if (pressTimer) clearTimeout(pressTimer);
+                pressTimer = null;
+            }
+
+            logo.addEventListener('pointerdown', startPress);
+            logo.addEventListener('pointerup', endPress);
+            logo.addEventListener('pointerleave', endPress);
+            logo.addEventListener('pointercancel', endPress);
+
+            logo.addEventListener('mousedown', startPress);
+            logo.addEventListener('mouseup', endPress);
+            logo.addEventListener('mouseleave', endPress);
+
+            logo.addEventListener('touchstart', startPress, { passive: true });
+            logo.addEventListener('touchend', endPress);
+            logo.addEventListener('touchcancel', endPress);
+
+            logo.addEventListener('contextmenu', (e) => {
+                if (pressTimer) {
+                    e.preventDefault();
+                }
+            });
+
+            logo.addEventListener('click', (e) => {
+                if (longPressTriggered) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    longPressTriggered = false;
+                }
+            }, true);
+
+            document.addEventListener('pointerdown', (e) => {
+                if (!visible) return;
+                if (switchWrap.contains(e.target) || logo.contains(e.target)) return;
+                hide();
+            });
+
+            function toggleTheme() {
+                const isLight = document.body.classList.contains('theme-light');
+                const next = isLight ? 'dark' : 'light';
+                console.log('Theme toggle clicked. Next:', next);
+                applyTheme(next);
+                persistTheme(next)
+                    .then((res) => {
+                        console.log('Theme persist response:', res);
+                    })
+                    .catch((err) => {
+                        console.log('Theme persist error:', err);
+                    });
+                hide();
+            }
+
+            switchBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleTheme();
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            applyTheme('dark');
+            initThemeLongPress();
+            fetch('http://127.0.0.1:8000/api/theme', { credentials: 'include' })
+                .then(r => r.json())
+                .then(d => {
+                    if (d && d.success) applyTheme(d.theme || 'dark');
+                })
+                .catch(() => {
+                });
+            loadUserData();
+        });
+    </script>
+
+    <div class="theme-switch-overlay" id="theme-switch-overlay" style="display: none;">
+        <div class="theme-switch" id="theme-switch" style="display: none;">
+            <button class="theme-switch-btn" id="theme-switch-btn" type="button" aria-label="Переключить тему">
+                <span class="theme-switch-thumb" aria-hidden="true">
+                    <span class="theme-switch-icon theme-switch-icon-sun">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M12 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M12 20v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M4.93 4.93l1.41 1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M17.66 17.66l1.41 1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M2 12h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M20 12h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M4.93 19.07l1.41-1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M17.66 6.34l1.41-1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </span>
+                    <span class="theme-switch-icon theme-switch-icon-moon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 14.5A8.5 8.5 0 0 1 9.5 3 6.5 6.5 0 1 0 21 14.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                </span>
+            </button>
+        </div>
+    </div>
+</body>
+</html>
