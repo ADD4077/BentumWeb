@@ -1526,6 +1526,96 @@ body.theme-light .team-indicator.active {
     right: 0;
 }
 
+.shard-group-5 {
+    top: 15%;
+    left: 45%;
+}
+
+.shard-group-5 .shard:nth-child(1) {
+    top: 0;
+    left: 0;
+}
+
+.shard-group-5 .shard:nth-child(2) {
+    top: 25px;
+    left: 30px;
+}
+
+.shard-group-6 {
+    top: 70%;
+    left: 35%;
+}
+
+.shard-group-6 .shard:nth-child(1) {
+    top: 0;
+    left: 0;
+}
+
+.shard-group-6 .shard:nth-child(2) {
+    top: -30px;
+    left: 40px;
+}
+
+.shard-group-7 {
+    top: 35%;
+    right: 40%;
+}
+
+.shard-group-7 .shard:nth-child(1) {
+    top: 0;
+    right: 0;
+}
+
+.shard-group-7 .shard:nth-child(2) {
+    top: 45px;
+    right: 35px;
+}
+
+.shard-group-8 {
+    bottom: 25%;
+    right: 30%;
+}
+
+.shard-group-8 .shard:nth-child(1) {
+    bottom: 0;
+    right: 0;
+}
+
+.shard-group-8 .shard:nth-child(2) {
+    bottom: -25px;
+    right: 45px;
+}
+
+.shard-group-9 {
+    top: 55%;
+    left: 15%;
+}
+
+.shard-group-9 .shard:nth-child(1) {
+    top: 0;
+    left: 0;
+}
+
+.shard-group-9 .shard:nth-child(2) {
+    top: 35px;
+    left: -25px;
+}
+
+.shard-group-10 {
+    bottom: 40%;
+    left: 50%;
+}
+
+.shard-group-10 .shard:nth-child(1) {
+    bottom: 0;
+    left: 0;
+}
+
+.shard-group-10 .shard:nth-child(2) {
+    bottom: 40px;
+    left: -30px;
+}
+
 .shard-1 {
     border-left: 15px solid transparent;
     border-right: 15px solid transparent;
@@ -1565,6 +1655,62 @@ body.theme-light .team-indicator.active {
     transform: rotate(-15deg);
 }
 
+.shard-6 {
+    border-left: 16px solid transparent;
+    border-right: 16px solid transparent;
+    border-bottom: 28px solid rgba(255, 255, 255, 0.04);
+    animation: float1 13s ease-in-out infinite;
+    transform: rotate(25deg);
+}
+
+.shard-7 {
+    border-left: 11px solid transparent;
+    border-right: 11px solid transparent;
+    border-bottom: 19px solid rgba(255, 255, 255, 0.06);
+    animation: float3 14s ease-in-out infinite;
+    transform: rotate(-35deg);
+}
+
+.shard-8 {
+    border-left: 13px solid transparent;
+    border-right: 13px solid transparent;
+    border-bottom: 24px solid rgba(255, 255, 255, 0.03);
+    animation: float2 15s ease-in-out infinite;
+    transform: rotate(40deg);
+}
+
+.shard-9 {
+    border-left: 17px solid transparent;
+    border-right: 17px solid transparent;
+    border-bottom: 26px solid rgba(255, 255, 255, 0.05);
+    animation: float1 16s ease-in-out infinite;
+    transform: rotate(-25deg);
+}
+
+.shard-10 {
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-bottom: 21px solid rgba(255, 255, 255, 0.04);
+    animation: float3 17s ease-in-out infinite;
+    transform: rotate(30deg);
+}
+
+.shard-11 {
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-bottom: 23px solid rgba(255, 255, 255, 0.03);
+    animation: float2 18s ease-in-out infinite;
+    transform: rotate(-40deg);
+}
+
+.shard-12 {
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-bottom: 20px solid rgba(255, 255, 255, 0.05);
+    animation: float1 19s ease-in-out infinite;
+    transform: rotate(35deg);
+}
+
 /* Light theme shards - make them visible on white background */
 body.theme-light .shard-1 {
     border-bottom-color: rgba(10, 10, 10, 0.15);
@@ -1583,6 +1729,34 @@ body.theme-light .shard-4 {
 }
 
 body.theme-light .shard-5 {
+    border-bottom-color: rgba(10, 10, 10, 0.09);
+}
+
+body.theme-light .shard-6 {
+    border-bottom-color: rgba(10, 10, 10, 0.08);
+}
+
+body.theme-light .shard-7 {
+    border-bottom-color: rgba(10, 10, 10, 0.10);
+}
+
+body.theme-light .shard-8 {
+    border-bottom-color: rgba(10, 10, 10, 0.07);
+}
+
+body.theme-light .shard-9 {
+    border-bottom-color: rgba(10, 10, 10, 0.09);
+}
+
+body.theme-light .shard-10 {
+    border-bottom-color: rgba(10, 10, 10, 0.08);
+}
+
+body.theme-light .shard-11 {
+    border-bottom-color: rgba(10, 10, 10, 0.07);
+}
+
+body.theme-light .shard-12 {
     border-bottom-color: rgba(10, 10, 10, 0.09);
 }
 
@@ -1737,6 +1911,105 @@ body.theme-light .shard-5 {
 .shard-large-schedule-right .shard-large:nth-child(3) {
     bottom: 120px;
     right: 100px;
+}
+
+/* для секции Literature */
+.shard-large-literature-left {
+    position: absolute;
+    top: 12%;
+    left: 2%;
+}
+
+.shard-large-literature-left .shard-large:nth-child(1) {
+    top: 0;
+    left: 0;
+}
+
+.shard-large-literature-left .shard-large:nth-child(2) {
+    top: 70px;
+    left: 50px;
+}
+
+.shard-large-literature-right {
+    position: absolute;
+    bottom: 18%;
+    right: 2%;
+}
+
+.shard-large-literature-right .shard-large:nth-child(1) {
+    bottom: 0;
+    right: 0;
+}
+
+.shard-large-literature-right .shard-large:nth-child(2) {
+    bottom: 60px;
+    right: 60px;
+}
+
+/* для секции News */
+.shard-large-news-left {
+    position: absolute;
+    top: 8%;
+    left: 3%;
+}
+
+.shard-large-news-left .shard-large:nth-child(1) {
+    top: 0;
+    left: 0;
+}
+
+.shard-large-news-left .shard-large:nth-child(2) {
+    top: 90px;
+    left: 70px;
+}
+
+.shard-large-news-right {
+    position: absolute;
+    bottom: 12%;
+    right: 3%;
+}
+
+.shard-large-news-right .shard-large:nth-child(1) {
+    bottom: 0;
+    right: 0;
+}
+
+.shard-large-news-right .shard-large:nth-child(2) {
+    bottom: 80px;
+    right: 80px;
+}
+
+/* для секции Games */
+.shard-large-games-left {
+    position: absolute;
+    top: 15%;
+    left: 2%;
+}
+
+.shard-large-games-left .shard-large:nth-child(1) {
+    top: 0;
+    left: 0;
+}
+
+.shard-large-games-left .shard-large:nth-child(2) {
+    top: 60px;
+    left: 40px;
+}
+
+.shard-large-games-right {
+    position: absolute;
+    bottom: 20%;
+    right: 2%;
+}
+
+.shard-large-games-right .shard-large:nth-child(1) {
+    bottom: 0;
+    right: 0;
+}
+
+.shard-large-games-right .shard-large:nth-child(2) {
+    bottom: 70px;
+    right: 50px;
 }
 
 /* Большие треугольники */
@@ -2227,5 +2500,284 @@ body.theme-light .theme-switch-icon-moon {
     
     .simple-footer-right {
         order: -1;
+    }
+}
+
+/* Стили для новых страниц с одноцветным фоном и shards */
+.literature-section, .news-section, .games-section {
+    padding: 120px 0 80px;
+    min-height: 100vh;
+    position: relative;
+    background: var(--primary-dark);
+    overflow: hidden;
+}
+
+/* Осколки для новых страниц */
+.literature-section .glass-shards,
+.news-section .glass-shards,
+.games-section .glass-shards {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.literature-section .glass-shards-large,
+.news-section .glass-shards-large,
+.games-section .glass-shards-large {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Контейнер контента поверх осколков */
+.literature-section .container,
+.news-section .container,
+.games-section .container {
+    position: relative;
+    z-index: 2;
+}
+
+/* Сетка для литературы */
+.literature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 30px;
+    margin-top: 60px;
+}
+
+.literature-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 30px;
+    backdrop-filter: var(--glass-backdrop);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.literature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--glass-shadow);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.literature-cover {
+    width: 100%;
+    height: 200px;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.literature-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.literature-info h3 {
+    color: var(--text-primary);
+    font-size: 1.4rem;
+    margin-bottom: 10px;
+}
+
+.literature-info .author {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    margin-bottom: 15px;
+}
+
+.literature-info .description {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    flex-grow: 1;
+}
+
+/* Сетка для новостей */
+.news-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 30px;
+    margin-top: 60px;
+}
+
+.news-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    overflow: hidden;
+    backdrop-filter: var(--glass-backdrop);
+    transition: all 0.3s ease;
+}
+
+.news-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--glass-shadow);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.news-image {
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+}
+
+.news-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.news-content {
+    padding: 30px;
+}
+
+.news-meta {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.news-date {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.news-category {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+}
+
+.news-content h3 {
+    color: var(--text-primary);
+    font-size: 1.4rem;
+    margin-bottom: 15px;
+}
+
+.news-excerpt {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+/* Сетка для игр */
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 30px;
+    margin-top: 60px;
+}
+
+.game-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    overflow: hidden;
+    backdrop-filter: var(--glass-backdrop);
+    transition: all 0.3s ease;
+}
+
+.game-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--glass-shadow);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.game-preview {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+}
+
+.game-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.game-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.game-preview:hover .game-overlay {
+    opacity: 1;
+}
+
+.game-info {
+    padding: 30px;
+}
+
+.game-info h3 {
+    color: var(--text-primary);
+    font-size: 1.4rem;
+    margin-bottom: 15px;
+}
+
+.game-description {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.game-stats {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.difficulty, .players {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .literature-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .news-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .games-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .literature-card,
+    .news-content,
+    .game-info {
+        padding: 20px;
     }
 }
