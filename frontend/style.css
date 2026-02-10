@@ -2451,8 +2451,10 @@ body.theme-light .theme-switch-icon-moon {
 
 /* Секция копирайта в конце страницы */
 .copyright-section {
-    text-align: center;
-    padding: 20px 0 80px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px 80px 24px;
     background: var(--primary-dark);
     border-top: 1px solid var(--glass-border);
 }
@@ -2464,6 +2466,12 @@ body.theme-light .theme-switch-icon-moon {
 }
 
 @media (max-width: 768px) {
+    .copyright-section {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+        padding: 20px 24px 80px 24px;
+    }
     .dashboard-section {
         padding: 100px 0 60px;
     }

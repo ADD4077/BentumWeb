@@ -125,6 +125,7 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 });
 
 let currentSlide = 0;
+let autoSlideInterval;
 const teamTrack = document.querySelector('.team-track');
 const teamMembers = document.querySelectorAll('.team-member');
 const indicators = document.querySelectorAll('.team-indicator');
@@ -147,24 +148,42 @@ function showSlide(index) {
     });
 }
 
+function startAutoSlide() {
+    // Очищаем предыдущий таймер
+    if (autoSlideInterval) {
+        clearInterval(autoSlideInterval);
+    }
+    // Запускаем новый таймер
+    autoSlideInterval = setInterval(() => {
+        showSlide(currentSlide + 1);
+    }, 5000);
+}
+
+function resetAutoSlideTimer() {
+    // Сбрасываем таймер при ручном переключении
+    startAutoSlide();
+}
+
 document.getElementById('prevBtn')?.addEventListener('click', () => {
     showSlide(currentSlide - 1);
+    resetAutoSlideTimer();
 });
 
 document.getElementById('nextBtn')?.addEventListener('click', () => {
     showSlide(currentSlide + 1);
+    resetAutoSlideTimer();
 });
 
 indicators.forEach((indicator, index) => {
     indicator.addEventListener('click', () => {
         showSlide(index);
+        resetAutoSlideTimer();
     });
 });
 
+// Запускаем автоматическое переключение если карусель существует
 if (teamTrack && totalSlides) {
-    setInterval(() => {
-        showSlide(currentSlide + 1);
-    }, 5000);
+    startAutoSlide();
 }
 
 // Модальное окно входа
