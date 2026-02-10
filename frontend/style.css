@@ -182,7 +182,7 @@ body.theme-light .logo-img {
 }
 
 .nav-list {
-    display: flex;
+    display: none;
     list-style: none;
     gap: 8px;
     align-items: center;
@@ -247,7 +247,7 @@ body.theme-light .login-btn {
 
 /* Бургер меню */
 .burger {
-    display: none;
+    display: flex;
     flex-direction: column;
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
@@ -272,6 +272,35 @@ body.theme-light .login-btn {
     margin: 3px 0;
     transition: all 0.3s ease;
     border-radius: 2px;
+}
+
+/* Стили для активного бургер-меню на всех устройствах */
+.burger.active span:nth-child(1) {
+    transform: rotate(-45deg) translate(-5px, 6px);
+}
+
+.burger.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.burger.active span:nth-child(3) {
+    transform: rotate(45deg) translate(-5px, -6px);
+}
+
+.nav-list.active {
+    display: flex;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: rgba(10, 10, 10, 0.95);
+    backdrop-filter: blur(20px);
+    flex-direction: column;
+    padding: 24px;
+    border-bottom: 1px solid var(--glass-border);
+    gap: 8px;
+    border-radius: 0 0 20px 20px;
+    min-width: 200px;
+    z-index: 100;
 }
 
 .logout-section {
@@ -1134,6 +1163,15 @@ body.theme-light .team-indicator.active {
     margin-bottom: 10px;
 }
 
+.privacy-footer {
+    text-align: center;
+    margin-top: -30px;
+    background: var(--glass-bg);
+    border-radius: 20px;
+    padding-top: 20px;
+    padding-bottom: 60px;
+}
+
 .back-btn {
     display: inline-flex;
     align-items: center;
@@ -1369,6 +1407,33 @@ body.theme-light .team-indicator.active {
     
     .nav-list.active {
         display: flex;
+    }
+    
+    /* Стили для профиля пользователя в бургер-меню */
+    .user-profile {
+        padding: 15px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 10px;
+    }
+    
+    .user-name {
+        color: var(--text-primary);
+        font-weight: 600;
+        font-size: 16px;
+        text-align: center;
+    }
+    
+    .nav-list .logout-btn {
+        margin-top: auto;
+        padding: 15px 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        color: #ff6b6b;
+        text-align: center;
+    }
+    
+    .nav-list .logout-btn:hover {
+        background: rgba(255, 107, 107, 0.1);
+        color: #ff8787;
     }
     
     .burger {

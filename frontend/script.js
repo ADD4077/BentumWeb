@@ -61,6 +61,30 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(() => {
     });
+
+    // Загрузка данных пользователя в dashboard
+    function loadUserData() {
+        if (window.location.pathname.includes('dashboard.html') || window.location.href.includes('dashboard.html')) {
+            const userNameElement = document.getElementById('userName');
+            if (userNameElement) {
+                fetch('http://127.0.0.1:8000/api/dashboard', {
+                    credentials: 'include'
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.success && data.user) {
+                        userNameElement.textContent = data.user.fullname;
+                    }
+                })
+                .catch(() => {
+                    userNameElement.textContent = 'Пользователь';
+                });
+            }
+        }
+    }
+    
+    // Вызываем загрузку данных пользователя
+    loadUserData();
 });
 
 document.querySelectorAll('.nav-link').forEach(link => {

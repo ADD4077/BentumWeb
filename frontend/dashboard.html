@@ -28,21 +28,14 @@
                     <img src="Assets/logo.png" alt="Бентум" class="logo-img">
                 </a>
                 
-                <nav class="nav dashboard">
-                    <div class="search-container">
-                        <div class="search-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="11" cy="11" r="8"></circle>
-                                <path d="m21 21-4.35-4.35"></path>
-                            </svg>
-                        </div>
-                        <input type="text" class="search-input" placeholder="Поиск...">
-                    </div>
+                <nav class="nav">
+                    <ul class="nav-list">
+                        <li class="user-profile">
+                            <div class="user-name" id="userName">Загрузка...</div>
+                        </li>
+                        <li><a href="#" class="nav-link logout-btn" onclick="logout()">Выйти</a></li>
+                    </ul>
                 </nav>
-                
-                <div class="logout-section">
-                    <a href="#" class="nav-link logout-btn" onclick="logout()">Выйти</a>
-                </div>
                 
                 <button class="burger" id="burger">
                     <span></span>
@@ -166,6 +159,12 @@
                         document.getElementById('user-faculty').textContent = data.user.faculty;
                         document.getElementById('user-student-code').textContent = data.user.student_code;
                         document.getElementById('user-created-at').textContent = new Date(data.user.created_at).toLocaleDateString('ru-RU');
+                        
+                        // Обновляем ФИО в бургер-меню
+                        const userNameElement = document.getElementById('userName');
+                        if (userNameElement) {
+                            userNameElement.textContent = data.user.fullname;
+                        }
                     } else {
                         alert(`Ошибка: ${data.detail || 'Неизвестная ошибка'}`);
                         window.location.href = 'main.html';
@@ -362,5 +361,7 @@
             </button>
         </div>
     </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
