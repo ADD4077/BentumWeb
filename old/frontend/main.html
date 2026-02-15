@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Бентум</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="shortcut icon" href="Assets/shortlogo.png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,900;1,900&display=swap" rel="stylesheet">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Khula:wght@300;400;600;700;800&family=Libre+Franklin:ital@0;1&display=swap" rel="stylesheet">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Actor&family=Khula:wght@300;400;600;700;800&family=Libre+Franklin:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="main.html" class="logo" onclick="scrollToTop(event)">
+                    <img src="Assets/logo.png" alt="Бентум" class="logo-img">
+                </a>
+                
+                <nav class="nav">
+                    <ul class="nav-list">
+                        <li><a href="#home" class="nav-link">Главная</a></li>
+                        <li><a href="#about" class="nav-link">О проекте</a></li>
+                        <li><a href="#support" class="nav-link">Поддержка</a></li>
+                        <li><a href="#login" class="nav-link login-btn">Войти</a></li>
+                    </ul>
+                </nav>
+                
+                <button class="burger" id="burger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section id="home" class="hero">
+            <div class="glass-shards">
+                <div class="shard shard-1 shard-group-1"></div>
+                <div class="shard shard-2 shard-group-1"></div>
+                <div class="shard shard-3 shard-group-1"></div>
+                <div class="shard shard-4 shard-group-2"></div>
+                <div class="shard shard-5 shard-group-2"></div>
+            </div>
+            <div class="container">
+                <div class="hero-content">
+                    <h1 class="hero-title">БЕНТУМ</h1>
+                    <p class="hero-subtitle">Это проект, созданный для помощи студентам и экономии их драгоценного времени. В нём полно полезной информации и дополнительных функций.</p>
+                    <div class="hero-buttons">
+                        <a href="#login" class="btn btn-primary start-btn">Начать</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="about" class="about">
+            <div class="glass-shards">
+                <div class="shard shard-2 shard-group-3"></div>
+                <div class="shard shard-4 shard-group-3"></div>
+                <div class="shard shard-1 shard-group-4"></div>
+            </div>
+            <div class="glass-shards-large">
+                <div class="shard-large shard-large-1 shard-large-about-left"></div>
+                <div class="shard-large shard-large-3 shard-large-about-left"></div>
+                <div class="shard-large shard-large-2 shard-large-about-right"></div>
+                <div class="shard-large shard-large-4 shard-large-about-right"></div>
+            </div>
+            <div class="container">
+                <h2 class="section-title">О проекте</h2>
+                <div class="about-content">
+                    <div class="about-text">
+                        <h3>Что такое Бентум?</h3>
+                        <p>Бентум - это инновационный бот для студентов, созданный для упрощения учебного процесса. Мы помогаем студентам организовать свое время, находить нужную литературу и быть в курсе всех событий.</p>
+                        
+                        <h3>Наши возможности</h3>
+                        <ul class="features-list">
+                            <li>📚 Доступ к учебной литературе</li>
+                            <li>📅 Умное расписание занятий</li>
+                            <li>🔔 Напоминания о важных событиях</li>
+                            <li>💬 Поддержка 24/7</li>
+                            <li>📱 Удобный интерфейс для всех устройств</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="support" class="support">
+            <div class="glass-shards">
+                <div class="shard shard-3 shard-group-2"></div>
+                <div class="shard shard-5 shard-group-2"></div>
+                <div class="shard shard-1 shard-group-3"></div>
+                <div class="shard shard-4 shard-group-4"></div>
+            </div>
+            <div class="container">
+                <h2 class="section-title">Поддержка</h2>
+                <div class="support-content">
+                    <p>Если у Вас есть предложения, идеи или Вы нашли баг, то можете соообщить об этом, мы постараемся как можно быстрее ответить на Ваше сообщение. Наша команда всегда готова помочь вам с любыми вопросами. Свяжитесь с нами через:</p>
+                    <div class="contact-info">
+                        <div class="contact-item">
+                            <strong>Telegram:</strong> @Amfisak
+                        </div>
+                        <div class="contact-item">
+                            <strong>Email:</strong> support@bentum.ru
+                        </div>
+                        <div class="contact-item">
+                            <strong>Время работы:</strong> 10:00 - 22:00
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="team">
+            <div class="glass-shards">
+                <div class="shard shard-2 shard-group-1"></div>
+                <div class="shard shard-3 shard-group-1"></div>
+                <div class="shard shard-5 shard-group-3"></div>
+                <div class="shard shard-1 shard-group-4"></div>
+                <div class="shard shard-4 shard-group-4"></div>
+            </div>
+            <div class="glass-shards-large">
+                <div class="shard-large shard-large-2 shard-large-team-left"></div>
+                <div class="shard-large shard-large-5 shard-large-team-left"></div>
+                <div class="shard-large shard-large-1 shard-large-team-right"></div>
+                <div class="shard-large shard-large-3 shard-large-team-right"></div>
+                <div class="shard-large shard-large-4 shard-large-team-right"></div>
+            </div>
+            <div class="container">
+                <h2 class="section-title">Наша команда</h2>
+                <div class="team-carousel">
+                    <div class="team-track">
+                        <div class="team-member active">
+                            <div class="team-photo-3d">
+                                <img src="Assets/team/teamlead.jpg" alt="Член команды" class="team-photo">
+                            </div>
+                            <h4>Свиридович Павел</h4>
+                            <p>🔧 Тимлид / Разработчик</p>
+                        </div>
+                        <div class="team-member">
+                            <div class="team-photo-3d">
+                                <img src="Assets/team/dev.jpg" alt="Член команды" class="team-photo">
+                            </div>
+                            <h4>Смоленский Андрей</h4>
+                            <p>🛡️ Разработчик / Системный администратор</p>
+                        </div>
+                        <div class="team-member">
+                            <div class="team-photo-3d">
+                                <img src="Assets/team/promouter.jpg" alt="Член команды" class="team-photo">
+                            </div>
+                            <h4>Гончарик Александр</h4>
+                            <p>🍺 Промоутер / Frontend-разработчик</p>
+                        </div>
+                        <div class="team-member">
+                            <div class="team-photo-3d">
+                                <img src="Assets/team/designer.jpg" alt="Член команды" class="team-photo">
+                            </div>
+                            <h4>Абраменко Александр</h4>
+                            <p>✏️ 2D / 3D Дизайнер</p>
+                        </div>
+                        <div class="team-member">
+                            <div class="team-photo-3d">
+                                <img src="Assets/team/tester.jpeg" alt="Член команды" class="team-photo">
+                            </div>
+                            <h4>Альшевский Алексей</h4>
+                            <p>⛓️‍💥 Тестировщик</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="team-controls">
+                    <button class="team-btn" id="prevBtn">‹</button>
+                    <div class="team-indicators">
+                        <span class="team-indicator active" data-slide="0"></span>
+                        <span class="team-indicator" data-slide="1"></span>
+                        <span class="team-indicator" data-slide="2"></span>
+                        <span class="team-indicator" data-slide="3"></span>
+                        <span class="team-indicator" data-slide="4"></span>
+                    </div>
+                    <button class="team-btn" id="nextBtn">›</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div class="copyright-section">
+        <p>&copy; 2026 Бентум. Все права защищены.</p>
+        <a href="privacy.html" class="privacy-btn">Политика конфиденциальности</a>
+    </div>
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeLoginModal()">&times;</span>
+            <h2>Вход в систему</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="studentCode">Студенческий код:</label>
+                    <input type="text" id="studentCode" name="studentCode" required placeholder="Введите Ваш чёрный код">
+                    <small class="error-message" id="studentCodeError"></small>
+                </div>
+                <div class="form-group">
+                    <label for="studentRedCode">Красный код:</label>
+                    <input type="text" id="studentRedCode" name="studentRedCode" required placeholder="Введите Ваш красный код">
+                    <small class="error-message" id="studentRedCodeError"></small>
+                </div>
+                <button type="submit" class="btn btn-primary">Войти</button>
+            </form>
+        </div>
+    </div>
+
+    
+
+    <script src="script.js"></script>
+</body>
+</html>
