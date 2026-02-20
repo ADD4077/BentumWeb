@@ -3,8 +3,9 @@ import Header from './components/Header.jsx';
 import ScheduleItem from './components/ScheduleItem.jsx';
 import LoginModal from './components/LoginModal.jsx';
 import FeatureCard from './components/FeatureCard.jsx';
+import TeamCarousel from './components/TeamCarousel.jsx';
 import { scheduleData } from './data/scheduleData.js';
-import { daysOfWeek, groupInfo, features } from './utils/constants.js';
+import { daysOfWeek, groupInfo, features, teamMembers } from './utils/constants.js';
 
 function App() {
   const [darkMode, setDarkMode] = useState(true);
@@ -34,6 +35,23 @@ function App() {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+
+  // Добавление CSS анимации
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes colorShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   const toggleTheme = () => {
     setDarkMode(!darkMode);
@@ -71,9 +89,18 @@ function App() {
               <div className="text-center max-w-4xl mx-auto mb-20 mt-10">
                 <h1 className="text-5xl md:text-7xl font-bold mb-8 tracking-tight text-slate-900 dark:text-white leading-[1.1]">
                   Умное расписание <br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500">
+                  <span className="relative inline-block">
+                  <span 
+                    className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-6xl md:text-7xl font-bold tracking-tight bg-clip-text text-transparent transition-all duration-1000"
+                    style={{
+                      backgroundSize: '200% 100%',
+                      backgroundPosition: '0% 50%',
+                      animation: 'colorShift 4s ease-in-out infinite'
+                    }}
+                  >
                     Для студентов БНТУ
                   </span>
+                </span>
                 </h1>
                 
                 <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 mb-10 leading-relaxed max-w-2xl mx-auto">
@@ -102,13 +129,15 @@ function App() {
                   {features.map((feature, index) => (
                     <FeatureCard 
                       key={index}
-                      icon={feature.icon}
                       title={feature.title}
                       description={feature.description}
                     />
                   ))}
                 </div>
               </div>
+
+              {/* Team Carousel Section */}
+              <TeamCarousel teamMembers={teamMembers} />
             </div>
           )}
 
