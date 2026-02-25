@@ -1,5 +1,4 @@
 import json
-import asyncio
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
@@ -122,7 +121,7 @@ def save_data(request):
             return response
 
         print(f"Calling authorize with student_code: {student_code}, red_code: {red_code}")
-        auth_result = asyncio.run(authorize(student_code, red_code))
+        auth_result = authorize(student_code, red_code)
         print(f"Authorize result: {auth_result}")
         
         if auth_result is False:

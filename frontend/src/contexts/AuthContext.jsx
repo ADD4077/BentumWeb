@@ -54,9 +54,11 @@ export const AuthProvider = ({ children }) => {
         setUser(data.user);
         return { success: true };
       } else {
+        // data.ok === false, но ответ от сервера есть — показываем его текст
         return { success: false, error: data.detail || 'Ошибка входа' };
       }
     } catch (error) {
+      // Реальный обрыв соединения или CORS
       return { success: false, error: 'Ошибка соединения с сервером' };
     }
   };

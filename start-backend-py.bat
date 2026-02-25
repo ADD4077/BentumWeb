@@ -1,8 +1,28 @@
 @echo off
 echo Starting BNTU Bot Backend (using py launcher)...
 
-cd /d "C:\Users\Amfisak\Documents\GitHub\BentumWeb\backend"
+REM Попытка перейти по первому пути (текущий проект)
+cd /d "d:\BENTUM WEB\BentumWeb\backend" 2>nul
+if %errorlevel% equ 0 (
+    echo Found project at: d:\BENTUM WEB\BentumWeb\backend
+    goto :found
+)
 
+REM Попытка перейти по второму пути (старый проект)
+cd /d "C:\Users\Amfisak\Documents\GitHub\BentumWeb\backend" 2>nul
+if %errorlevel% equ 0 (
+    echo Found project at: C:\Users\Amfisak\Documents\GitHub\BentumWeb\backend
+    goto :found
+)
+
+REM Если ни один путь не найден
+echo ERROR: Backend folder not found!
+echo Please check the paths in this batch file.
+echo.
+pause
+exit /b
+
+:found
 REM Check if py launcher is available
 py --version >nul 2>&1
 if errorlevel 1 (

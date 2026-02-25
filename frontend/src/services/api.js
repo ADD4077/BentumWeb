@@ -14,14 +14,19 @@ export const api = {
         credentials: 'include',
         body: JSON.stringify(userData),
       });
-      
-      if (!response.ok) {
-        const error = new Error(`HTTP error! status: ${response.status}`);
-        error.response = { status: response.status };
-        throw error;
+
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
       }
-      
-      return await response.json();
+
+      return {
+        ok: response.ok,
+        status: response.status,
+        ...(data || {}),
+      };
     } catch (error) {
       console.error('Error saving data:', error);
       throw error;
