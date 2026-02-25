@@ -101,7 +101,7 @@ function LoginModal({ isOpen, onClose }) {
         </button>
         
         <div className="text-center mb-8">
-          <div className="inline-flex justify-center items-center w-16 h-16 bg-gradient-to-tr from-emerald-400 to-teal-600 rounded-2xl text-white mb-6 shadow-lg shadow-emerald-500/30">
+          <div className="inline-flex justify-center items-center w-16 h-16 bg-gradient-to-tr from-emerald-400 to-teal-600 rounded-3xl text-white mb-6 shadow-lg shadow-emerald-500/30">
             <LogIn className="w-8 h-8" />
           </div>
           <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Вход</h2>
@@ -115,7 +115,7 @@ function LoginModal({ isOpen, onClose }) {
               type="text" 
               value={studentCode}
               onChange={handleStudentCodeChange}
-              className={`w-full px-5 py-4 rounded-xl bg-gray-50 dark:bg-slate-800/50 border focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent dark:text-white transition-all font-medium ${
+              className={`w-full px-5 py-4 rounded-2xl bg-gray-50 dark:bg-slate-800/50 border focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent dark:text-white transition-all font-medium ${
                 errors.studentCode 
                   ? 'border-red-500 focus:ring-red-500' 
                   : 'border-gray-200 dark:border-slate-700'
@@ -133,7 +133,7 @@ function LoginModal({ isOpen, onClose }) {
               type="password" 
               value={password}
               onChange={handlePasswordChange}
-              className={`w-full px-5 py-4 rounded-xl bg-gray-50 dark:bg-slate-800/50 border focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent dark:text-white transition-all font-medium ${
+              className={`w-full px-5 py-4 rounded-2xl bg-gray-50 dark:bg-slate-800/50 border focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent dark:text-white transition-all font-medium ${
                 errors.password 
                   ? 'border-red-500 focus:ring-red-500' 
                   : 'border-gray-200 dark:border-slate-700'
@@ -147,7 +147,7 @@ function LoginModal({ isOpen, onClose }) {
           </div>
           
           {errors.general && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-3">
               <p className="text-red-600 dark:text-red-400 text-sm">{errors.general}</p>
             </div>
           )}
@@ -155,7 +155,7 @@ function LoginModal({ isOpen, onClose }) {
           <button 
             type="submit"
             disabled={isLoading}
-            className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-xl font-bold text-lg shadow-lg shadow-emerald-500/30 transition-all hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50 mt-2 flex items-center justify-center gap-2"
+            className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-2xl font-bold text-lg shadow-lg shadow-emerald-500/30 transition-all hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50 mt-2 flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <>

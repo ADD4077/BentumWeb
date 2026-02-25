@@ -63,14 +63,14 @@ function FeatureCard({ icon, title, description }) {
   const colors = getCardColors();
 
   return (
-    <div className={`relative flex flex-col h-full p-8 rounded-2xl border ${colors.bg} ${colors.border} shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group backdrop-blur-md overflow-hidden`}>
+    <div className={`relative flex flex-col h-full p-8 rounded-3xl border ${colors.bg} ${colors.border} shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group backdrop-blur-md overflow-hidden`}>
       
       {/* Свечение в правом верхнем углу */}
       <div className={`absolute -top-10 -right-20 w-52 h-52 ${colors.line} rounded-full opacity-10 blur-2xl transition-all duration-500 group-hover:w-60 group-hover:h-60 group-hover:opacity-20`}></div>
       
       {/* Иконка */}
-      <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 text-white text-3xl shadow-lg relative z-10">
-        <div className={`w-full h-full rounded-2xl flex items-center justify-center ${colors.iconBg}`}>
+      <div className="w-16 h-16 rounded-3xl flex items-center justify-center mb-6 text-white text-3xl shadow-lg relative z-10 transition-all duration-300 group-hover:scale-110">
+        <div className={`w-full h-full rounded-3xl flex items-center justify-center ${colors.iconBg} transition-all duration-300`}>
           {getIcon()}
         </div>
       </div>

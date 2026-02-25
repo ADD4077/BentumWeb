@@ -73,20 +73,20 @@ function TeamCarousel({ teamMembers }) {
       
       <div className="relative">
         {/* Основной слайдер */}
-        <div className="overflow-hidden rounded-2xl">
+        <div className="overflow-hidden rounded-2xl max-w-4xl mx-auto">
           <div 
             className="flex transition-transform duration-500 ease-in-out"
             style={{ transform: `translateX(-${currentIndex * 100}%)` }}
           >
             {teamMembers.map((member, index) => (
               <div key={index} className="w-full flex-shrink-0 px-4">
-                <div className="max-w-md mx-auto bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="max-w-md mx-auto bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/50 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-md overflow-hidden">
                   
                   {/* Центрированный контент */}
                   <div className="flex flex-col items-center text-center">
                     
                     {/* Фото участника */}
-                    <div className="w-32 h-32 rounded-2xl overflow-hidden bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg flex items-center justify-center mb-6 transition-all duration-300 ease-out transform translate-y-0 rotate-0 hover:shadow-2xl hover:shadow-gray-400/50 group cursor-pointer hover:-translate-y-2 hover:rotate-6">
+                    <div className="w-32 h-32 rounded-3xl overflow-hidden bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg flex items-center justify-center mb-6 transition-all duration-300 ease-out transform translate-y-0 rotate-0 hover:shadow-2xl hover:shadow-gray-400/50 group cursor-pointer hover:-translate-y-2 hover:rotate-6">
                       {member.image ? (
                         <img 
                           src={member.image} 
@@ -126,7 +126,7 @@ function TeamCarousel({ teamMembers }) {
       <div className="flex items-center justify-center gap-4 mt-6">
         <button
           onClick={prevSlide}
-          className="w-12 h-12 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+          className="w-12 h-12 bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/50 rounded-full flex items-center justify-center shadow-lg hover:bg-white/60 dark:hover:bg-slate-800/60 transition-all duration-300 backdrop-blur-md"
         >
           <span className="text-slate-900 dark:text-white text-xl">‹</span>
         </button>
@@ -139,8 +139,8 @@ function TeamCarousel({ teamMembers }) {
               onClick={() => goToSlide(index)}
               className={`w-2 h-2 rounded-full transition-all duration-300 ${
                 index === currentIndex 
-                  ? 'bg-gray-500 w-8' 
-                  : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
+                  ? 'bg-gray-500/60 w-8' 
+                  : 'bg-gray-300/40 dark:bg-gray-600/40 hover:bg-gray-400/60 dark:hover:bg-gray-500/60'
               }`}
             />
           ))}
@@ -148,7 +148,7 @@ function TeamCarousel({ teamMembers }) {
         
         <button
           onClick={nextSlide}
-          className="w-12 h-12 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+          className="w-12 h-12 bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/50 rounded-full flex items-center justify-center shadow-lg hover:bg-white/60 dark:hover:bg-slate-800/60 transition-all duration-300 backdrop-blur-md"
         >
           <span className="text-slate-900 dark:text-white text-xl">›</span>
         </button>

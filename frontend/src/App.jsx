@@ -21,7 +21,7 @@ function AppContent() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const { loading, isAuthenticated } = useAuth();
+  const { loading, isAuthenticated, user } = useAuth();
 
   useEffect(() => {
     const today = new Date().getDay();
@@ -97,7 +97,7 @@ function AppContent() {
         />
 
         {/* --- Main Content --- */}
-        <main className="container mx-auto px-4 py-12 relative z-10">
+        <main className="container mx-auto px-4 pt-24 pb-12 relative z-10">
           
           {/* HOME TAB */}
           {activeTab === 'home' && (
@@ -132,14 +132,14 @@ function AppContent() {
                   {!isAuthenticated && (
                     <button 
                       onClick={() => setIsLoginModalOpen(true)}
-                      className="w-full sm:w-auto px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-emerald-500/30 transition-all hover:-translate-y-1 flex items-center justify-center gap-2 pl-5"
+                      className="w-full sm:w-auto px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-3xl font-bold text-lg shadow-xl shadow-emerald-500/30 transition-all hover:-translate-y-1 flex items-center justify-center gap-2 pl-5"
                     >
                       <LogIn className="w-5 h-5" />
                       <span>Начать</span>
                     </button>
                   )}
                   <button 
-                    className="w-full sm:w-auto px-8 py-4 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-slate-900 dark:text-white border border-gray-200 dark:border-slate-700 rounded-2xl font-bold text-lg transition-all hover:-translate-y-1 flex items-center justify-center gap-2 shadow-lg shadow-slate-200/20 dark:shadow-none"
+                    className="w-full sm:w-auto px-8 py-4 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-slate-900 dark:text-white border border-gray-200 dark:border-slate-700 rounded-3xl font-bold text-lg transition-all hover:-translate-y-1 flex items-center justify-center gap-2 shadow-lg shadow-slate-200/20 dark:shadow-none"
                   >
                     <span>Узнать больше</span>
                     <ChevronRight className="w-5 h-5" />
@@ -194,9 +194,11 @@ function AppContent() {
                 <div>
                   <h2 className="text-4xl font-bold mb-2 text-slate-900 dark:text-white tracking-tight">Расписание</h2>
                   <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                    <span className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700">Группа {groupInfo.group}</span>
+                    <span className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700">
+                      Группа {user?.student_code?.slice(0, 8) || groupInfo.group}
+                    </span>
                     <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
-                    <span className="text-sm">{groupInfo.faculty}</span>
+                    <span className="text-sm">{user?.faculty || groupInfo.faculty}</span>
                   </div>
                 </div>
 
