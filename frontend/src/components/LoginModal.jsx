@@ -1,5 +1,6 @@
 // LoginModal компонент - модальное окно входа
 import React, { useState } from 'react';
+import { LogIn } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 
 function LoginModal({ isOpen, onClose }) {
@@ -101,7 +102,7 @@ function LoginModal({ isOpen, onClose }) {
         
         <div className="text-center mb-8">
           <div className="inline-flex justify-center items-center w-16 h-16 bg-gradient-to-tr from-emerald-400 to-teal-600 rounded-2xl text-white mb-6 shadow-lg shadow-emerald-500/30">
-            🔐
+            <LogIn className="w-8 h-8" />
           </div>
           <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Вход</h2>
           <p className="text-slate-500 text-sm mt-3">Войдите в личный кабинет, чтобы получить доступ к функционалу</p>

@@ -21,7 +21,7 @@ function AppContent() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const { loading } = useAuth();
+  const { loading, isAuthenticated } = useAuth();
 
   useEffect(() => {
     const today = new Date().getDay();
@@ -129,13 +129,15 @@ function AppContent() {
                 </p>
                 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <button 
-                    onClick={() => setActiveTab('schedule')}
-                    className="w-full sm:w-auto px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-emerald-500/30 transition-all hover:-translate-y-1 flex items-center justify-center gap-2 pl-5"
-                  >
-                    <LogIn className="w-5 h-5" />
-                    <span>Начать</span>
-                  </button>
+                  {!isAuthenticated && (
+                    <button 
+                      onClick={() => setIsLoginModalOpen(true)}
+                      className="w-full sm:w-auto px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-emerald-500/30 transition-all hover:-translate-y-1 flex items-center justify-center gap-2 pl-5"
+                    >
+                      <LogIn className="w-5 h-5" />
+                      <span>Начать</span>
+                    </button>
+                  )}
                   <button 
                     className="w-full sm:w-auto px-8 py-4 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-slate-900 dark:text-white border border-gray-200 dark:border-slate-700 rounded-2xl font-bold text-lg transition-all hover:-translate-y-1 flex items-center justify-center gap-2 shadow-lg shadow-slate-200/20 dark:shadow-none"
                   >
