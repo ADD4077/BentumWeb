@@ -242,6 +242,9 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                   <GraduationCap className="w-6 h-6 text-white" />
                 </div>
                 
+                {/* Fixed width spacer */}
+                <div className="w-[400px]"></div>
+                
                 {/* Theme Toggle */}
                 <button 
                   onClick={toggleTheme}
@@ -269,7 +272,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                   <GraduationCap className="w-7 h-7 text-white" />
                 </div>
                 
-                <div className="flex items-center gap-2">
+                <div className="w-[400px] flex items-center gap-2 justify-end">
                   {/* Theme Toggle */}
                   <button 
                     onClick={toggleTheme}
