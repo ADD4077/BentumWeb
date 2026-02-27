@@ -1,5 +1,5 @@
 // Header компонент - шапка сайта
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { LogOut, GraduationCap, Sun, Moon, User } from 'lucide-react';
 
@@ -51,7 +51,22 @@ function BurgerIcon({ isOpen }) {
 function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModalOpen, isMobileMenuOpen, setIsMobileMenuOpen }) {
   const { isAuthenticated, user, logout } = useAuth();
 
+  const [isHeaderPill, setIsHeaderPill] = useState(!isMobileMenuOpen);
+
   const headerRef = useRef(null);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      setIsHeaderPill(false);
+      return;
+    }
+
+    const t = setTimeout(() => {
+      setIsHeaderPill(true);
+    }, 300);
+
+    return () => clearTimeout(t);
+  }, [isMobileMenuOpen]);
 
   useEffect(() => {
     if (!isMobileMenuOpen) return;
@@ -87,7 +102,9 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
     <>
       <header ref={headerRef} className="sticky top-0 z-50 w-full bg-transparent">
         <div className="container mx-auto px-6 py-4">
-          <div className="bg-gray-100/50 dark:bg-slate-800/50 backdrop-blur-md border border-gray-200 dark:border-slate-700/50 rounded-3xl shadow-lg shadow-gray-900/10 dark:shadow-black/20">
+          <div className={`relative bg-gray-100/50 dark:bg-slate-800/50 backdrop-blur-md border border-gray-200 dark:border-slate-700/50 shadow-lg shadow-gray-900/10 dark:shadow-black/20 ${
+            isHeaderPill ? 'rounded-full' : 'rounded-[32px]'
+          }`}>
             <div className="h-16 flex items-center justify-between px-4">
           
           {/* Center Navigation */}
@@ -101,6 +118,39 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                   onClick={() => setActiveTab('home')}
                 >
                   <GraduationCap className="w-6 h-6 text-white" />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setActiveTab('home')}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'home' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                  >
+                    Главная
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('schedule')}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'schedule' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                  >
+                    Расписание
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('literature')}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'literature' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                  >
+                    Литература
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('news')}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'news' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                  >
+                    Новости
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('games')}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'games' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                  >
+                    Игровая
+                  </button>
                 </div>
                 
                 <div className="flex items-center gap-2">
@@ -266,13 +316,13 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
             </div>
 
             {isAuthenticated && (
-              <nav className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-4">
+              <nav className="flex flex-col md:hidden gap-2 mt-4">
                 <button 
                   onClick={() => {
                     setActiveTab('home');
                     setIsMobileMenuOpen(false);
                   }}
-                  className={`px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-300 ${activeTab === 'home' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'home' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
                 >
                   Главная
                 </button>
@@ -281,7 +331,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                     setActiveTab('schedule');
                     setIsMobileMenuOpen(false);
                   }}
-                  className={`px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-300 ${activeTab === 'schedule' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'schedule' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
                 >
                   Расписание
                 </button>
@@ -290,7 +340,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                     setActiveTab('literature');
                     setIsMobileMenuOpen(false);
                   }}
-                  className={`px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-300 ${activeTab === 'literature' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'literature' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
                 >
                   Литература
                 </button>
@@ -299,7 +349,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                     setActiveTab('news');
                     setIsMobileMenuOpen(false);
                   }}
-                  className={`px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-300 ${activeTab === 'news' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'news' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
                 >
                   Новости
                 </button>
@@ -308,7 +358,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                     setActiveTab('games');
                     setIsMobileMenuOpen(false);
                   }}
-                  className={`px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-300 ${activeTab === 'games' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'games' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
                 >
                   Игровая
                 </button>

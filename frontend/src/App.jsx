@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header.jsx';
 import ScheduleItem from './components/ScheduleItem.jsx';
 import LoginModal from './components/LoginModal.jsx';
 import FeatureCard from './components/FeatureCard.jsx';
 import TeamCarousel from './components/TeamCarousel.jsx';
-import { Star, LogIn, ChevronRight, BookOpen, Download, ExternalLink, Search, Filter, Calendar, Clock, User, Tag, ArrowRight, Gamepad2, Trophy, Zap, Target, Brain, Heart } from 'lucide-react';
+import { Star, LogIn, ChevronRight, ChevronDown, BookOpen, Download, ExternalLink, Search, Filter, Calendar, Clock, User, Tag, ArrowRight, Gamepad2, Trophy, Zap, Target, Brain, Heart } from 'lucide-react';
 import { scheduleData } from './data/scheduleData.js';
 import { daysOfWeek, groupInfo, features, teamMembers } from './utils/constants.js';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
@@ -23,10 +23,14 @@ function AppContent() {
   const [scrolled, setScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [selectedNewsCategory, setSelectedNewsCategory] = useState('all');
   const [selectedGameCategory, setSelectedGameCategory] = useState('all');
   const [gameScores, setGameScores] = useState({});
   const { loading, isAuthenticated, user } = useAuth();
+
+  const categoryButtonRef = useRef(null);
+  const categoryPanelRef = useRef(null);
 
   // Games data
   const gamesData = [
@@ -179,6 +183,32 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
   }, [darkMode]);
+
+  useEffect(() => {
+    if (!isCategoryMenuOpen) return;
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsCategoryMenuOpen(false);
+      }
+    };
+
+    const onPointerDown = (e) => {
+      const panel = categoryPanelRef.current;
+      const button = categoryButtonRef.current;
+      if (!panel || !button) return;
+      if (panel.contains(e.target) || button.contains(e.target)) return;
+      setIsCategoryMenuOpen(false);
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('pointerdown', onPointerDown);
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [isCategoryMenuOpen]);
 
   // Добавление CSS анимации
   useEffect(() => {
@@ -529,27 +559,19 @@ function AppContent() {
                 </div>
 
                 {/* Week Toggle */}
-                <div className="relative bg-white dark:bg-slate-800 p-1.5 rounded-2xl flex shadow-inner border border-gray-200 dark:border-slate-700">
-                  <div 
-                    className={`absolute top-1.5 bottom-1.5 rounded-xl bg-emerald-500 shadow-lg shadow-emerald-500/30 transition-all duration-300 ease-out`}
-                    style={{
-                      left: weekType === 'upper' ? '6px' : '50%',
-                      width: 'calc(50% - 6px)'
-                    }}
-                  ></div>
-                  
+                <div className="bg-white dark:bg-slate-800 p-1.5 rounded-2xl flex shadow-inner border border-gray-200 dark:border-slate-700">
                   <button
                     onClick={() => setWeekType('upper')}
-                    className={`relative z-10 px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 w-36 ${
-                      weekType === 'upper' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 w-36 ${
+                      weekType === 'upper' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     1 Неделя
                   </button>
                   <button
                     onClick={() => setWeekType('lower')}
-                    className={`relative z-10 px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 w-36 ${
-                      weekType === 'lower' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 w-36 ${
+                      weekType === 'lower' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     2 Неделя
@@ -603,7 +625,6 @@ function AppContent() {
                 </p>
               </div>
 
-              {/* Search and Filter */}
               <div className="flex flex-col md:flex-row gap-4 mb-8">
                 {/* Search */}
                 <div className="flex-1 relative">
@@ -619,18 +640,48 @@ function AppContent() {
 
                 {/* Category Filter */}
                 <div className="relative">
-                  <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="pl-12 pr-10 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent appearance-none cursor-pointer min-w-[200px]"
+                  <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
+                  <button
+                    ref={categoryButtonRef}
+                    type="button"
+                    onClick={() => setIsCategoryMenuOpen((v) => !v)}
+                    className="pl-12 pr-10 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent cursor-pointer min-w-[200px] text-left"
+                    aria-haspopup="dialog"
+                    aria-expanded={isCategoryMenuOpen}
                   >
-                    {categories.map(category => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
+                    {categories.find((c) => c.id === selectedCategory)?.name || 'Все категории'}
+                    <ChevronDown className={`absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 transition-transform duration-300 ${isCategoryMenuOpen ? 'rotate-180' : 'rotate-0'}`} />
+                  </button>
+
+                  <div className={`absolute top-full left-0 right-0 z-50 mt-1 grid overflow-hidden transition-[grid-template-rows,opacity,transform] duration-300 ease-out ${
+                    isCategoryMenuOpen ? 'grid-rows-[1fr] opacity-100 translate-y-0' : 'grid-rows-[0fr] opacity-0 -translate-y-2'
+                  }`}>
+                    <div className="min-h-0">
+                      <div ref={categoryPanelRef} className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-3xl shadow-xl shadow-black/10">
+                        <div className="p-3">
+                          <div className="flex flex-col gap-2">
+                            {categories.map((category) => (
+                              <button
+                                key={category.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedCategory(category.id);
+                                  setIsCategoryMenuOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-300 ${
+                                  selectedCategory === category.id
+                                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                                }`}
+                              >
+                                {category.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
