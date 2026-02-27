@@ -4,7 +4,7 @@ import ScheduleItem from './components/ScheduleItem.jsx';
 import LoginModal from './components/LoginModal.jsx';
 import FeatureCard from './components/FeatureCard.jsx';
 import TeamCarousel from './components/TeamCarousel.jsx';
-import { Star, LogIn, ChevronRight } from 'lucide-react';
+import { Star, LogIn, ChevronRight, BookOpen, Download, ExternalLink, Search, Filter, Calendar, Clock, User, Tag, ArrowRight, Gamepad2, Trophy, Zap, Target, Brain, Heart } from 'lucide-react';
 import { scheduleData } from './data/scheduleData.js';
 import { daysOfWeek, groupInfo, features, teamMembers } from './utils/constants.js';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
@@ -21,6 +21,11 @@ function AppContent() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedNewsCategory, setSelectedNewsCategory] = useState('all');
+  const [selectedGameCategory, setSelectedGameCategory] = useState('all');
+  const [gameScores, setGameScores] = useState({});
   const { loading, isAuthenticated, user } = useAuth();
 
   useEffect(() => {
@@ -81,6 +86,194 @@ function AppContent() {
   };
 
   const currentSchedule = scheduleData[weekType][selectedDay] || [];
+
+  // Literature data
+  const literatureData = [
+    {
+      id: 1,
+      title: "Высшая математика. Курс лекций",
+      author: "П.Е. Данко, А.Г. Попов",
+      category: "mathematics",
+      type: "textbook",
+      year: 2020,
+      description: "Полный курс высшей математики для студентов технических вузов. Содержит теоретический материал и практические задания.",
+      url: "#",
+      downloadUrl: "#"
+    },
+    {
+      id: 2,
+      title: "Физика. Учебное пособие",
+      author: "И.В. Савельев",
+      category: "physics",
+      type: "textbook",
+      year: 2019,
+      description: "Фундаментальный курс физики, охватывающий все разделы общей и теоретической физики.",
+      url: "#",
+      downloadUrl: "#"
+    },
+    {
+      id: 3,
+      title: "Сопротивление материалов",
+      author: "Н.М. Беляев",
+      category: "mechanics",
+      type: "textbook",
+      year: 2021,
+      description: "Классический учебник по сопротивлению материалов с примерами расчетов и задачами.",
+      url: "#",
+      downloadUrl: "#"
+    },
+    {
+      id: 4,
+      title: "Теоретическая механика",
+      author: "А.А. Яблонский",
+      category: "mechanics",
+      type: "textbook",
+      year: 2018,
+      description: "Учебное пособие по теоретической механике для студентов инженерных специальностей.",
+      url: "#",
+      downloadUrl: "#"
+    },
+    {
+      id: 5,
+      title: "Химия. Общая и неорганическая",
+      author: "Ю.Д. Третьяков",
+      category: "chemistry",
+      type: "textbook",
+      year: 2020,
+      description: "Современный курс общей и неорганической химии с практикумом.",
+      url: "#",
+      downloadUrl: "#"
+    },
+    {
+      id: 6,
+      title: "Инженерная графика",
+      author: "В.Г. Бородин",
+      category: "engineering",
+      type: "manual",
+      year: 2019,
+      description: "Практикум по инженерной графике и начертательной геометрии.",
+      url: "#",
+      downloadUrl: "#"
+    }
+  ];
+
+  const categories = [
+    { id: 'all', name: 'Все категории' },
+    { id: 'mathematics', name: 'Математика' },
+    { id: 'physics', name: 'Физика' },
+    { id: 'mechanics', name: 'Механика' },
+    { id: 'chemistry', name: 'Химия' },
+    { id: 'engineering', name: 'Инженерные науки' }
+  ];
+
+  // Filter literature based on search and category
+  const filteredLiterature = literatureData.filter(item => {
+    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         item.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         item.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  // News data
+  const newsData = [
+    {
+      id: 1,
+      title: "Открытие новой лаборатории робототехники в БНТУ",
+      excerpt: "В Белорусском национальном техническом университете открыли современную лабораторию робототехники, оснащенную последними моделями промышленных роботов.",
+      content: "В Белорусском национальном техническом университете открыли современную лабораторию робототехники, оснащенную последними моделями промышленных роботов. Новая лаборатория позволит студентам изучать передовые технологии автоматизации и программирования роботизированных систем.",
+      category: "academic",
+      author: "Пресс-центр БНТУ",
+      date: "2024-02-25",
+      imageUrl: "",
+      featured: true,
+      readTime: "3 мин"
+    },
+    {
+      id: 2,
+      title: "Студенты БНТУ победили в международном конкурсе IT-проектов",
+      excerpt: "Команда студентов факультета информационных технологий заняла первое место в международном конкурсе инновационных IT-проектов.",
+      content: "Команда студентов факультета информационных технологий заняла первое место в международном конкурсе инновационных IT-проектов. Проект посвящен разработке системы умного управления городским транспортом.",
+      category: "achievements",
+      author: "Отдел по работе со студентами",
+      date: "2024-02-23",
+      imageUrl: "",
+      featured: true,
+      readTime: "4 мин"
+    },
+    {
+      id: 3,
+      title: "Прием заявлений на летнюю практику 2024",
+      excerpt: "Открыт прием заявлений на прохождение летней производственной практики на ведущих предприятиях страны.",
+      content: "Открыт прием заявлений на прохождение летней производственной практики на ведущих предприятиях страны. Студентам предложены места на крупных промышленных предприятиях и в IT-компаниях.",
+      category: "education",
+      author: "Деканат",
+      date: "2024-02-20",
+      imageUrl: "",
+      featured: false,
+      readTime: "2 мин"
+    },
+    {
+      id: 4,
+      title: "День открытых дверей в БНТУ",
+      excerpt: "Приглашаем абитуриентов и их родителей на день открытых дверей, который состоится 15 марта.",
+      content: "Приглашаем абитуриентов и их родителей на день открытых дверей, который состоится 15 марта. Гости смогут посетить лекции, познакомиться с преподавателями и узнать о специальностях.",
+      category: "events",
+      author: "Приемная комиссия",
+      date: "2024-02-18",
+      imageUrl: "",
+      featured: false,
+      readTime: "3 мин"
+    },
+    {
+      id: 5,
+      title: "Новые образовательные программы в области искусственного интеллекта",
+      excerpt: "БНТУ запускает новые магистерские программы по направлению 'Искусственный интеллект и машинное обучение'.",
+      content: "БНТУ запускает новые магистерские программы по направлению 'Искусственный интеллект и машинное обучение'. Программы разработаны совместно с ведущими IT-компаниями.",
+      category: "education",
+      author: "Управление образования",
+      date: "2024-02-15",
+      imageUrl: "",
+      featured: false,
+      readTime: "5 мин"
+    },
+    {
+      id: 6,
+      title: "Спортивные достижения студентов БНТУ",
+      excerpt: "Сборные команды университета завоевали призовые места в республиканских соревнованиях по баскетболу и волейболу.",
+      content: "Сборные команды университета завоевали призовые места в республиканских соревнованиях по баскетболу и волейболу. Студенты показали отличные результаты и принесли славу университету.",
+      category: "sports",
+      author: "Спортивный отдел",
+      date: "2024-02-12",
+      imageUrl: "",
+      featured: false,
+      readTime: "2 мин"
+    }
+  ];
+
+  const newsCategories = [
+    { id: 'all', name: 'Все новости' },
+    { id: 'academic', name: 'Академические' },
+    { id: 'achievements', name: 'Достижения' },
+    { id: 'education', name: 'Образование' },
+    { id: 'events', name: 'Мероприятия' },
+    { id: 'sports', name: 'Спорт' }
+  ];
+
+  // Filter news based on category
+  const filteredNews = newsData.filter(item => {
+    return selectedNewsCategory === 'all' || item.category === selectedNewsCategory;
+  });
+
+  // Format date
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ru-RU', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+  };
 
   return (
     <div className={`${darkMode ? 'dark' : ''} min-h-screen flex flex-col font-sans selection:bg-emerald-500 selection:text-white`}>
@@ -262,6 +455,260 @@ function AppContent() {
                     <p className="text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
                       Пар нет. Отличное время для саморазвития или отдыха.
                     </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* LITERATURE TAB */}
+          {activeTab === 'literature' && (
+            <div className="max-w-6xl mx-auto">
+              <div className="text-center mb-10">
+                <h2 className="text-4xl font-bold mb-4 text-slate-900 dark:text-white tracking-tight">Литература</h2>
+                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                  Учебные материалы, пособия и методические указания для студентов БНТУ
+                </p>
+              </div>
+
+              {/* Search and Filter */}
+              <div className="flex flex-col md:flex-row gap-4 mb-8">
+                {/* Search */}
+                <div className="flex-1 relative">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    placeholder="Поиск по названию, автору или описанию..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Category Filter */}
+                <div className="relative">
+                  <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="pl-12 pr-10 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent appearance-none cursor-pointer min-w-[200px]"
+                  >
+                    {categories.map(category => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Results count */}
+              <div className="mb-6 text-sm text-slate-600 dark:text-slate-400">
+                Найдено материалов: {filteredLiterature.length}
+              </div>
+
+              {/* Literature Grid */}
+              {filteredLiterature.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredLiterature.map((item) => (
+                    <div
+                      key={item.id}
+                      className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                    >
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/20 rounded-xl flex items-center justify-center">
+                            <BookOpen className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <div>
+                            <span className="inline-block px-2 py-1 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 text-xs font-medium rounded-lg mb-1">
+                              {categories.find(cat => cat.id === item.category)?.name}
+                            </span>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">
+                              {item.type === 'textbook' ? 'Учебник' : 'Пособие'} • {item.year}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Content */}
+                      <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-2 line-clamp-2">
+                        {item.title}
+                      </h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">
+                        {item.author}
+                      </p>
+                      <p className="text-sm text-slate-500 dark:text-slate-500 mb-4 line-clamp-3">
+                        {item.description}
+                      </p>
+
+                      {/* Actions */}
+                      <div className="flex gap-2">
+                        <button
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium transition-colors"
+                        >
+                          <Download className="w-4 h-4" />
+                          Скачать
+                        </button>
+                        <button
+                          className="flex items-center justify-center px-4 py-2 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 border border-gray-200 dark:border-slate-600 rounded-xl text-sm font-medium transition-colors"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-24 text-center">
+                  <div className="w-20 h-20 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
+                    <BookOpen className="w-10 h-10 text-gray-400 dark:text-slate-500" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
+                    Материалы не найдены
+                  </h3>
+                  <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
+                    Попробуйте изменить параметры поиска или выбрать другую категорию
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSelectedCategory('all');
+                    }}
+                    className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-colors"
+                  >
+                    Сбросить фильтры
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* NEWS TAB */}
+          {activeTab === 'news' && (
+            <div className="max-w-6xl mx-auto">
+              <div className="text-center mb-10">
+                <h2 className="text-4xl font-bold mb-4 text-slate-900 dark:text-white tracking-tight">Новости</h2>
+                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                  Актуальные события, достижения и важные объявления БНТУ
+                </p>
+              </div>
+
+              {/* Category Filter */}
+              <div className="flex flex-wrap justify-center gap-3 mb-8">
+                {newsCategories.map(category => (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedNewsCategory(category.id)}
+                    className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
+                      selectedNewsCategory === category.id
+                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-gray-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:text-emerald-600 dark:hover:text-emerald-400'
+                    }`}
+                  >
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+
+              {/* Featured News */}
+              {filteredNews.filter(item => item.featured).length > 0 && (
+                <div className="mb-12">
+                  <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">Важные новости</h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {filteredNews.filter(item => item.featured).map((item) => (
+                      <div
+                        key={item.id}
+                        className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-800/30 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <span className="inline-block px-3 py-1 bg-emerald-500 text-white text-xs font-medium rounded-lg">
+                            {newsCategories.find(cat => cat.id === item.category)?.name}
+                          </span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {item.readTime}
+                          </span>
+                        </div>
+                        <h3 className="font-bold text-xl text-slate-900 dark:text-white mb-3 line-clamp-2">
+                          {item.title}
+                        </h3>
+                        <p className="text-slate-600 dark:text-slate-400 mb-4 line-clamp-3">
+                          {item.excerpt}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                            <Calendar className="w-4 h-4" />
+                            {formatDate(item.date)}
+                          </div>
+                          <button className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium text-sm transition-colors">
+                            Читать далее
+                            <ArrowRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Regular News Grid */}
+              <div>
+                <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">
+                  {selectedNewsCategory === 'all' ? 'Все новости' : newsCategories.find(cat => cat.id === selectedNewsCategory)?.name}
+                </h3>
+                {filteredNews.filter(item => !item.featured).length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredNews.filter(item => !item.featured).map((item) => (
+                      <div
+                        key={item.id}
+                        className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <span className="inline-block px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-lg">
+                            {newsCategories.find(cat => cat.id === item.category)?.name}
+                          </span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {item.readTime}
+                          </span>
+                        </div>
+                        <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-3 line-clamp-2">
+                          {item.title}
+                        </h3>
+                        <p className="text-slate-600 dark:text-slate-400 mb-4 line-clamp-3">
+                          {item.excerpt}
+                        </p>
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
+                            <Calendar className="w-4 h-4" />
+                            {formatDate(item.date)}
+                          </div>
+                          <button className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium transition-colors">
+                            Подробнее
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-24 text-center">
+                    <div className="w-20 h-20 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
+                      <Calendar className="w-10 h-10 text-gray-400 dark:text-slate-500" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
+                      Новостей не найдено
+                    </h3>
+                    <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
+                      В выбранной категории пока нет новостей. Попробуйте выбрать другую категорию.
+                    </p>
+                    <button
+                      onClick={() => setSelectedNewsCategory('all')}
+                      className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-colors"
+                    >
+                      Показать все новости
+                    </button>
                   </div>
                 )}
               </div>
