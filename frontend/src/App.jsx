@@ -28,6 +28,133 @@ function AppContent() {
   const [gameScores, setGameScores] = useState({});
   const { loading, isAuthenticated, user } = useAuth();
 
+  // Games data
+  const gamesData = [
+    {
+      id: 1,
+      title: "Cyber Racing 2077",
+      developer: "Neon Studios",
+      category: "racing",
+      price: 59.99,
+      originalPrice: 79.99,
+      discount: 25,
+      rating: 4.5,
+      image: "https://picsum.photos/seed/cyber-racing/400/225",
+      description: "Гонки в киберпанк-мире будущего",
+      tags: ["Гонки", "Киберпанк", "Будущее"],
+      featured: true
+    },
+    {
+      id: 2,
+      title: "Fantasy Quest IX",
+      developer: "Magic Games",
+      category: "rpg",
+      price: 49.99,
+      originalPrice: null,
+      discount: 0,
+      rating: 4.8,
+      image: "https://picsum.photos/seed/fantasy-quest/400/225",
+      description: "Эпическое RPG приключение",
+      tags: ["RPG", "Фэнтези", "Приключения"],
+      featured: true
+    },
+    {
+      id: 3,
+      title: "Space Warriors",
+      developer: "Galaxy Interactive",
+      category: "shooter",
+      price: 39.99,
+      originalPrice: 59.99,
+      discount: 33,
+      rating: 4.2,
+      image: "https://picsum.photos/seed/space-warriors/400/225",
+      description: "Космические сражения",
+      tags: ["Шутер", "Космос", "Экшен"],
+      featured: false
+    },
+    {
+      id: 4,
+      title: "Puzzle Master Pro",
+      developer: "Brain Games",
+      category: "puzzle",
+      price: 19.99,
+      originalPrice: null,
+      discount: 0,
+      rating: 4.6,
+      image: "https://picsum.photos/seed/puzzle-master/400/225",
+      description: "Сложные головоломки",
+      tags: ["Головоломки", "Логика", "Интеллект"],
+      featured: false
+    },
+    {
+      id: 5,
+      title: "Battle Arena Legends",
+      developer: "Combat Studios",
+      category: "action",
+      price: 0,
+      originalPrice: null,
+      discount: 0,
+      rating: 4.3,
+      image: "https://picsum.photos/seed/battle-arena/400/225",
+      description: "Многопользовательские бои",
+      tags: ["MOBA", "Мультиплеер", "Бесплатно"],
+      featured: true
+    },
+    {
+      id: 6,
+      title: "Survival Island",
+      developer: "Wild Games",
+      category: "survival",
+      price: 29.99,
+      originalPrice: 39.99,
+      discount: 25,
+      rating: 4.4,
+      image: "https://picsum.photos/seed/survival-island/400/225",
+      description: "Выживание на необитаемом острове",
+      tags: ["Выживание", "Открытый мир", "Приключения"],
+      featured: false
+    },
+    {
+      id: 7,
+      title: "Racing Championship",
+      developer: "Speed Games",
+      category: "racing",
+      price: 44.99,
+      originalPrice: null,
+      discount: 0,
+      rating: 4.1,
+      image: "https://picsum.photos/seed/racing-champ/400/225",
+      description: "Реалистичные гоночные соревнования",
+      tags: ["Гонки", "Симулятор", "Спорт"],
+      featured: false
+    },
+    {
+      id: 8,
+      title: "Mystery Detective",
+      developer: "Dark Studios",
+      category: "adventure",
+      price: 24.99,
+      originalPrice: 34.99,
+      discount: 29,
+      rating: 4.7,
+      image: "https://picsum.photos/seed/mystery-detective/400/225",
+      description: "Расследование загадочных преступлений",
+      tags: ["Детектив", "Приключения", "Мистика"],
+      featured: false
+    }
+  ];
+
+  const gameCategories = [
+    { id: 'all', name: 'Все игры' },
+    { id: 'action', name: 'Экшен' },
+    { id: 'rpg', name: 'RPG' },
+    { id: 'racing', name: 'Гонки' },
+    { id: 'shooter', name: 'Шутеры' },
+    { id: 'puzzle', name: 'Головоломки' },
+    { id: 'survival', name: 'Выживание' },
+    { id: 'adventure', name: 'Приключения' }
+  ];
+
   useEffect(() => {
     const today = new Date().getDay();
     const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
@@ -263,6 +390,11 @@ function AppContent() {
   // Filter news based on category
   const filteredNews = newsData.filter(item => {
     return selectedNewsCategory === 'all' || item.category === selectedNewsCategory;
+  });
+
+  // Filter games based on category
+  const filteredGames = gamesData.filter(item => {
+    return selectedGameCategory === 'all' || item.category === selectedGameCategory;
   });
 
   // Format date
@@ -708,6 +840,229 @@ function AppContent() {
                       className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-colors"
                     >
                       Показать все новости
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* GAMES TAB */}
+          {activeTab === 'games' && (
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center mb-10">
+                <h2 className="text-4xl font-bold mb-4 text-slate-900 dark:text-white tracking-tight">Игры</h2>
+                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                  Лучшие игры для студентов БНТУ - отдыхайте с пользой
+                </p>
+              </div>
+
+              {/* Category Filter */}
+              <div className="flex flex-wrap justify-center gap-3 mb-8">
+                {gameCategories.map(category => (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedGameCategory(category.id)}
+                    className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
+                      selectedGameCategory === category.id
+                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-gray-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:text-emerald-600 dark:hover:text-emerald-400'
+                    }`}
+                  >
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+
+              {/* Featured Games */}
+              {filteredGames.filter(item => item.featured).length > 0 && (
+                <div className="mb-12">
+                  <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">Рекомендуемые игры</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredGames.filter(item => item.featured).map((game) => (
+                      <div
+                        key={game.id}
+                        className="group relative bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-slate-700 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
+                      >
+                        {/* Game Image */}
+                        <div className="relative h-48 overflow-hidden">
+                          <img 
+                            src={game.image} 
+                            alt={game.title}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                          {game.discount > 0 && (
+                            <div className="absolute top-3 left-3 bg-red-500 text-white px-3 py-1 rounded-lg text-sm font-bold">
+                              -{game.discount}%
+                            </div>
+                          )}
+                          {game.price === 0 && (
+                            <div className="absolute top-3 left-3 bg-emerald-500 text-white px-3 py-1 rounded-lg text-sm font-bold">
+                              Бесплатно
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        </div>
+
+                        {/* Game Info */}
+                        <div className="p-6">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <h3 className="font-bold text-xl text-slate-900 dark:text-white mb-1 line-clamp-1">
+                                {game.title}
+                              </h3>
+                              <p className="text-sm text-slate-500 dark:text-slate-400">
+                                {game.developer}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1 ml-3">
+                              <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                {game.rating}
+                              </span>
+                            </div>
+                          </div>
+
+                          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 line-clamp-2">
+                            {game.description}
+                          </p>
+
+                          {/* Tags */}
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {game.tags.slice(0, 3).map((tag, index) => (
+                              <span 
+                                key={index}
+                                className="px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 text-xs rounded-lg"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+
+                          {/* Price and Action */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {game.price === 0 ? (
+                                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-lg">
+                                  Бесплатно
+                                </span>
+                              ) : (
+                                <>
+                                  {game.originalPrice && (
+                                    <span className="text-sm text-slate-500 dark:text-slate-400 line-through">
+                                      ${game.originalPrice}
+                                    </span>
+                                  )}
+                                  <span className="text-slate-900 dark:text-white font-bold text-lg">
+                                    ${game.price}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                            <button className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2">
+                              <Download className="w-4 h-4" />
+                              {game.price === 0 ? 'Получить' : 'Купить'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* All Games Grid */}
+              <div>
+                <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">
+                  {selectedGameCategory === 'all' ? 'Все игры' : gameCategories.find(cat => cat.id === selectedGameCategory)?.name}
+                </h3>
+                {filteredGames.filter(item => !item.featured).length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {filteredGames.filter(item => !item.featured).map((game) => (
+                      <div
+                        key={game.id}
+                        className="group bg-white dark:bg-slate-800 rounded-xl overflow-hidden border border-gray-200 dark:border-slate-700 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                      >
+                        {/* Game Image */}
+                        <div className="relative h-32 overflow-hidden">
+                          <img 
+                            src={game.image} 
+                            alt={game.title}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                          {game.discount > 0 && (
+                            <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">
+                              -{game.discount}%
+                            </div>
+                          )}
+                          {game.price === 0 && (
+                            <div className="absolute top-2 left-2 bg-emerald-500 text-white px-2 py-1 rounded text-xs font-bold">
+                              Бесплатно
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Game Info */}
+                        <div className="p-4">
+                          <h4 className="font-bold text-sm text-slate-900 dark:text-white mb-1 line-clamp-1">
+                            {game.title}
+                          </h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                            {game.developer}
+                          </p>
+
+                          {/* Rating */}
+                          <div className="flex items-center gap-1 mb-3">
+                            <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                              {game.rating}
+                            </span>
+                          </div>
+
+                          {/* Price and Action */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              {game.price === 0 ? (
+                                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">
+                                  Бесплатно
+                                </span>
+                              ) : (
+                                <>
+                                  {game.originalPrice && (
+                                    <span className="text-xs text-slate-500 dark:text-slate-400 line-through">
+                                      ${game.originalPrice}
+                                    </span>
+                                  )}
+                                  <span className="text-slate-900 dark:text-white font-bold text-sm">
+                                    ${game.price}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                            <button className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-medium transition-colors">
+                              {game.price === 0 ? 'Получить' : 'Купить'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-24 text-center">
+                    <div className="w-20 h-20 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
+                      <Gamepad2 className="w-10 h-10 text-gray-400 dark:text-slate-500" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
+                      Игры не найдены
+                    </h3>
+                    <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
+                      В выбранной категории пока нет игр. Попробуйте выбрать другую категорию.
+                    </p>
+                    <button
+                      onClick={() => setSelectedGameCategory('all')}
+                      className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-colors"
+                    >
+                      Показать все игры
                     </button>
                   </div>
                 )}
