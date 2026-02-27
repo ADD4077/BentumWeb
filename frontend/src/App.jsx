@@ -52,6 +52,7 @@ function AppContent() {
   useEffect(() => {
     const style = document.createElement('style');
     style.textContent = `
+      html { scrollbar-gutter: stable; }
       @keyframes float {
         0%, 100% { transform: translateY(0px); }
         50% { transform: translateY(-8px); }
@@ -83,7 +84,7 @@ function AppContent() {
 
   return (
     <div className={`${darkMode ? 'dark' : ''} min-h-screen flex flex-col font-sans selection:bg-emerald-500 selection:text-white`}>
-      <div className="flex-grow bg-gray-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 transition-colors duration-500 overflow-x-hidden relative">
+      <div className="flex-grow bg-gray-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 transition-colors duration-500 relative">
         
         {/* --- Header --- */}
         <Header 
@@ -97,7 +98,7 @@ function AppContent() {
         />
 
         {/* --- Main Content --- */}
-        <main className="container mx-auto px-4 pt-24 pb-12 relative z-10">
+        <main className="container mx-auto px-4 pt-8 pb-12 relative z-10">
           
           {/* HOME TAB */}
           {activeTab === 'home' && (
