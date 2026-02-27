@@ -1,4 +1,5 @@
 import json
+import os
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
@@ -327,4 +328,70 @@ def theme(request):
         return JsonResponse(
             {"detail": "Некорректный JSON"},
             status=400
+        )
+
+
+@csrf_exempt
+def get_schedule(request):
+    """Получение расписания для группы пользователя"""
+    if request.method != "GET":
+        return JsonResponse(
+            {"detail": "Метод не разрешён"},
+            status=405
+        )
+    
+    # Отладочная информация
+    print(f"Session data: {dict(request.session)}")
+    print(f"Is authenticated: {request.session.get('is_authenticated')}")
+    print(f"Student code: {request.session.get('student_code')}")
+    
+    # Проверяем авторизацию
+    if not request.session.get('is_authenticated'):
+        return JsonResponse(
+            {"detail": "Требуется авторизация"},
+            status=401
+        )
+    
+    student_code = request.session.get('student_code')
+    if not student_code:
+        return JsonResponse(
+            {"detail": "Отсутствует код студента"},
+            status=400
+        )
+    
+    try:
+        # Формируем имя файла расписания (используем первые 8 цифр)
+        schedule_filename = f"schedule_{student_code[:8]}.json"
+        schedule_path = os.path.join(settings.BASE_DIR, 'schedules', schedule_filename)
+        
+        print(f"Looking for schedule file: {schedule_filename}")
+        print(f"Full path: {schedule_path}")
+        print(f"File exists: {os.path.exists(schedule_path)}")
+        
+        # Проверяем существование файла
+        if not os.path.exists(schedule_path):
+            return JsonResponse(
+                {"detail": f"Расписание для группы {student_code[:8]} не найдено"},
+                status=404
+            )
+        
+        # Читаем файл расписания
+        with open(schedule_path, 'r', encoding='utf-8') as f:
+            schedule_data = json.load(f)
+        
+        return JsonResponse({
+            "success": True,
+            "schedule": schedule_data,
+            "student_code": student_code
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {"detail": "Ошибка чтения файла расписания"},
+            status=500
+        )
+    except Exception as e:
+        return JsonResponse(
+            {"detail": f"Внутренняя ошибка сервера: {str(e)}"},
+            status=500
         )

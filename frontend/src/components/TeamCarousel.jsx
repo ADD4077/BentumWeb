@@ -73,14 +73,14 @@ function TeamCarousel({ teamMembers }) {
       
       <div className="relative">
         {/* Основной слайдер */}
-        <div className="overflow-hidden rounded-2xl max-w-4xl mx-auto">
+        <div className="overflow-hidden rounded-2xl max-w-4xl mx-auto" style={{ padding: '20px' }}>
           <div 
             className="flex transition-transform duration-500 ease-in-out"
             style={{ transform: `translateX(-${currentIndex * 100}%)` }}
           >
             {teamMembers.map((member, index) => (
               <div key={index} className="w-full flex-shrink-0 px-4">
-                <div className="max-w-md mx-auto bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/50 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-md overflow-hidden">
+                <div className="max-w-md mx-auto bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/50 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-md">
                   
                   {/* Центрированный контент */}
                   <div className="flex flex-col items-center text-center">

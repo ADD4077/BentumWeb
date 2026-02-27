@@ -102,7 +102,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
     <>
       <header ref={headerRef} className="sticky top-0 z-50 w-full bg-transparent">
         <div className="container mx-auto px-6 py-4">
-          <div className={`relative bg-gray-100/50 dark:bg-slate-800/50 backdrop-blur-md border border-gray-200 dark:border-slate-700/50 shadow-lg shadow-gray-900/10 dark:shadow-black/20 ${
+          <div className={`relative bg-gray-100/50 dark:bg-slate-800/50 backdrop-blur-md border border-gray-200 dark:border-slate-700/50 shadow-lg shadow-gray-900/10 dark:shadow-black/20 max-w-4xl mx-auto ${
             isHeaderPill ? 'rounded-full' : 'rounded-[32px]'
           }`}>
             <div className="h-16 flex items-center justify-between px-4">
@@ -275,7 +275,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                 <div className="px-4">
             <div className="flex flex-col gap-3">
               {isAuthenticated ? (
-                <div className="flex items-center gap-3 px-4 py-3 bg-white/50 dark:bg-slate-900/30 rounded-2xl flex-1">
+                <div className="flex items-center gap-3 px-4 py-3 rounded-2xl flex-1">
                   <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center text-white font-bold">
                     {user?.fullname?.charAt(0) ? (
                       <span>{user?.fullname?.charAt(0)}</span>

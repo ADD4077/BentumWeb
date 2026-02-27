@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header.jsx';
 import ScheduleItem from './components/ScheduleItem.jsx';
 import LoginModal from './components/LoginModal.jsx';
 import FeatureCard from './components/FeatureCard.jsx';
 import TeamCarousel from './components/TeamCarousel.jsx';
-import { Star, LogIn, ChevronRight, ChevronDown, BookOpen, Download, ExternalLink, Search, Filter, Calendar, Clock, User, Tag, ArrowRight, Gamepad2, Trophy, Zap, Target, Brain, Heart } from 'lucide-react';
-import { scheduleData } from './data/scheduleData.js';
-import { daysOfWeek, groupInfo, features, teamMembers } from './utils/constants.js';
+import { Star, LogIn, ChevronRight, BookOpen, Download, ExternalLink, Search, Filter, Calendar, Clock, User, Tag, ArrowRight, Gamepad2, Trophy, Zap, Target, Brain, Heart } from 'lucide-react';
+import { daysOfWeek, quickDayButtons, groupInfo, features, teamMembers } from './utils/constants.js';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
 
 function AppContent() {
@@ -16,21 +15,17 @@ function AppContent() {
     return savedTheme !== null ? JSON.parse(savedTheme) : true;
   });
   const [activeTab, setActiveTab] = useState('home'); 
-  const [weekType, setWeekType] = useState('upper');
   const [selectedDay, setSelectedDay] = useState('Пн');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [selectedNewsCategory, setSelectedNewsCategory] = useState('all');
   const [selectedGameCategory, setSelectedGameCategory] = useState('all');
+  const [weekType, setWeekType] = useState('upper');
   const [gameScores, setGameScores] = useState({});
   const { loading, isAuthenticated, user } = useAuth();
-
-  const categoryButtonRef = useRef(null);
-  const categoryPanelRef = useRef(null);
 
   // Games data
   const gamesData = [
@@ -184,32 +179,6 @@ function AppContent() {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
   }, [darkMode]);
 
-  useEffect(() => {
-    if (!isCategoryMenuOpen) return;
-
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        setIsCategoryMenuOpen(false);
-      }
-    };
-
-    const onPointerDown = (e) => {
-      const panel = categoryPanelRef.current;
-      const button = categoryButtonRef.current;
-      if (!panel || !button) return;
-      if (panel.contains(e.target) || button.contains(e.target)) return;
-      setIsCategoryMenuOpen(false);
-    };
-
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('pointerdown', onPointerDown);
-
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('pointerdown', onPointerDown);
-    };
-  }, [isCategoryMenuOpen]);
-
   // Добавление CSS анимации
   useEffect(() => {
     const style = document.createElement('style');
@@ -242,7 +211,137 @@ function AppContent() {
     }
   };
 
-  const currentSchedule = scheduleData[weekType][selectedDay] || [];
+  const [userSchedule, setUserSchedule] = useState(null);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+
+  // Загрузка расписания пользователя
+  useEffect(() => {
+    if (isAuthenticated && user?.student_code) {
+      loadUserSchedule();
+    }
+  }, [isAuthenticated, user?.student_code]);
+
+  const loadUserSchedule = async () => {
+    if (!user?.student_code) return;
+    
+    setScheduleLoading(true);
+    try {
+      const response = await fetch('http://localhost:8000/api/schedule', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setUserSchedule(data.schedule);
+        }
+      } else {
+        console.error('Failed to load schedule');
+      }
+    } catch (error) {
+      console.error('Error loading schedule:', error);
+    } finally {
+      setScheduleLoading(false);
+    }
+  };
+
+  // Преобразование расписания из API в формат для отображения
+  const getScheduleForDay = (day) => {
+    if (!userSchedule || !userSchedule.Schedule) return [];
+    
+    const dayMapping = {
+      'Пн': 'Понедельник',
+      'Вт': 'Вторник', 
+      'Ср': 'Среда',
+      'Чт': 'Четверг',
+      'Пт': 'Пятница',
+      'Сб': 'Суббота',
+      'Вс': 'Воскресенье'
+    };
+    
+    const fullDayName = dayMapping[day];
+    
+    // Выбираем неделю (0 - первая неделя, 1 - вторая неделя)
+    const weekIndex = weekType === 'upper' ? 0 : 1;
+    
+    // Проверяем, что неделя существует
+    if (!userSchedule.Schedule[weekIndex]) return [];
+    
+    const daySchedule = userSchedule.Schedule[weekIndex];
+    
+    if (!daySchedule || !daySchedule[fullDayName]) return [];
+    
+    return daySchedule[fullDayName].map((item, index) => ({
+      id: index + 1,
+      time: item.Time,
+      subject: item.Matter,
+      teacher: item.Teacher,
+      classroom: item.Classroom,
+      type: getLessonType(item.Matter)
+    }));
+  };
+
+  // Определение типа занятия по названию
+  const getLessonType = (subject) => {
+    if (subject.includes('(Лек.)') || subject.includes('Лекция')) return 'Лекция';
+    if (subject.includes('(Лаб.)') || subject.includes('Лабораторная')) return 'Лабораторная';
+    if (subject.includes('(Практ.)') || subject.includes('Практика')) return 'Практика';
+    return 'Лекция';
+  };
+
+  // Получение времени в московской часовой зоне (UTC+3)
+  const getMoscowTime = () => {
+    const now = new Date();
+    // Получаем UTC время и добавляем 3 часа для МСК
+    const moscowTime = new Date(now.getTime() + (3 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60 * 1000));
+    return moscowTime;
+  };
+
+  // Определение сегодняшнего и завтрашнего дня
+  const getTodayDay = () => {
+    const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+    const moscowTime = getMoscowTime();
+    const today = moscowTime.getDay();
+    // Преобразуем день недели: 0(Вс) -> 6(Сб), 1(Пн) -> 0(Пн), и т.д.
+    const adjustedDay = today === 0 ? 6 : today - 1;
+    return days[adjustedDay] || 'Пн'; // fallback на Пн
+  };
+
+  const getTomorrowDay = () => {
+    const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+    const moscowTime = getMoscowTime();
+    const today = moscowTime.getDay();
+    const tomorrow = (today + 1) % 7;
+    // Для завтрашнего дня: 0(Вс) -> undefined (выходной), 1(Пн) -> 0(Пн), 2(Вт) -> 1(Вт), и т.д.
+    if (tomorrow === 0) return undefined; // Воскресенье - нет занятий
+    const adjustedTomorrow = tomorrow - 1;
+    return days[adjustedTomorrow] || 'Вт'; // fallback на Вт
+  };
+
+  // Определение недели (верхняя/нижняя) начиная с 1 сентября 2025
+  const getWeekType = () => {
+    const moscowTime = getMoscowTime();
+    const startDate = new Date('2025-09-01T00:00:00'); // 1 сентября 2025
+    const diffTime = moscowTime.getTime() - startDate.getTime();
+    const diffWeeks = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000));
+    
+    // Нечетные недели - верхние, четные - нижние
+    return diffWeeks % 2 === 0 ? 'upper' : 'lower';
+  };
+
+  // Обработчики быстрых кнопок
+  const handleQuickDaySelect = (dayType) => {
+    if (dayType === 'today') {
+      setSelectedDay(getTodayDay());
+      setWeekType(getWeekType()); // Автоматически определяем неделю
+    } else if (dayType === 'tomorrow') {
+      setSelectedDay(getTomorrowDay());
+      setWeekType(getWeekType()); // Автоматически определяем неделю
+    }
+  };
+
+  const currentSchedule = getScheduleForDay(selectedDay);
 
   // Literature data
   const literatureData = [
@@ -546,8 +645,8 @@ function AppContent() {
           {/* SCHEDULE TAB */}
           {activeTab === 'schedule' && (
             <div className="max-w-4xl mx-auto">
-              <div className="flex flex-col md:flex-row justify-between items-end md:items-center mb-10 gap-6">
-                <div>
+              <div className="flex flex-col md:flex-row justify-between items-end md:items-center mb-10 gap-6 w-full">
+                <div className="text-left self-start">
                   <h2 className="text-4xl font-bold mb-2 text-slate-900 dark:text-white tracking-tight">Расписание</h2>
                   <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
                     <span className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700">
@@ -555,28 +654,63 @@ function AppContent() {
                     </span>
                     <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
                     <span className="text-sm">{user?.faculty || groupInfo.faculty}</span>
+                    {userSchedule && (
+                      <>
+                        <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
+                        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                          Расписание загружено
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
 
                 {/* Week Toggle */}
-                <div className="bg-white dark:bg-slate-800 p-1.5 rounded-2xl flex shadow-inner border border-gray-200 dark:border-slate-700">
+                <div className="relative bg-white dark:bg-slate-800 p-1.5 rounded-2xl flex shadow-inner border border-gray-200 dark:border-slate-700">
+                  <div 
+                    className={`absolute top-1.5 bottom-1.5 rounded-xl bg-white dark:bg-slate-700 transition-all duration-300 ease-out shadow-sm`}
+                    style={{
+                      left: weekType === 'upper' ? '6px' : '50%',
+                      width: 'calc(50% - 6px)'
+                    }}
+                  ></div>
+                  
                   <button
                     onClick={() => setWeekType('upper')}
-                    className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 w-36 ${
-                      weekType === 'upper' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    className={`relative z-10 px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 w-36 ${
+                      weekType === 'upper' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     1 Неделя
                   </button>
                   <button
                     onClick={() => setWeekType('lower')}
-                    className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 w-36 ${
-                      weekType === 'lower' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    className={`relative z-10 px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 w-36 ${
+                      weekType === 'lower' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     2 Неделя
                   </button>
                 </div>
+              </div>
+
+              {/* Quick Day Buttons */}
+              <div className="flex gap-3 mb-4">
+                {/* Debug: {JSON.stringify(quickDayButtons)} */}
+                {quickDayButtons.map((button) => (
+                  <button
+                    key={button.id}
+                    onClick={() => handleQuickDaySelect(button.id)}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                      (button.id === 'today' && selectedDay === getTodayDay()) ||
+                      (button.id === 'tomorrow' && selectedDay === getTomorrowDay())
+                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-gray-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:text-emerald-600 dark:hover:text-emerald-400'
+                    }`}
+                  >
+                    {button.name}
+                  </button>
+                ))}
               </div>
 
               {/* Days Navigation */}
@@ -598,17 +732,35 @@ function AppContent() {
 
               {/* Schedule List */}
               <div className="space-y-4">
-                {currentSchedule.length > 0 ? (
+                {scheduleLoading ? (
+                  <div className="flex flex-col items-center justify-center py-24 text-center">
+                    <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-6"></div>
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Загрузка расписания...</h3>
+                  </div>
+                ) : currentSchedule.length > 0 ? (
                   currentSchedule.map((item) => (
                     <ScheduleItem key={item.id} item={item} />
                   ))
                 ) : (
                   <div className="flex flex-col items-center justify-center py-24 text-center">
                     <div className="text-6xl mb-6">☀️</div>
-                    <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Свободный день</h3>
+                    <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
+                      {userSchedule ? 'Свободный день' : 'Расписание не загружено'}
+                    </h3>
                     <p className="text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
-                      Пар нет. Отличное время для саморазвития или отдыха.
+                      {userSchedule 
+                        ? 'Пар нет. Отличное время для саморазвития или отдыха.'
+                        : 'Попробуйте обновить страницу или войти заново.'
+                      }
                     </p>
+                    {!userSchedule && (
+                      <button 
+                        onClick={loadUserSchedule}
+                        className="mt-4 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-colors"
+                      >
+                        Обновить расписание
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -625,6 +777,7 @@ function AppContent() {
                 </p>
               </div>
 
+              {/* Search and Filter */}
               <div className="flex flex-col md:flex-row gap-4 mb-8">
                 {/* Search */}
                 <div className="flex-1 relative">
@@ -640,48 +793,18 @@ function AppContent() {
 
                 {/* Category Filter */}
                 <div className="relative">
-                  <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
-                  <button
-                    ref={categoryButtonRef}
-                    type="button"
-                    onClick={() => setIsCategoryMenuOpen((v) => !v)}
-                    className="pl-12 pr-10 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent cursor-pointer min-w-[200px] text-left"
-                    aria-haspopup="dialog"
-                    aria-expanded={isCategoryMenuOpen}
+                  <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="pl-12 pr-10 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent appearance-none cursor-pointer min-w-[200px]"
                   >
-                    {categories.find((c) => c.id === selectedCategory)?.name || 'Все категории'}
-                    <ChevronDown className={`absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 transition-transform duration-300 ${isCategoryMenuOpen ? 'rotate-180' : 'rotate-0'}`} />
-                  </button>
-
-                  <div className={`absolute top-full left-0 right-0 z-50 mt-1 grid overflow-hidden transition-[grid-template-rows,opacity,transform] duration-300 ease-out ${
-                    isCategoryMenuOpen ? 'grid-rows-[1fr] opacity-100 translate-y-0' : 'grid-rows-[0fr] opacity-0 -translate-y-2'
-                  }`}>
-                    <div className="min-h-0">
-                      <div ref={categoryPanelRef} className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-3xl shadow-xl shadow-black/10">
-                        <div className="p-3">
-                          <div className="flex flex-col gap-2">
-                            {categories.map((category) => (
-                              <button
-                                key={category.id}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedCategory(category.id);
-                                  setIsCategoryMenuOpen(false);
-                                }}
-                                className={`w-full text-left px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-300 ${
-                                  selectedCategory === category.id
-                                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
-                                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50'
-                                }`}
-                              >
-                                {category.name}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                    {categories.map(category => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -1122,6 +1245,15 @@ function AppContent() {
           )}
         </main>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="text-center text-sm text-slate-500 dark:text-slate-400">
+            <p>© 2026 BentumWeb. Все права защищены.</p>
+          </div>
+        </div>
+      </footer>
 
       {/* Login Modal */}
       <LoginModal 
