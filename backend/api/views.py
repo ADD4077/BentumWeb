@@ -427,6 +427,8 @@ def get_literature(request):
                 return str(size)
 
         s = str(size).strip()
+        # Автоисправление формата "1000.Kb" -> "1000KB"
+        s = re.sub(r'([0-9]+)\.([kKmMgGtT]?)\s*([bB])', r'\1\2\3', s)
         # Пытаемся матчить число и опциональную единицу
         m = re.match(r"^\s*([0-9]+(?:[.,][0-9]+)?)\s*([kKmMgGtT]?\s*[bB])?\s*$", s)
         if not m:
@@ -453,6 +455,37 @@ def get_literature(request):
             return f"{formatted}{unit}"
         except Exception:
             return s
+
+    def _parse_size(size_str: str) -> int:
+        """Парсит строку размера и возвращает размер в байтах.
+        Примеры: '1.76MB' -> 1843200, '1763KB' -> 1806336, '988KB' -> 1011712, '1000.Kb' -> 1024000
+        """
+        if not size_str:
+            return 0
+        
+        s = str(size_str).strip()
+        # Матчим число и единицу (включаем форматы типа "1000.Kb")
+        m = re.match(r"^\s*([0-9]+(?:[.,][0-9]*)?)\s*([kKmMgGtT]?\s*[bB])?\s*$", s)
+        if not m:
+            return 0
+        
+        try:
+            num = float(m.group(1).replace(',', '.'))
+            unit = (m.group(2) or '').replace(' ', '').upper()
+            
+            # Конвертируем в байты
+            multipliers = {
+                'B': 1,
+                'KB': 1024,
+                'MB': 1024 * 1024,
+                'GB': 1024 * 1024 * 1024,
+                'TB': 1024 * 1024 * 1024 * 1024
+            }
+            
+            multiplier = multipliers.get(unit, 1)
+            return int(num * multiplier)
+        except Exception:
+            return 0
 
     try:
         page = int(request.GET.get('page', '1'))
@@ -516,8 +549,12 @@ def get_literature(request):
 
         # Фильтрация
         def matches(item):
-            if category and category != 'all' and str(item.get('category')) != category:
-                return False
+            # Поддержка множественных категорий
+            categories = request.GET.getlist('category')
+            if categories and 'all' not in categories:
+                item_category = str(item.get('category'))
+                if item_category not in categories:
+                    return False
             if search:
                 hay = ' '.join([str(item.get(k, '')).lower() for k in ('title', 'author', 'description')])
                 if search not in hay:
@@ -526,6 +563,26 @@ def get_literature(request):
 
         filtered = [it for it in flattened if matches(it)]
         total = len(filtered)
+
+        # Сортировка
+        sort_param = request.GET.get('sort', 'default')
+        if sort_param != 'default':
+            if sort_param == 'title_asc':
+                filtered.sort(key=lambda x: x.get('title', '').lower())
+            elif sort_param == 'title_desc':
+                filtered.sort(key=lambda x: x.get('title', '').lower(), reverse=True)
+            elif sort_param == 'year_desc':
+                filtered.sort(key=lambda x: x.get('year', ''), reverse=True)
+            elif sort_param == 'year_asc':
+                filtered.sort(key=lambda x: x.get('year', ''))
+            elif sort_param == 'category_asc':
+                filtered.sort(key=lambda x: x.get('category', '').lower())
+            elif sort_param == 'category_desc':
+                filtered.sort(key=lambda x: x.get('category', '').lower(), reverse=True)
+            elif sort_param == 'size_desc':
+                filtered.sort(key=lambda x: _parse_size(x.get('downloadSize', '')), reverse=True)
+            elif sort_param == 'size_asc':
+                filtered.sort(key=lambda x: _parse_size(x.get('downloadSize', '')))
 
         start = (page - 1) * page_size
         end = start + page_size

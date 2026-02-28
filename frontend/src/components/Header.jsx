@@ -123,31 +123,31 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => setActiveTab('home')}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'home' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'home' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                   >
                     Главная
                   </button>
                   <button 
                     onClick={() => setActiveTab('schedule')}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'schedule' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'schedule' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                   >
                     Расписание
                   </button>
                   <button 
                     onClick={() => setActiveTab('literature')}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'literature' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'literature' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                   >
                     Литература
                   </button>
                   <button 
                     onClick={() => setActiveTab('news')}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'news' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'news' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                   >
                     Новости
                   </button>
                   <button 
                     onClick={() => setActiveTab('games')}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'games' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'games' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                   >
                     Игровая
                   </button>
@@ -229,7 +229,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                   {/* Login Button */}
                   <button 
                     onClick={() => setIsLoginModalOpen(true)}
-                    className="px-6 py-2.5 text-sm font-semibold text-white bg-slate-900 dark:bg-emerald-600 hover:bg-slate-800 dark:hover:bg-emerald-500 rounded-full transition-all shadow-lg shadow-emerald-500/20"
+                    className="px-6 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-full transition-all shadow-lg shadow-emerald-500/20"
                   >
                     Войти
                   </button>
@@ -258,7 +258,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                   {/* Login Button */}
                   <button 
                     onClick={() => setIsLoginModalOpen(true)}
-                    className="px-4 py-2 text-sm font-semibold text-white bg-slate-900 dark:bg-emerald-600 hover:bg-slate-800 dark:hover:bg-emerald-500 rounded-full transition-all shadow-lg shadow-emerald-500/20"
+                    className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-full transition-all shadow-lg shadow-emerald-500/20"
                   >
                     Войти
                   </button>
@@ -308,7 +308,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                     setIsLoginModalOpen(true);
                     setIsMobileMenuOpen(false);
                   }}
-                  className="w-full text-left px-4 py-3 text-sm font-semibold text-white bg-slate-900 dark:bg-emerald-600 hover:bg-slate-800 dark:hover:bg-emerald-500 rounded-2xl transition-all shadow-lg shadow-emerald-500/20"
+                  className="w-full text-left px-4 py-3 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-2xl transition-all shadow-lg shadow-emerald-500/20"
                 >
                   Войти
                 </button>
@@ -322,7 +322,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                     setActiveTab('home');
                     setIsMobileMenuOpen(false);
                   }}
-                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'home' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'home' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                 >
                   Главная
                 </button>
@@ -331,7 +331,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                     setActiveTab('schedule');
                     setIsMobileMenuOpen(false);
                   }}
-                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'schedule' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'schedule' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                 >
                   Расписание
                 </button>
@@ -340,7 +340,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                     setActiveTab('literature');
                     setIsMobileMenuOpen(false);
                   }}
-                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'literature' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'literature' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                 >
                   Литература
                 </button>
@@ -349,7 +349,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                     setActiveTab('news');
                     setIsMobileMenuOpen(false);
                   }}
-                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'news' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'news' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                 >
                   Новости
                 </button>
@@ -358,7 +358,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                     setActiveTab('games');
                     setIsMobileMenuOpen(false);
                   }}
-                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'games' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-white/40 dark:bg-slate-900/20'}`}
+                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'games' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                 >
                   Игровая
                 </button>

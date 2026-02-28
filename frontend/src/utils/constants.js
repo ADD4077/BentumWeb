@@ -32,7 +32,7 @@ export const teamMembers = [
   {
     name: 'Смоленский Андрей',
     role: 'Разработчик / Системный администратор',
-    description: 'Node.js специалист. Разработал API и обеспечил быструю работу серверной части.',
+    description: 'Python специалист. Разработал API и обеспечил быструю работу серверной части.',
     image: '/src/assets/team/developer.jpg'
   },
   {

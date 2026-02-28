@@ -399,6 +399,8 @@ function AppContent() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [categorySearchQuery, setCategorySearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState(['all']);
+  const [sortBy, setSortBy] = useState('default');
+  const [isSortModalOpen, setIsSortModalOpen] = useState(false);
 
   const fetchLiterature = async (page = 1) => {
     setLiteratureLoading(true);
@@ -407,12 +409,11 @@ function AppContent() {
       params.set('page', page);
       params.set('page_size', literaturePageSize);
       if (searchQuery) params.set('search', searchQuery);
-      if (selectedCategories.length > 0 && !(selectedCategories.length === 1 && selectedCategories[0] === 'all')) {
-        selectedCategories.forEach(cat => {
-          if (cat !== 'all') {
-            params.append('category', cat);
-          }
-        });
+      if (selectedCategories.length > 0 && !selectedCategories.includes('all')) {
+        selectedCategories.forEach(cat => params.append('category', cat));
+      }
+      if (sortBy !== 'default') {
+        params.set('sort', sortBy);
       }
 
       const res = await fetch(`/api/literature?${params.toString()}`);
@@ -435,8 +436,7 @@ function AppContent() {
     if (activeTab === 'literature') {
       fetchLiterature(literaturePage);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, literaturePage]);
+  }, [activeTab, literaturePage, selectedCategories, sortBy]);
 
   // When search or category changes, reset to page 1 and fetch
   useEffect(() => {
@@ -786,7 +786,7 @@ function AppContent() {
               </div>
 
               {/* Search and Filter */}
-              <div className="flex flex-col md:flex-row gap-4 mb-8">
+              <div className="flex flex-row gap-2 mb-8">
                 {/* Search */}
                 <div className="flex-1 relative">
                   <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -802,16 +802,16 @@ function AppContent() {
                 {/* Category Filter */}
                 <button
                   onClick={() => setIsCategoryModalOpen(true)}
-                  className="flex items-center justify-center w-12 h-12 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                  className="flex items-center justify-center w-12 h-12 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex-shrink-0"
                   title="Фильтр категорий"
                 >
                   <Filter className="w-5 h-5" />
                 </button>
 
-                {/* Sort Button (decorative) */}
+                {/* Sort Button */}
                 <button
-                  disabled
-                  className="flex items-center justify-center w-12 h-12 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-400 cursor-not-allowed transition-colors"
+                  onClick={() => setIsSortModalOpen(true)}
+                  className="flex items-center justify-center w-12 h-12 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex-shrink-0"
                   title="Сортировка"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -820,9 +820,100 @@ function AppContent() {
                 </button>
               </div>
 
-              {/* Results count */}
-              <div className="mb-6 text-sm text-slate-600 dark:text-slate-400">
-                Найдено материалов: {literatureTotal}
+              {/* Active Filters */}
+              <div className="mb-6">
+                {/* Results count */}
+                <div className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                  Найдено материалов: <span className="font-medium text-slate-900 dark:text-white">{literatureTotal}</span>
+                </div>
+                
+                {/* Active filters display */}
+                <div className="flex flex-wrap gap-2 items-center">
+                  {/* Search filter */}
+                  {searchQuery && (
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 rounded-full text-sm font-medium">
+                      <Search className="w-4 h-4" />
+                      <span>{searchQuery}</span>
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center hover:bg-emerald-700 transition-colors"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Categories filter */}
+                  {selectedCategories.length > 0 && !selectedCategories.includes('all') && (
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
+                      <Filter className="w-4 h-4" />
+                      <span>{selectedCategories.length} {selectedCategories.length === 1 ? 'категория' : selectedCategories.length < 5 ? 'категории' : 'категорий'}</span>
+                      <button
+                        onClick={() => {
+                          setSelectedCategories(['all']);
+                          setLiteraturePage(1);
+                        }}
+                        className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Sort filter */}
+                  {sortBy !== 'default' && (
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-full text-sm font-medium">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                      </svg>
+                      <span>
+                        {(() => {
+                          const option = [
+                            { id: 'title_asc', name: 'А-Я' },
+                            { id: 'title_desc', name: 'Я-А' },
+                            { id: 'year_desc', name: 'новые' },
+                            { id: 'year_asc', name: 'старые' },
+                            { id: 'category_asc', name: 'категория А-Я' },
+                            { id: 'category_desc', name: 'категория Я-А' },
+                            { id: 'size_desc', name: 'большие' },
+                            { id: 'size_asc', name: 'маленькие' }
+                          ].find(opt => opt.id === sortBy);
+                          return option ? option.name : sortBy;
+                        })()}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setSortBy('default');
+                          setLiteraturePage(1);
+                        }}
+                        className="w-4 h-4 rounded-full bg-purple-600 text-white flex items-center justify-center hover:bg-purple-700 transition-colors"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Clear all filters */}
+                  {(searchQuery || (selectedCategories.length > 0 && !selectedCategories.includes('all')) || sortBy !== 'default') && (
+                    <button
+                      onClick={() => {
+                        setSearchQuery('');
+                        setSelectedCategories(['all']);
+                        setSortBy('default');
+                        setLiteraturePage(1);
+                      }}
+                      className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      Сбросить все
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Literature Grid */}
@@ -949,19 +1040,35 @@ function AppContent() {
                         </svg>
                       </button>
 
-                      {/* Page counter */}
-                      <div className="px-4 py-2 bg-emerald-500 dark:bg-emerald-600 text-white rounded-xl text-sm font-medium shadow-sm">
-                        {literaturePage}
-                      </div>
-
-                      {/* Page separator */}
-                      <div className="text-slate-400 dark:text-slate-500 text-sm font-medium px-1">
-                        из
-                      </div>
-
-                      {/* Total pages */}
-                      <div className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-medium">
-                        {literatureMaxPage}
+                      {/* Page input */}
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="1"
+                          max={literatureMaxPage}
+                          value={literaturePage}
+                          onChange={(e) => {
+                            const page = parseInt(e.target.value);
+                            if (page >= 1 && page <= literatureMaxPage) {
+                              setLiteraturePage(page);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              const page = parseInt(e.target.value);
+                              if (page >= 1 && page <= literatureMaxPage) {
+                                setLiteraturePage(page);
+                              }
+                            }
+                          }}
+                          className="w-12 px-1.5 py-2 bg-emerald-500 dark:bg-emerald-600 text-white rounded-xl text-sm font-medium shadow-sm text-center focus:outline-none focus:ring-2 focus:ring-emerald-400 [-moz-appearance:_textfield] [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none"
+                        />
+                        <div className="text-slate-400 dark:text-slate-500 text-sm font-medium px-1">
+                          из
+                        </div>
+                        <div className="px-3 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-medium">
+                          {literatureMaxPage}
+                        </div>
                       </div>
 
                       {/* Next button */}
@@ -1080,23 +1187,28 @@ function AppContent() {
                           onClick={() => {
                             if (category.id === 'all') {
                               setSelectedCategories(['all']);
-                            setIsCategoryModalOpen(false);
-                              setLiteraturePage(1);
                             } else {
-                              const isSelected = selectedCategories.includes(category.id);
-                              if (isSelected) {
-                                setSelectedCategories(selectedCategories.filter(id => id !== category.id));
-                              } else {
-                                setSelectedCategories([...selectedCategories.filter(id => id !== 'all'), category.id]);
-                              }
+                              const newSelected = selectedCategories.includes('all') 
+                                ? [category.id]
+                                : selectedCategories.includes(category.id)
+                                  ? selectedCategories.filter(id => id !== category.id)
+                                  : [...selectedCategories, category.id];
+                              setSelectedCategories(newSelected.length > 0 ? newSelected : ['all']);
                             }
                           }}
-                          className={`p-4 rounded-2xl border-2 transition-all duration-200 text-left hover:scale-105 ${
+                          className={`p-4 rounded-2xl border-2 transition-all duration-200 text-left hover:scale-105 relative ${
                             selectedCategories.includes(category.id)
                               ? 'border-emerald-500 bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
                               : 'border-white/50 dark:border-slate-700/50 bg-white/80 dark:bg-slate-800/40 hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-slate-700 dark:text-slate-300'
                           }`}
                         >
+                          {selectedCategories.includes(category.id) && (
+                            <div className="absolute top-2 right-2 w-5 h-5 bg-white text-emerald-500 rounded-full flex items-center justify-center">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          )}
                           <div className="w-full">
                             <div className="font-medium text-slate-900 dark:text-white break-words text-center">{category.name}</div>
                           </div>
@@ -1109,21 +1221,128 @@ function AppContent() {
                 <div className="flex items-center justify-between p-6 border-t border-white/20 dark:border-slate-700/50">
                   <div className="text-sm text-slate-500 dark:text-slate-400">
                     Выбрано: <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                      {selectedCategories.length === 1 && selectedCategories[0] === 'all' 
-                        ? 'Все' 
-                        : selectedCategories.map(id => categories.find(cat => cat.id === id)?.name).join(', ')
+                      {selectedCategories.includes('all') 
+                        ? 'Все категории' 
+                        : `${selectedCategories.length} ${selectedCategories.length === 1 ? 'категория' : selectedCategories.length < 5 ? 'категории' : 'категорий'}`
                       }
                     </span>
                   </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setSelectedCategories(['all']);
+                        setCategorySearchQuery('');
+                      }}
+                      className="px-6 py-3 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-2xl font-medium transition-all duration-300"
+                    >
+                      Сбросить
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsCategoryModalOpen(false);
+                        setLiteraturePage(1);
+                        fetchLiterature(1);
+                      }}
+                      className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-medium transition-all duration-300 hover:scale-105"
+                    >
+                      Применить
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Sort Modal */}
+          {isSortModalOpen && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b border-white/20 dark:border-slate-700/50">
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+                    <svg className="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                    </svg>
+                    Сортировка
+                  </h2>
                   <button
-                    onClick={() => {
-                      setIsCategoryModalOpen(false);
-                      // Применяем фильтры - обновляем страницу для загрузки
-                      setLiteraturePage(1);
-                    }}
+                    onClick={() => setIsSortModalOpen(false)}
+                    className="w-10 h-10 rounded-2xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-white/10 dark:hover:bg-slate-700/10 transition-all duration-300"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Sort Options */}
+                <div className="p-6">
+                  <div className="space-y-3">
+                    {[
+                      { id: 'default', name: 'По умолчанию', icon: '📋' },
+                      { id: 'title_asc', name: 'По алфавиту (А-Я)', icon: '🔤' },
+                      { id: 'title_desc', name: 'По алфавиту (Я-А)', icon: '🔤' },
+                      { id: 'year_desc', name: 'По году (новые)', icon: '📅' },
+                      { id: 'year_asc', name: 'По году (старые)', icon: '📅' },
+                      { id: 'category_asc', name: 'По категории (А-Я)', icon: '📁' },
+                      { id: 'category_desc', name: 'По категории (Я-А)', icon: '📁' },
+                      { id: 'size_desc', name: 'По размеру (большие)', icon: '📦' },
+                      { id: 'size_asc', name: 'По размеру (маленькие)', icon: '📦' }
+                    ].map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => {
+                          setSortBy(option.id);
+                          setIsSortModalOpen(false);
+                          setLiteraturePage(1);
+                        }}
+                        className={`w-full p-4 rounded-2xl border-2 transition-all duration-200 text-left hover:scale-105 flex items-center gap-3 ${
+                          sortBy === option.id
+                            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
+                            : 'border-gray-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-gray-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <span className="text-xl">{option.icon}</span>
+                        <div className="flex-1">
+                          <div className="font-medium">{option.name}</div>
+                        </div>
+                        {sortBy === option.id && (
+                          <div className="w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-between p-6 border-t border-white/20 dark:border-slate-700/50">
+                  <div className="text-sm text-slate-500 dark:text-slate-400">
+                    Текущая: <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                      {(() => {
+                        const option = [
+                          { id: 'default', name: 'По умолчанию' },
+                          { id: 'title_asc', name: 'По алфавиту (А-Я)' },
+                          { id: 'title_desc', name: 'По алфавиту (Я-А)' },
+                          { id: 'year_desc', name: 'По году (новые)' },
+                          { id: 'year_asc', name: 'По году (старые)' },
+                          { id: 'category_asc', name: 'По категории (А-Я)' },
+                          { id: 'category_desc', name: 'По категории (Я-А)' },
+                          { id: 'size_desc', name: 'По размеру (большие)' },
+                          { id: 'size_asc', name: 'По размеру (маленькие)' }
+                        ].find(opt => opt.id === sortBy);
+                        return option ? option.name : 'По умолчанию';
+                      })()}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setIsSortModalOpen(false)}
                     className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-medium transition-all duration-300 hover:scale-105"
                   >
-                    Применить
+                    Закрыть
                   </button>
                 </div>
               </div>
@@ -1157,61 +1376,28 @@ function AppContent() {
                 ))}
               </div>
 
-              {/* Featured News */}
-              {filteredNews.filter(item => item.featured).length > 0 && (
-                <div className="mb-12">
-                  <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">Важные новости</h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {filteredNews.filter(item => item.featured).map((item) => (
-                      <div
-                        key={item.id}
-                        className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-800/30 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
-                      >
-                        <div className="flex items-start justify-between mb-4">
-                          <span className="inline-block px-3 py-1 bg-emerald-500 text-white text-xs font-medium rounded-lg">
-                            {newsCategories.find(cat => cat.id === item.category)?.name}
-                          </span>
-                          <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {item.readTime}
-                          </span>
-                        </div>
-                        <h3 className="font-bold text-xl text-slate-900 dark:text-white mb-3 line-clamp-2">
-                          {item.title}
-                        </h3>
-                        <p className="text-slate-600 dark:text-slate-400 mb-4 line-clamp-3">
-                          {item.excerpt}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                            <Calendar className="w-4 h-4" />
-                            {formatDate(item.date)}
-                          </div>
-                          <button className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium text-sm transition-colors">
-                            Читать далее
-                            <ArrowRight className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Regular News Grid */}
+              {/* News Grid */}
               <div>
                 <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">
                   {selectedNewsCategory === 'all' ? 'Все новости' : newsCategories.find(cat => cat.id === selectedNewsCategory)?.name}
                 </h3>
-                {filteredNews.filter(item => !item.featured).length > 0 ? (
+                {filteredNews.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredNews.filter(item => !item.featured).map((item) => (
+                    {filteredNews.map((item) => (
                       <div
                         key={item.id}
-                        className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                        className={`bg-white dark:bg-slate-800 rounded-2xl border p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 ${
+                          item.featured 
+                            ? 'border-emerald-200 dark:border-emerald-800/30 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20' 
+                            : 'border-gray-200 dark:border-slate-700'
+                        }`}
                       >
                         <div className="flex items-start justify-between mb-4">
-                          <span className="inline-block px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-lg">
+                          <span className={`inline-block px-2 py-1 text-xs font-medium rounded-lg ${
+                            item.featured 
+                              ? 'bg-emerald-500 text-white' 
+                              : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300'
+                          }`}>
                             {newsCategories.find(cat => cat.id === item.category)?.name}
                           </span>
                           <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">

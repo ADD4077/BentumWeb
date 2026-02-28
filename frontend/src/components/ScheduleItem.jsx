@@ -19,9 +19,8 @@ function ScheduleItem({ item }) {
 
   return (
     <div className="flex flex-col sm:flex-row gap-5 p-6 bg-white dark:bg-slate-800/80 backdrop-blur-md rounded-[1.5rem] border border-gray-100 dark:border-slate-700/50 shadow-lg hover:shadow-xl transition-all duration-300">
-      <div className="flex sm:flex-col items-center sm:items-start justify-center gap-1 sm:w-28 sm:border-r border-gray-100 dark:border-slate-700/50 pr-4">
+      <div className="flex sm:flex-col items-center sm:items-start justify-center sm:w-28 sm:border-r border-gray-100 dark:border-slate-700/50 pr-4">
          <div className="text-2xl font-black text-slate-800 dark:text-slate-200 tracking-tight">{item.time.split(' - ')[0]}</div>
-         <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Начало</div>
       </div>
 
       <div className="flex-grow pl-2 flex flex-col justify-center">
