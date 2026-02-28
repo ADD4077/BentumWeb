@@ -346,12 +346,47 @@ function AppContent() {
 
   // Literature data
   const categories = [
-    { id: 'all', name: 'Все категории' },
-    { id: 'mathematics', name: 'Математика' },
-    { id: 'physics', name: 'Физика' },
-    { id: 'mechanics', name: 'Механика' },
-    { id: 'chemistry', name: 'Химия' },
-    { id: 'engineering', name: 'Инженерные науки' }
+    { id: 'all', name: 'Все' },
+    { id: 'Автомобили', name: 'Автомобили' },
+    { id: 'Гидропневмоавтоматика и гидропневмопривод', name: 'Гидропневматика' },
+    { id: 'Двигатели внутреннего сгорания', name: 'Двигатели' },
+    { id: 'Инженерная графика машиностроительного профиля', name: 'Инженерная графика' },
+    { id: 'Коммерческая деятельность и бухгалтерский учет на транспорте', name: 'Коммерческая деятельность' },
+    { id: 'Техническая эксплуатация автомобилей', name: 'Техническая эксплуатация' },
+    { id: 'Тракторы', name: 'Тракторы' },
+    { id: 'Транспортные системы и технологии', name: 'Транспортные системы' },
+    { id: 'Экономика и логистика', name: 'Экономика и логистика' },
+    { id: 'Английский язык №1', name: 'Английский язык' },
+    { id: 'Горные машины', name: 'Горные машины' },
+    { id: 'Горные работы', name: 'Горные работы' },
+    { id: 'Инженерная экология', name: 'Инженерная экология' },
+    { id: 'Инженерная экономика', name: 'Инженерная экономика' },
+    { id: 'Машиноведение и детали машин', name: 'Машиноведение' },
+    { id: 'Мехатроника и искусственный интеллект', name: 'Мехатроника' },
+    { id: 'Теоретическая механика и механика материалов', name: 'Теоретическая механика' },
+    { id: 'Технологическое оборудование', name: 'Технологическое оборудование' },
+    { id: 'Технология машиностроения', name: 'Технология машиностроения' },
+    { id: 'Материаловедение в машиностроении', name: 'Материаловедение' },
+    { id: 'Машины и технология литейного производства', name: 'Литейное производство' },
+    { id: 'Машины и технология обработки металлов давлением', name: 'Обработка металлов' },
+    { id: 'Металлургические технологии', name: 'Металлургические технологии' },
+    { id: 'Металлургия черных и цветных сплавов', name: 'Металлургия сплавов' },
+    { id: 'Охрана труда', name: 'Охрана труда' },
+    { id: 'Порошковая металлургия, сварка и технология материалов', name: 'Порошковая металлургия' },
+    { id: 'Бизнес-администрирование', name: 'Бизнес-администрирование' },
+    { id: 'Маркетинг', name: 'Маркетинг' },
+    { id: 'Межкультурная профессиональная коммуникация', name: 'Межкультурная коммуникация' },
+    { id: 'Торговое и рекламное оборудование', name: 'Торговое оборудование' },
+    { id: 'Экономика и управление инновационными проектами в промышленности', name: 'Экономика инноваций' },
+    { id: 'Промышленная теплоэнергетика и теплотехника', name: 'Промышленная теплоэнергетика' },
+    { id: 'Тепловые электрические станции', name: 'Тепловые электростанции' },
+    { id: 'Экономика и организация энергетики', name: 'Экономика энергетики' },
+    { id: 'Электрические системы', name: 'Электрические системы' },
+    { id: 'Электрические станции', name: 'Электрические станции' },
+    { id: 'Электроснабжение', name: 'Электроснабжение' },
+    { id: 'Электротехника и электроника', name: 'Электротехника' },
+    { id: 'Высшая математика', name: 'Высшая математика' },
+    { id: 'Программное обеспечение информационных систем и технологий', name: 'Программное обеспечение' }
   ];
 
   // Literature pagination state and loader
@@ -361,6 +396,9 @@ function AppContent() {
   const literaturePageSize = 6;
   const literatureMaxPage = Math.max(1, Math.ceil(literatureTotal / literaturePageSize));
   const [literatureLoading, setLiteratureLoading] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [categorySearchQuery, setCategorySearchQuery] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState(['all']);
 
   const fetchLiterature = async (page = 1) => {
     setLiteratureLoading(true);
@@ -369,7 +407,13 @@ function AppContent() {
       params.set('page', page);
       params.set('page_size', literaturePageSize);
       if (searchQuery) params.set('search', searchQuery);
-      if (selectedCategory && selectedCategory !== 'all') params.set('category', selectedCategory);
+      if (selectedCategories.length > 0 && !(selectedCategories.length === 1 && selectedCategories[0] === 'all')) {
+        selectedCategories.forEach(cat => {
+          if (cat !== 'all') {
+            params.append('category', cat);
+          }
+        });
+      }
 
       const res = await fetch(`/api/literature?${params.toString()}`);
       if (!res.ok) throw new Error('Ошибка запроса литературы');
@@ -756,20 +800,24 @@ function AppContent() {
                 </div>
 
                 {/* Category Filter */}
-                <div className="relative">
-                  <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="pl-12 pr-10 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent appearance-none cursor-pointer min-w-[200px]"
-                  >
-                    {categories.map(category => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <button
+                  onClick={() => setIsCategoryModalOpen(true)}
+                  className="flex items-center justify-center w-12 h-12 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                  title="Фильтр категорий"
+                >
+                  <Filter className="w-5 h-5" />
+                </button>
+
+                {/* Sort Button (decorative) */}
+                <button
+                  disabled
+                  className="flex items-center justify-center w-12 h-12 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-400 cursor-not-allowed transition-colors"
+                  title="Сортировка"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                  </svg>
+                </button>
               </div>
 
               {/* Results count */}
@@ -798,7 +846,7 @@ function AppContent() {
                           </div>
                           <div>
                             <span className="inline-block px-2 py-1 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 text-xs font-medium rounded-lg mb-1">
-                              {categories.find(cat => cat.id === item.category)?.name}
+                              {item.category || 'Без категории'}
                             </span>
                             <div className="text-xs text-slate-500 dark:text-slate-400">
                               {item.type === 'textbook' ? 'Учебник' : 'Пособие'} • {item.year}
@@ -866,49 +914,88 @@ function AppContent() {
                   ))}
                   </div>
 
-                  {/* Pagination controls (First / Prev / Current / Next / Last) */}
-                  <div className="flex items-center justify-center gap-3 mt-8">
-                    <div className="flex items-center gap-2 bg-transparent">
+                  {/* Pagination controls */}
+                  <div className="flex items-center justify-center mt-10">
+                    <div className="flex items-center gap-2 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-white/50 dark:border-slate-700/50 rounded-2xl p-2 shadow-lg">
+                      {/* First button */}
                       <button
                         onClick={() => setLiteraturePage(1)}
                         disabled={literaturePage === 1}
                         title="В начало"
-                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${literaturePage === 1 ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 opacity-60 cursor-not-allowed border border-gray-200 dark:border-slate-700' : 'bg-emerald-600 text-white hover:bg-emerald-500'}`}
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                          literaturePage === 1 
+                            ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed' 
+                            : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                        }`}
                       >
-                        «
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                        </svg>
                       </button>
 
+                      {/* Previous button */}
                       <button
                         onClick={() => literaturePage > 1 && setLiteraturePage(literaturePage - 1)}
                         disabled={literaturePage === 1}
                         title="Предыдущая"
-                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${literaturePage === 1 ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 opacity-60 cursor-not-allowed border border-gray-200 dark:border-slate-700' : 'bg-emerald-600 text-white hover:bg-emerald-500'}`}
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                          literaturePage === 1 
+                            ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed' 
+                            : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                        }`}
                       >
-                        ‹
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
                       </button>
 
-                      <div className="px-3 py-2 bg-emerald-600 text-white rounded-md text-sm">
-                        Стр {literaturePage} из {literatureMaxPage}
+                      {/* Page counter */}
+                      <div className="px-4 py-2 bg-emerald-500 dark:bg-emerald-600 text-white rounded-xl text-sm font-medium shadow-sm">
+                        {literaturePage}
                       </div>
 
+                      {/* Page separator */}
+                      <div className="text-slate-400 dark:text-slate-500 text-sm font-medium px-1">
+                        из
+                      </div>
+
+                      {/* Total pages */}
+                      <div className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-medium">
+                        {literatureMaxPage}
+                      </div>
+
+                      {/* Next button */}
                       <button
                         onClick={() => {
                           if (literaturePage < literatureMaxPage) setLiteraturePage(literaturePage + 1);
                         }}
                         disabled={literaturePage >= literatureMaxPage}
                         title="Следующая"
-                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${literaturePage >= literatureMaxPage ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 opacity-60 cursor-not-allowed border border-gray-200 dark:border-slate-700' : 'bg-emerald-600 text-white hover:bg-emerald-500'}`}
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                          literaturePage >= literatureMaxPage 
+                            ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed' 
+                            : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                        }`}
                       >
-                        ›
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
                       </button>
 
+                      {/* Last button */}
                       <button
                         onClick={() => setLiteraturePage(literatureMaxPage)}
                         disabled={literaturePage === literatureMaxPage}
                         title="В конец"
-                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${literaturePage === literatureMaxPage ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 opacity-60 cursor-not-allowed border border-gray-200 dark:border-slate-700' : 'bg-emerald-600 text-white hover:bg-emerald-500'}`}
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                          literaturePage === literatureMaxPage 
+                            ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed' 
+                            : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                        }`}
                       >
-                        »
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                        </svg>
                       </button>
                     </div>
                   </div>
@@ -945,6 +1032,101 @@ function AppContent() {
                   </button>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Category Modal */}
+          {isCategoryModalOpen && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b border-white/20 dark:border-slate-700/50">
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+                    <Filter className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                    Выбор категории
+                  </h2>
+                  <button
+                    onClick={() => setIsCategoryModalOpen(false)}
+                    className="w-10 h-10 rounded-2xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-white/10 dark:hover:bg-slate-700/10 transition-all duration-300"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Search inside modal */}
+                <div className="px-6 pt-3 pb-3">
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5 opacity-60" />
+                    <input
+                      type="text"
+                      placeholder="Быстрый поиск категории..."
+                      value={categorySearchQuery}
+                      onChange={(e) => setCategorySearchQuery(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* Categories Grid */}
+                <div className="px-6 pt-1 pb-6 overflow-y-auto max-h-[50vh]">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {categories
+                      .filter(cat => cat.name.toLowerCase().includes(categorySearchQuery.toLowerCase()))
+                      .map((category) => (
+                        <button
+                          key={category.id}
+                          onClick={() => {
+                            if (category.id === 'all') {
+                              setSelectedCategories(['all']);
+                            setIsCategoryModalOpen(false);
+                              setLiteraturePage(1);
+                            } else {
+                              const isSelected = selectedCategories.includes(category.id);
+                              if (isSelected) {
+                                setSelectedCategories(selectedCategories.filter(id => id !== category.id));
+                              } else {
+                                setSelectedCategories([...selectedCategories.filter(id => id !== 'all'), category.id]);
+                              }
+                            }
+                          }}
+                          className={`p-4 rounded-2xl border-2 transition-all duration-200 text-left hover:scale-105 ${
+                            selectedCategories.includes(category.id)
+                              ? 'border-emerald-500 bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                              : 'border-white/50 dark:border-slate-700/50 bg-white/80 dark:bg-slate-800/40 hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          <div className="w-full">
+                            <div className="font-medium text-slate-900 dark:text-white break-words text-center">{category.name}</div>
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-between p-6 border-t border-white/20 dark:border-slate-700/50">
+                  <div className="text-sm text-slate-500 dark:text-slate-400">
+                    Выбрано: <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                      {selectedCategories.length === 1 && selectedCategories[0] === 'all' 
+                        ? 'Все' 
+                        : selectedCategories.map(id => categories.find(cat => cat.id === id)?.name).join(', ')
+                      }
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsCategoryModalOpen(false);
+                      // Применяем фильтры - обновляем страницу для загрузки
+                      setLiteraturePage(1);
+                    }}
+                    className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-medium transition-all duration-300 hover:scale-105"
+                  >
+                    Применить
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
