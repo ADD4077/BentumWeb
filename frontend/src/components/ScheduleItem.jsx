@@ -7,6 +7,16 @@ function ScheduleItem({ item }) {
     return lessonTypes[type] || lessonTypes['Практика'];
   };
 
+  // Очистка названия предмета от типа пары
+  const cleanSubjectName = (subject) => {
+    return subject
+      .replace(/^\(Лаб\.\)\s*/, '') // Убираем (Лаб.) в начале
+      .replace(/^\(Лекц\.\)\s*/, '') // Убираем (Лекц.) в начале
+      .replace(/^\(Практ\.\)\s*/, '') // Убираем (Практ.) в начале
+      .replace(/^\(Сем\.\)\s*/, '') // Убираем (Сем.) в начале
+      .trim();
+  };
+
   return (
     <div className="flex flex-col sm:flex-row gap-5 p-6 bg-white dark:bg-slate-800/80 backdrop-blur-md rounded-[1.5rem] border border-gray-100 dark:border-slate-700/50 shadow-lg hover:shadow-xl transition-all duration-300">
       <div className="flex sm:flex-col items-center sm:items-start justify-center gap-1 sm:w-28 sm:border-r border-gray-100 dark:border-slate-700/50 pr-4">
@@ -16,19 +26,28 @@ function ScheduleItem({ item }) {
 
       <div className="flex-grow pl-2 flex flex-col justify-center">
         <div className="flex justify-between items-start mb-2">
-          <h3 className="text-xl font-bold text-slate-900 dark:text-white">{item.subject}</h3>
+          <h3 className="text-xl font-bold text-slate-900 dark:text-white">{cleanSubjectName(item.subject)}</h3>
           <span className={`text-[10px] uppercase tracking-wider px-3 py-1 rounded-full font-bold shadow-sm ${getTypeClass(item.type)}`}>
             {item.type}
           </span>
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mt-1">
-          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-            <span className="font-medium">{item.teacher}</span>
-          </div>
-          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-            <span className="font-medium">📍 Корпус {item.building}, ауд. {item.room}</span>
-          </div>
+          {item.teacher && (
+            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+              <span className="font-medium">{item.teacher}</span>
+            </div>
+          )}
+          {(item.frame || item.classroom) && (
+            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+              <span className="font-medium">
+                📍 
+                {item.frame && `Корпус ${item.frame}`}
+                {item.frame && item.classroom && ', '}
+                {item.classroom && `ауд. ${item.classroom}`}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

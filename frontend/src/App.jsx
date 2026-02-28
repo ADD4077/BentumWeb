@@ -277,6 +277,7 @@ function AppContent() {
       time: item.Time,
       subject: item.Matter,
       teacher: item.Teacher,
+      frame: item.Frame,
       classroom: item.Classroom,
       type: getLessonType(item.Matter)
     }));
@@ -284,7 +285,7 @@ function AppContent() {
 
   // Определение типа занятия по названию
   const getLessonType = (subject) => {
-    if (subject.includes('(Лек.)') || subject.includes('Лекция')) return 'Лекция';
+    if (subject.includes('(Лекц.)') || subject.includes('Лекция')) return 'Лекция';
     if (subject.includes('(Лаб.)') || subject.includes('Лабораторная')) return 'Лабораторная';
     if (subject.includes('(Практ.)') || subject.includes('Практика')) return 'Практика';
     return 'Лекция';
@@ -654,15 +655,7 @@ function AppContent() {
                     </span>
                     <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
                     <span className="text-sm">{user?.faculty || groupInfo.faculty}</span>
-                    {userSchedule && (
-                      <>
-                        <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
-                        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                          Расписание загружено
-                        </span>
-                      </>
-                    )}
-                  </div>
+                                      </div>
                 </div>
 
                 {/* Week Toggle */}
@@ -702,8 +695,8 @@ function AppContent() {
                     key={button.id}
                     onClick={() => handleQuickDaySelect(button.id)}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                      (button.id === 'today' && selectedDay === getTodayDay()) ||
-                      (button.id === 'tomorrow' && selectedDay === getTomorrowDay())
+                      (button.id === 'today' && selectedDay === getTodayDay() && weekType === getWeekType()) ||
+                      (button.id === 'tomorrow' && selectedDay === getTomorrowDay() && weekType === getWeekType())
                         ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
                         : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-gray-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:text-emerald-600 dark:hover:text-emerald-400'
                     }`}
@@ -714,7 +707,7 @@ function AppContent() {
               </div>
 
               {/* Days Navigation */}
-              <div className="flex overflow-x-auto pb-6 gap-3 mb-2">
+              <div className="flex overflow-x-auto px-3 py-2 pb-6 gap-3 mb-2">
                 {daysOfWeek.map((day) => (
                   <button
                     key={day}
