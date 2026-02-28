@@ -345,75 +345,6 @@ function AppContent() {
   const currentSchedule = getScheduleForDay(selectedDay);
 
   // Literature data
-  const literatureData = [
-    {
-      id: 1,
-      title: "Высшая математика. Курс лекций",
-      author: "П.Е. Данко, А.Г. Попов",
-      category: "mathematics",
-      type: "textbook",
-      year: 2020,
-      description: "Полный курс высшей математики для студентов технических вузов. Содержит теоретический материал и практические задания.",
-      url: "#",
-      downloadUrl: "#"
-    },
-    {
-      id: 2,
-      title: "Физика. Учебное пособие",
-      author: "И.В. Савельев",
-      category: "physics",
-      type: "textbook",
-      year: 2019,
-      description: "Фундаментальный курс физики, охватывающий все разделы общей и теоретической физики.",
-      url: "#",
-      downloadUrl: "#"
-    },
-    {
-      id: 3,
-      title: "Сопротивление материалов",
-      author: "Н.М. Беляев",
-      category: "mechanics",
-      type: "textbook",
-      year: 2021,
-      description: "Классический учебник по сопротивлению материалов с примерами расчетов и задачами.",
-      url: "#",
-      downloadUrl: "#"
-    },
-    {
-      id: 4,
-      title: "Теоретическая механика",
-      author: "А.А. Яблонский",
-      category: "mechanics",
-      type: "textbook",
-      year: 2018,
-      description: "Учебное пособие по теоретической механике для студентов инженерных специальностей.",
-      url: "#",
-      downloadUrl: "#"
-    },
-    {
-      id: 5,
-      title: "Химия. Общая и неорганическая",
-      author: "Ю.Д. Третьяков",
-      category: "chemistry",
-      type: "textbook",
-      year: 2020,
-      description: "Современный курс общей и неорганической химии с практикумом.",
-      url: "#",
-      downloadUrl: "#"
-    },
-    {
-      id: 6,
-      title: "Инженерная графика",
-      author: "В.Г. Бородин",
-      category: "engineering",
-      type: "manual",
-      year: 2019,
-      description: "Практикум по инженерной графике и начертательной геометрии.",
-      url: "#",
-      downloadUrl: "#"
-    }
-  ];
-
   const categories = [
     { id: 'all', name: 'Все категории' },
     { id: 'mathematics', name: 'Математика' },
@@ -423,14 +354,54 @@ function AppContent() {
     { id: 'engineering', name: 'Инженерные науки' }
   ];
 
-  // Filter literature based on search and category
-  const filteredLiterature = literatureData.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // Literature pagination state and loader
+  const [literatureItems, setLiteratureItems] = useState([]);
+  const [literatureTotal, setLiteratureTotal] = useState(0);
+  const [literaturePage, setLiteraturePage] = useState(1);
+  const literaturePageSize = 6;
+  const literatureMaxPage = Math.max(1, Math.ceil(literatureTotal / literaturePageSize));
+  const [literatureLoading, setLiteratureLoading] = useState(false);
+
+  const fetchLiterature = async (page = 1) => {
+    setLiteratureLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('page', page);
+      params.set('page_size', literaturePageSize);
+      if (searchQuery) params.set('search', searchQuery);
+      if (selectedCategory && selectedCategory !== 'all') params.set('category', selectedCategory);
+
+      const res = await fetch(`/api/literature?${params.toString()}`);
+      if (!res.ok) throw new Error('Ошибка запроса литературы');
+      const data = await res.json();
+      setLiteratureItems(data.items || []);
+      setLiteratureTotal(data.total || 0);
+      setLiteraturePage(data.page || page);
+    } catch (e) {
+      console.error('fetchLiterature error', e);
+      setLiteratureItems([]);
+      setLiteratureTotal(0);
+    } finally {
+      setLiteratureLoading(false);
+    }
+  };
+
+  // When page changes or when the literature tab becomes active, load data
+  useEffect(() => {
+    if (activeTab === 'literature') {
+      fetchLiterature(literaturePage);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, literaturePage]);
+
+  // When search or category changes, reset to page 1 and fetch
+  useEffect(() => {
+    if (activeTab === 'literature') {
+      setLiteraturePage(1);
+      fetchLiterature(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, selectedCategory]);
 
   // News data
   const newsData = [
@@ -803,22 +774,27 @@ function AppContent() {
 
               {/* Results count */}
               <div className="mb-6 text-sm text-slate-600 dark:text-slate-400">
-                Найдено материалов: {filteredLiterature.length}
+                Найдено материалов: {literatureTotal}
               </div>
 
               {/* Literature Grid */}
-              {filteredLiterature.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredLiterature.map((item) => (
+              {literatureItems.length > 0 ? (
+                <div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {literatureItems.map((item) => (
                     <div
                       key={item.id}
-                      className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                      className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between h-full"
                     >
                       {/* Header */}
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/20 rounded-xl flex items-center justify-center">
-                            <BookOpen className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                          <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/20 rounded-md flex items-center justify-center overflow-hidden">
+                            {item.image_url ? (
+                              <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <BookOpen className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                            )}
                           </div>
                           <div>
                             <span className="inline-block px-2 py-1 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 text-xs font-medium rounded-lg mb-1">
@@ -844,20 +820,98 @@ function AppContent() {
 
                       {/* Actions */}
                       <div className="flex gap-2">
-                        <button
-                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium transition-colors"
-                        >
-                          <Download className="w-4 h-4" />
-                          Скачать
-                        </button>
-                        <button
-                          className="flex items-center justify-center px-4 py-2 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 border border-gray-200 dark:border-slate-600 rounded-xl text-sm font-medium transition-colors"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </button>
+                        { (item.downloadUrl || item.download_url) ? (
+                          <a
+                            href={item.downloadUrl || item.download_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download
+                            className="flex-1 flex items-center justify-center gap-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium transition-colors"
+                          >
+                            <Download className="w-4 h-4" />
+                              Скачать
+                              { (item.downloadSize || item.size) && (
+                                <span className="text-sm text-slate-200 dark:text-slate-300 ml-1">({item.downloadSize || item.size})</span>
+                              ) }
+                          </a>
+                        ) : (
+                          <button
+                            disabled
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 text-gray-500 rounded-xl text-sm font-medium"
+                          >
+                            <Download className="w-4 h-4" />
+                            Скачать
+                          </button>
+                        )}
+
+                        { (item.downloadUrl || item.download_url) ? (
+                          <a
+                            href={item.downloadUrl || item.download_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center px-4 py-2 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 border border-gray-200 dark:border-slate-600 rounded-xl text-sm font-medium transition-colors"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        ) : (
+                          <button
+                            disabled
+                            className="flex items-center justify-center px-4 py-2 bg-gray-200 text-gray-500 rounded-xl text-sm font-medium"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
+                  </div>
+
+                  {/* Pagination controls (First / Prev / Current / Next / Last) */}
+                  <div className="flex items-center justify-center gap-3 mt-8">
+                    <div className="flex items-center gap-2 bg-transparent">
+                      <button
+                        onClick={() => setLiteraturePage(1)}
+                        disabled={literaturePage === 1}
+                        title="В начало"
+                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${literaturePage === 1 ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 opacity-60 cursor-not-allowed border border-gray-200 dark:border-slate-700' : 'bg-emerald-600 text-white hover:bg-emerald-500'}`}
+                      >
+                        «
+                      </button>
+
+                      <button
+                        onClick={() => literaturePage > 1 && setLiteraturePage(literaturePage - 1)}
+                        disabled={literaturePage === 1}
+                        title="Предыдущая"
+                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${literaturePage === 1 ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 opacity-60 cursor-not-allowed border border-gray-200 dark:border-slate-700' : 'bg-emerald-600 text-white hover:bg-emerald-500'}`}
+                      >
+                        ‹
+                      </button>
+
+                      <div className="px-3 py-2 bg-emerald-600 text-white rounded-md text-sm">
+                        Стр {literaturePage} из {literatureMaxPage}
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (literaturePage < literatureMaxPage) setLiteraturePage(literaturePage + 1);
+                        }}
+                        disabled={literaturePage >= literatureMaxPage}
+                        title="Следующая"
+                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${literaturePage >= literatureMaxPage ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 opacity-60 cursor-not-allowed border border-gray-200 dark:border-slate-700' : 'bg-emerald-600 text-white hover:bg-emerald-500'}`}
+                      >
+                        ›
+                      </button>
+
+                      <button
+                        onClick={() => setLiteraturePage(literatureMaxPage)}
+                        disabled={literaturePage === literatureMaxPage}
+                        title="В конец"
+                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${literaturePage === literatureMaxPage ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 opacity-60 cursor-not-allowed border border-gray-200 dark:border-slate-700' : 'bg-emerald-600 text-white hover:bg-emerald-500'}`}
+                      >
+                        »
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-24 text-center">

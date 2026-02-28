@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
@@ -395,3 +396,150 @@ def get_schedule(request):
             {"detail": f"Внутренняя ошибка сервера: {str(e)}"},
             status=500
         )
+
+
+@csrf_exempt
+def get_literature(request):
+    """Возвращает список литературы с пагинацией и фильтрацией.
+
+    Параметры GET:
+      - page (int) - номер страницы, начиная с 1 (по умолчанию 1)
+      - page_size (int) - элементов на страницу (по умолчанию 6)
+      - search (str) - поисковая строка по title/author/description
+      - category (str) - id категории (например, "mathematics"), "all" или отсутствие означает без фильтра
+    """
+    if request.method != "GET":
+        return JsonResponse({"detail": "Метод не разрешён"}, status=405)
+
+    def _format_size(size: any) -> any:
+        """Нормализует строку размера: округляет число до 2 знаков и стандартизует единицу (B/KB/MB/GB).
+        Если формат нераспознан — возвращает исходное значение.
+        Примеры: '1.763Mb' -> '1.76MB', '1763Kb' -> '1763.00KB' (если в данных такое встречается).
+        """
+        if not size and size != 0:
+            return None
+
+        # Число в чистом виде
+        if isinstance(size, (int, float)):
+            try:
+                return f"{float(size):.2f}"
+            except Exception:
+                return str(size)
+
+        s = str(size).strip()
+        # Пытаемся матчить число и опциональную единицу
+        m = re.match(r"^\s*([0-9]+(?:[.,][0-9]+)?)\s*([kKmMgGtT]?\s*[bB])?\s*$", s)
+        if not m:
+            return s
+
+        num = m.group(1).replace(',', '.')
+        unit = (m.group(2) or '').replace(' ', '')
+        unit = unit.upper() if unit else ''
+
+        # Приводим единицу к общепринятому виду (KB/MB/GB/B)
+        if unit in ('B', ''):
+            unit = 'B' if unit == 'B' else ''
+        elif unit in ('KB', 'K B'):
+            unit = 'KB'
+        elif unit in ('MB', 'M B'):
+            unit = 'MB'
+        elif unit in ('GB', 'G B'):
+            unit = 'GB'
+
+        try:
+            val = float(num)
+            # Округляем до 2 знаков
+            formatted = f"{val:.2f}"
+            return f"{formatted}{unit}"
+        except Exception:
+            return s
+
+    try:
+        page = int(request.GET.get('page', '1'))
+        page_size = int(request.GET.get('page_size', '6'))
+        if page < 1:
+            page = 1
+        if page_size < 1:
+            page_size = 6
+    except ValueError:
+        return JsonResponse({"detail": "Некорректные параметры пагинации"}, status=400)
+
+    search = (request.GET.get('search') or '').strip().lower()
+    category = (request.GET.get('category') or '').strip()
+
+    try:
+        literature_path = os.path.join(settings.BASE_DIR, 'books', 'literature.json')
+        if not os.path.exists(literature_path):
+            return JsonResponse({"detail": "Файл литературы не найден"}, status=404)
+
+        with open(literature_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        # Файл может быть либо списком элементов, либо словарём категорий с полем "items"
+        flattened = []
+        if isinstance(data, list):
+            flattened = data
+        elif isinstance(data, dict):
+            # Преобразуем структуру { category: { items: [...] } }
+            idx = 1
+            for cat_key, cat_val in data.items():
+                items = []
+                if isinstance(cat_val, dict) and 'items' in cat_val and isinstance(cat_val['items'], list):
+                    items = cat_val['items']
+                elif isinstance(cat_val, list):
+                    items = cat_val
+
+                for it in items:
+                    norm = {}
+                    norm['id'] = it.get('id') or idx
+                    norm['title'] = it.get('title') or it.get('name') or ''
+                    # authors may be a list
+                    authors = it.get('authors') or it.get('author') or ''
+                    if isinstance(authors, list):
+                        norm['author'] = ', '.join(authors)
+                    else:
+                        norm['author'] = authors
+                    norm['description'] = it.get('description') or ''
+                    norm['category'] = cat_key
+                    norm['year'] = it.get('publishing_date') or it.get('year') or ''
+                    # download link if present
+                    download = it.get('download') or {}
+                    norm['downloadUrl'] = download.get('download_link') or download.get('link') or it.get('download_link') or None
+                    raw_size = download.get('size') or it.get('download', {}).get('size') or it.get('size') or None
+                    norm['downloadSize'] = _format_size(raw_size)
+                    norm['image_url'] = it.get('image_url') or None
+                    norm['type'] = it.get('type') or None
+                    flattened.append(norm)
+                    idx += 1
+        else:
+            return JsonResponse({"detail": "Неподдерживаемый формат файла литературы"}, status=500)
+
+        # Фильтрация
+        def matches(item):
+            if category and category != 'all' and str(item.get('category')) != category:
+                return False
+            if search:
+                hay = ' '.join([str(item.get(k, '')).lower() for k in ('title', 'author', 'description')])
+                if search not in hay:
+                    return False
+            return True
+
+        filtered = [it for it in flattened if matches(it)]
+        total = len(filtered)
+
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_items = filtered[start:end]
+
+        return JsonResponse({
+            "success": True,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "items": page_items,
+        }, status=200, json_dumps_params={'ensure_ascii': False})
+
+    except json.JSONDecodeError:
+        return JsonResponse({"detail": "Ошибка чтения файла литературы"}, status=500)
+    except Exception as e:
+        return JsonResponse({"detail": f"Внутренняя ошибка сервера: {str(e)}"}, status=500)
