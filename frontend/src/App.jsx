@@ -913,6 +913,16 @@ function AppContent() {
                     </div>
                   </div>
                 </div>
+              ) : literatureLoading ? (
+                <div className="flex flex-col items-center justify-center py-24 text-center">
+                  <div className="w-16 h-16 border-4 border-emerald-200 dark:border-emerald-800 border-t-emerald-600 dark:border-t-emerald-400 rounded-full animate-spin mb-6"></div>
+                  <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                    Загрузка материалов...
+                  </h3>
+                  <p className="text-slate-500 dark:text-slate-400">
+                    Пожалуйста, подождите немного
+                  </p>
+                </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-24 text-center">
                   <div className="w-20 h-20 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
