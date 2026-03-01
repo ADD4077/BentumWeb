@@ -1,9 +1,13 @@
 import json
 import os
 import re
+import sqlite3
+from datetime import datetime
+from django.conf import settings
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.utils import timezone
+from .func import authorize
+import pytz
 from django.contrib.sessions.models import Session
 from django.contrib.sessions.backends.db import SessionStore
 from django.conf import settings
@@ -142,7 +146,7 @@ def save_data(request):
             faculty=faculty,
             student_code=student_code,
             bilet_code=red_code,
-            created_at=timezone.now()
+            created_at=datetime.now(pytz.UTC)
         )
         print(f"User created: {user.student_code}")
                 
@@ -361,24 +365,64 @@ def get_schedule(request):
         )
     
     try:
-        # Формируем имя файла расписания (используем первые 8 цифр)
-        schedule_filename = f"schedule_{student_code[:8]}.json"
-        schedule_path = os.path.join(settings.BASE_DIR, 'schedules', schedule_filename)
+        # Путь к базе данных
+        db_path = os.path.join(settings.BASE_DIR, 'schedules', 'schedules.db')
         
-        print(f"Looking for schedule file: {schedule_filename}")
-        print(f"Full path: {schedule_path}")
-        print(f"File exists: {os.path.exists(schedule_path)}")
+        print(f"Looking for schedule database: {db_path}")
+        print(f"Database exists: {os.path.exists(db_path)}")
         
-        # Проверяем существование файла
-        if not os.path.exists(schedule_path):
+        # Проверяем существование базы данных
+        if not os.path.exists(db_path):
             return JsonResponse(
-                {"detail": f"Расписание для группы {student_code[:8]} не найдено"},
+                {"detail": "База данных расписаний не найдена"},
                 status=404
             )
         
-        # Читаем файл расписания
-        with open(schedule_path, 'r', encoding='utf-8') as f:
-            schedule_data = json.load(f)
+        # Подключаемся к базе данных
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Ищем расписание для группы (первые 8 цифр student_code)
+        group_id = student_code[:8]
+        
+        # Получаем расписание из базы данных
+        cursor.execute("""
+            SELECT day, week, time, matter, frame, teacher, classroom 
+            FROM schedules 
+            WHERE group_number = ? 
+            ORDER BY day, week, time
+        """, (group_id,))
+        
+        rows = cursor.fetchall()
+        conn.close()
+        
+        if not rows:
+            return JsonResponse(
+                {"detail": f"Расписание для группы {group_id} не найдено"},
+                status=404
+            )
+        
+        # Формируем данные в том же формате, что и JSON
+        schedule_data = {}
+        
+        for row in rows:
+            day, week, time, matter, frame, teacher, classroom = row
+            
+            # Создаем структуру дня и недели если нужно
+            if day not in schedule_data:
+                schedule_data[day] = {}
+            week_type = 'upper' if week == 1 else 'lower'
+            if week_type not in schedule_data[day]:
+                schedule_data[day][week_type] = []
+            
+            # Добавляем занятие
+            schedule_data[day][week_type].append({
+                "time": time,
+                "subject": matter,
+                "type": frame,
+                "teacher": teacher,
+                "classroom": classroom
+            })
         
         return JsonResponse({
             "success": True,
@@ -386,12 +430,14 @@ def get_schedule(request):
             "student_code": student_code
         }, status=200)
         
-    except json.JSONDecodeError:
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
         return JsonResponse(
-            {"detail": "Ошибка чтения файла расписания"},
+            {"detail": "Ошибка базы данных расписаний"},
             status=500
         )
     except Exception as e:
+        print(f"Unexpected error: {e}")
         return JsonResponse(
             {"detail": f"Внутренняя ошибка сервера: {str(e)}"},
             status=500
@@ -501,102 +547,309 @@ def get_literature(request):
     category = (request.GET.get('category') or '').strip()
 
     try:
-        literature_path = os.path.join(settings.BASE_DIR, 'books', 'literature.json')
-        if not os.path.exists(literature_path):
-            return JsonResponse({"detail": "Файл литературы не найден"}, status=404)
+        # Путь к базе данных
+        db_path = os.path.join(settings.BASE_DIR, 'books', 'literature.db')
+        
+        if not os.path.exists(db_path):
+            return JsonResponse({"detail": "База данных литературы не найдена"}, status=404)
 
-        with open(literature_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        # Подключаемся к базе данных
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
 
-        # Файл может быть либо списком элементов, либо словарём категорий с полем "items"
-        flattened = []
-        if isinstance(data, list):
-            flattened = data
-        elif isinstance(data, dict):
-            # Преобразуем структуру { category: { items: [...] } }
-            idx = 1
-            for cat_key, cat_val in data.items():
-                items = []
-                if isinstance(cat_val, dict) and 'items' in cat_val and isinstance(cat_val['items'], list):
-                    items = cat_val['items']
-                elif isinstance(cat_val, list):
-                    items = cat_val
+        # Формируем SQL запрос с фильтрацией
+        where_conditions = []
+        params = []
 
-                for it in items:
-                    norm = {}
-                    norm['id'] = it.get('id') or idx
-                    norm['title'] = it.get('title') or it.get('name') or ''
-                    # authors may be a list
-                    authors = it.get('authors') or it.get('author') or ''
-                    if isinstance(authors, list):
-                        norm['author'] = ', '.join(authors)
-                    else:
-                        norm['author'] = authors
-                    norm['description'] = it.get('description') or ''
-                    norm['category'] = cat_key
-                    norm['year'] = it.get('publishing_date') or it.get('year') or ''
-                    # download link if present
-                    download = it.get('download') or {}
-                    norm['downloadUrl'] = download.get('download_link') or download.get('link') or it.get('download_link') or None
-                    raw_size = download.get('size') or it.get('download', {}).get('size') or it.get('size') or None
-                    norm['downloadSize'] = _format_size(raw_size)
-                    norm['image_url'] = it.get('image_url') or None
-                    norm['type'] = it.get('type') or None
-                    flattened.append(norm)
-                    idx += 1
-        else:
-            return JsonResponse({"detail": "Неподдерживаемый формат файла литературы"}, status=500)
+        # Фильтрация по категориям
+        categories = request.GET.getlist('category')
+        if categories and 'all' not in categories:
+            placeholders = ','.join(['?' for _ in categories])
+            where_conditions.append(f"category IN ({placeholders})")
+            params.extend(categories)
 
-        # Фильтрация
-        def matches(item):
-            # Поддержка множественных категорий
-            categories = request.GET.getlist('category')
-            if categories and 'all' not in categories:
-                item_category = str(item.get('category'))
-                if item_category not in categories:
-                    return False
-            if search:
-                hay = ' '.join([str(item.get(k, '')).lower() for k in ('title', 'author', 'description')])
-                if search not in hay:
-                    return False
-            return True
+        # Поисковый фильтр
+        if search:
+            where_conditions.append("(LOWER(title) LIKE ? OR LOWER(authors) LIKE ? OR LOWER(description) LIKE ?)")
+            search_param = f"%{search}%"
+            params.extend([search_param, search_param, search_param])
 
-        filtered = [it for it in flattened if matches(it)]
-        total = len(filtered)
+        # Формируем WHERE
+        where_clause = ""
+        if where_conditions:
+            where_clause = "WHERE " + " AND ".join(where_conditions)
 
         # Сортировка
+        order_clause = "ORDER BY title ASC"
         sort_param = request.GET.get('sort', 'default')
         if sort_param != 'default':
             if sort_param == 'title_asc':
-                filtered.sort(key=lambda x: x.get('title', '').lower())
+                order_clause = "ORDER BY title ASC"
             elif sort_param == 'title_desc':
-                filtered.sort(key=lambda x: x.get('title', '').lower(), reverse=True)
+                order_clause = "ORDER BY title DESC"
             elif sort_param == 'year_desc':
-                filtered.sort(key=lambda x: x.get('year', ''), reverse=True)
+                order_clause = "ORDER BY publishing_date DESC"
             elif sort_param == 'year_asc':
-                filtered.sort(key=lambda x: x.get('year', ''))
+                order_clause = "ORDER BY publishing_date ASC"
             elif sort_param == 'category_asc':
-                filtered.sort(key=lambda x: x.get('category', '').lower())
+                order_clause = "ORDER BY category ASC"
             elif sort_param == 'category_desc':
-                filtered.sort(key=lambda x: x.get('category', '').lower(), reverse=True)
+                order_clause = "ORDER BY category DESC"
             elif sort_param == 'size_desc':
-                filtered.sort(key=lambda x: _parse_size(x.get('downloadSize', '')), reverse=True)
+                order_clause = "ORDER BY title ASC"  # Временная сортировка, будем сортировать в Python
             elif sort_param == 'size_asc':
-                filtered.sort(key=lambda x: _parse_size(x.get('downloadSize', '')))
+                order_clause = "ORDER BY title ASC"  # Временная сортировка, будем сортировать в Python
 
-        start = (page - 1) * page_size
-        end = start + page_size
-        page_items = filtered[start:end]
+        # Для сортировки по размеру получаем все данные, иначе - используем пагинацию в SQL
+        if sort_param in ['size_desc', 'size_asc']:
+            # Получаем все данные для сортировки по размеру
+            query = f"""
+                SELECT rowid, title, faculty, category, authors, publishing_date, 
+                       description, image_url, download_size, download_link
+                FROM literature 
+                {where_clause}
+            """
+            cursor.execute(query, params)
+            all_rows = cursor.fetchall()
+            conn.close()
+            
+            # Формируем все данные
+            all_items = []
+            for row in all_rows:
+                (rowid, title, faculty, category, authors, publishing_date, 
+                 description, image_url, download_size, download_link) = row
+                
+                all_items.append({
+                    'id': rowid,
+                    'title': title or '',
+                    'author': authors or '',
+                    'description': description or '',
+                    'category': category or '',
+                    'year': publishing_date or '',
+                    'faculty': faculty or '',
+                    'downloadUrl': download_link,
+                    'downloadSize': _format_size(download_size),
+                    'downloadSizeRaw': download_size,
+                    'image_url': image_url
+                })
+            
+            # Сортировка по размеру
+            reverse = sort_param == 'size_desc'
+            all_items.sort(key=lambda x: _parse_size(x.get('downloadSizeRaw', '') or '0'), reverse=reverse)
+            
+            # Применяем пагинацию
+            total = len(all_items)
+            start = (page - 1) * page_size
+            end = start + page_size
+            items = all_items[start:end]
+            
+        else:
+            # Обычная сортировка через SQL с пагинацией
+            count_query = f"SELECT COUNT(*) FROM literature {where_clause}"
+            cursor.execute(count_query, params)
+            total = cursor.fetchone()[0]
+
+            offset = (page - 1) * page_size
+            limit_clause = f"LIMIT {page_size} OFFSET {offset}"
+
+            query = f"""
+                SELECT rowid, title, faculty, category, authors, publishing_date, 
+                       description, image_url, download_size, download_link
+                FROM literature 
+                {where_clause} 
+                {order_clause} 
+                {limit_clause}
+            """
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            conn.close()
+
+            # Формируем данные
+            items = []
+            for row in rows:
+                (rowid, title, faculty, category, authors, publishing_date, 
+                 description, image_url, download_size, download_link) = row
+                
+                items.append({
+                    'id': rowid,
+                    'title': title or '',
+                    'author': authors or '',
+                    'description': description or '',
+                    'category': category or '',
+                    'year': publishing_date or '',
+                    'faculty': faculty or '',
+                    'downloadUrl': download_link,
+                    'downloadSize': _format_size(download_size),
+                    'image_url': image_url
+                })
 
         return JsonResponse({
             "success": True,
             "page": page,
             "page_size": page_size,
             "total": total,
-            "items": page_items,
+            "items": items,
         }, status=200, json_dumps_params={'ensure_ascii': False})
 
-    except json.JSONDecodeError:
-        return JsonResponse({"detail": "Ошибка чтения файла литературы"}, status=500)
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        return JsonResponse({"detail": "Ошибка базы данных литературы"}, status=500)
     except Exception as e:
+        print(f"Unexpected error: {e}")
+        return JsonResponse({"detail": f"Внутренняя ошибка сервера: {str(e)}"}, status=500)
+
+
+@csrf_exempt
+def get_news(request):
+    """Возвращает список новостей с пагинацией и фильтрацией.
+    
+    Параметры GET:
+      - page (int) - номер страницы, начиная с 1 (по умолчанию 1)
+      - page_size (int) - элементов на страницу (по умолчанию 6)
+      - category (str) - фильтр по категории
+      - search (str) - поисковая строка
+    """
+    if request.method != "GET":
+        return JsonResponse({"detail": "Метод не разрешён"}, status=405)
+
+    try:
+        page = int(request.GET.get('page', '1'))
+        page_size = int(request.GET.get('page_size', '6'))
+        if page < 1:
+            page = 1
+        if page_size < 1:
+            page_size = 6
+    except ValueError:
+        return JsonResponse({"detail": "Некорректные параметры пагинации"}, status=400)
+
+    search = (request.GET.get('search') or '').strip().lower()
+    category = (request.GET.get('category') or '').strip()
+    sort_by = (request.GET.get('sort_by') or 'date_desc').strip()
+
+    try:
+        # Путь к базе данных
+        db_path = os.path.join(settings.BASE_DIR, 'news', 'times_news.db')
+        
+        if not os.path.exists(db_path):
+            return JsonResponse({"detail": "База данных новостей не найдена"}, status=404)
+
+        # Подключаемся к базе данных
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Формируем SQL запрос с фильтрацией
+        where_conditions = []
+        params = []
+
+        # Фильтр по категории
+        if category and category != 'all':
+            where_conditions.append("tags LIKE ?")
+            params.append(f"%{category}%")
+
+        # Поисковый фильтр
+        if search:
+            where_conditions.append("(LOWER(title) LIKE ? OR LOWER(summary) LIKE ?)")
+            search_param = f"%{search}%"
+            params.extend([search_param, search_param])
+
+        # Формируем WHERE
+        where_clause = ""
+        if where_conditions:
+            where_clause = "WHERE " + " AND ".join(where_conditions)
+
+        # Получаем общее количество
+        count_query = f"SELECT COUNT(*) FROM news {where_clause}"
+        cursor.execute(count_query, params)
+        total = cursor.fetchone()[0]
+
+        # Пагинация
+        offset = (page - 1) * page_size
+        limit_clause = f"LIMIT {page_size} OFFSET {offset}"
+
+        # Определяем сортировку
+        order_by = "timestamp DESC"  # По умолчанию новые сначала
+        if sort_by == 'date_asc':
+            order_by = "timestamp ASC"
+        elif sort_by == 'title_asc':
+            order_by = "title ASC"
+        elif sort_by == 'title_desc':
+            order_by = "title DESC"
+
+        # Основной запрос с динамической сортировкой
+        query = f"""
+            SELECT id, title, link, date, summary, tags, image_url, reading_time, timestamp
+            FROM news 
+            {where_clause} 
+            ORDER BY {order_by}
+            {limit_clause}
+        """
+        
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        conn.close()
+
+        # Формируем данные в нужном формате
+        items = []
+        for row in rows:
+            (news_id, title, link, date, summary, tags, image_url, reading_time, timestamp) = row
+            
+            # Определяем категорию из тегов
+            news_category = 'general'  # категория по умолчанию
+            if tags:
+                tags_lower = tags.lower()
+                if 'academic' in tags_lower or 'наука' in tags_lower:
+                    news_category = 'academic'
+                elif 'achievements' in tags_lower or 'достижения' in tags_lower:
+                    news_category = 'achievements'
+                elif 'events' in tags_lower or 'мероприятия' in tags_lower:
+                    news_category = 'events'
+            
+            # Передаем timestamp для корректной сортировки и конвертации на фронтенде
+            
+            # Парсим теги из строки
+            parsed_tags = []
+            if tags:
+                # Разделяем теги по запятым или другим разделителям
+                import re
+                tag_list = re.split(r'[,;]\s*', tags.strip())
+                parsed_tags = []
+                for tag in tag_list:
+                    clean_tag = tag.strip()
+                    # Удаляем все # в начале и другие символы
+                    clean_tag = re.sub(r'^#+', '', clean_tag)
+                    # Удаляем лишние пробелы
+                    clean_tag = clean_tag.strip()
+                    if clean_tag:
+                        parsed_tags.append(clean_tag)
+            
+            items.append({
+                'id': news_id,
+                'title': title or '',
+                'excerpt': summary or '',
+                'content': summary or '',  # Используем summary как контент
+                'category': news_category,
+                'tags': parsed_tags,  # Добавляем теги
+                'author': 'БНТУ',
+                'date': date,  # Передаем оригинальную дату
+                'timestamp': timestamp,  # Добавляем timestamp для сортировки
+                'imageUrl': image_url or '',
+                'link': link or '',
+                'featured': False,  # Можно определить по тегам если нужно
+                'readTime': f"{reading_time or 5} мин"
+            })
+
+        return JsonResponse({
+            "success": True,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "items": items,
+        }, status=200, json_dumps_params={'ensure_ascii': False})
+
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        return JsonResponse({"detail": "Ошибка базы данных новостей"}, status=500)
+    except Exception as e:
+        print(f"Unexpected error: {e}")
         return JsonResponse({"detail": f"Внутренняя ошибка сервера: {str(e)}"}, status=500)

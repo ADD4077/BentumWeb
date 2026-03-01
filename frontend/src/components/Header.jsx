@@ -98,7 +98,7 @@ function BurgerIcon({ isOpen }) {
 
 
 
-function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModalOpen, isMobileMenuOpen, setIsMobileMenuOpen }) {
+function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModalOpen, isMobileMenuOpen, setIsMobileMenuOpen, isProfileModalOpen, setIsProfileModalOpen }) {
 
   const { isAuthenticated, user, logout } = useAuth();
 
@@ -552,55 +552,59 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
 
               {isAuthenticated ? (
 
-                <div className="flex items-center gap-3 px-4 py-3 rounded-2xl flex-1">
-
-                  <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center text-white font-bold">
-
-                    {user?.fullname?.charAt(0) ? (
-
-                      <span>{user?.fullname?.charAt(0)}</span>
-
-                    ) : (
-
-                      <User className="w-5 h-5" />
-
-                    )}
-
-                  </div>
-
-                  <div className="flex flex-col flex-1 min-w-0">
-
-                    <span className="text-sm font-medium text-slate-900 dark:text-white truncate">
-
-                      {user?.fullname || 'Пользователь'}
-
-                    </span>
-
-                    <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
-
-                      {user?.faculty || 'Студент'}
-
-                    </span>
-
-                  </div>
-
-                  <button 
-
+                <div className="flex items-center gap-3">
+                  {/* Profile */}
+                  <div 
                     onClick={() => {
-
-                      logout();
-
-                      setActiveTab('home');
-
+                      setIsProfileModalOpen(true);
                       setIsMobileMenuOpen(false);
-
                     }}
-
-                    className="w-10 h-10 flex items-center justify-center bg-[#FFB2B2] hover:bg-[#FF9696] dark:bg-[#542426] dark:hover:bg-[#4a2526] rounded-xl transition-all"
-
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl flex-1 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all cursor-pointer"
                   >
 
-                    <LogOut className="w-10 h-4 text-red-600 dark:text-red-400" />
+                    <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center text-white font-bold">
+
+                      {user?.fullname?.charAt(0) ? (
+
+                        <span>{user?.fullname?.charAt(0)}</span>
+
+                      ) : (
+
+                        <User className="w-5 h-5" />
+
+                      )}
+
+                    </div>
+
+                    <div className="flex flex-col flex-1 min-w-0 text-left">
+
+                      <span className="text-sm font-medium text-slate-900 dark:text-white truncate">
+
+                        {user?.fullname || 'Пользователь'}
+
+                      </span>
+
+                      <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
+
+                        {user?.faculty || 'Студент'}
+
+                      </span>
+
+                    </div>
+
+                  </div>
+
+                  {/* Logout Button */}
+                  <button 
+                    onClick={() => {
+                      logout();
+                      setActiveTab('home');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-10 h-10 flex items-center justify-center bg-[#FFB2B2] hover:bg-[#FF9696] dark:bg-[#542426] dark:hover:bg-[#4a2526] rounded-xl transition-all"
+                  >
+
+                    <LogOut className="w-4 h-4 text-red-600 dark:text-red-400" />
 
                   </button>
 

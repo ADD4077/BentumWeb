@@ -1,12 +1,122 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Header from './components/Header.jsx';
 import ScheduleItem from './components/ScheduleItem.jsx';
 import LoginModal from './components/LoginModal.jsx';
 import FeatureCard from './components/FeatureCard.jsx';
 import TeamCarousel from './components/TeamCarousel.jsx';
-import { Star, LogIn, ChevronRight, BookOpen, Download, ExternalLink, Search, Filter, Calendar, Clock, User, Tag, ArrowRight, Gamepad2, Trophy, Zap, Target, Brain, Heart } from 'lucide-react';
+import { ArrowRight, Backpack, Book, BookOpen, Calendar, ChevronRight, Clock, Download, Edit, ExternalLink, Filter, Gamepad2, GraduationCap, LogIn, LogOut, Moon, Search, Star, Sun, User } from 'lucide-react';
 import { daysOfWeek, quickDayButtons, groupInfo, features, teamMembers } from './utils/constants.js';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
+
+// TagsContainer component for dynamic tag rendering
+const TagsContainer = ({ tags }) => {
+  const [visibleCount, setVisibleCount] = useState(1);
+  const containerRef = useRef(null);
+  
+  useEffect(() => {
+    const updateVisibleCount = () => {
+      if (!containerRef.current || !tags.length) return;
+      
+      const container = containerRef.current;
+      const containerWidth = container.offsetWidth;
+      
+      // Если контейнер слишком узкий
+      if (containerWidth < 80) {
+        setVisibleCount(1);
+        return;
+      }
+      
+      // Создаем временный элемент для точного измерения
+      const measureElement = document.createElement('span');
+      measureElement.style.visibility = 'hidden';
+      measureElement.style.position = 'absolute';
+      measureElement.style.fontSize = '12px';
+      measureElement.style.fontWeight = '500';
+      measureElement.style.padding = '8px';
+      measureElement.style.whiteSpace = 'nowrap';
+      measureElement.style.borderRadius = '8px';
+      document.body.appendChild(measureElement);
+      
+      // Измеряем ширину "+N"
+      measureElement.textContent = '+99';
+      const plusWidth = measureElement.offsetWidth;
+      
+      const gap = 4; // gap-1 = 4px
+      let totalWidth = 0;
+      let maxTags = 1;
+      
+      // Измеряем каждый тег
+      for (let i = 0; i < tags.length; i++) {
+        measureElement.textContent = tags[i];
+        const tagWidth = measureElement.offsetWidth;
+        
+        const remainingTags = tags.length - i - 1;
+        const needsPlus = remainingTags > 0;
+        
+        if (i === 0) {
+          totalWidth = tagWidth;
+          maxTags = 1;
+        } else {
+          const nextWidth = totalWidth + gap + tagWidth + (needsPlus ? plusWidth + gap : 0);
+          
+          if (nextWidth <= containerWidth) {
+            totalWidth += gap + tagWidth;
+            maxTags++;
+          } else {
+            break;
+          }
+        }
+      }
+      
+      document.body.removeChild(measureElement);
+      setVisibleCount(Math.max(1, maxTags));
+    };
+    
+    // Несколько попыток измерения для корректного рендеринга
+    const timers = [
+      setTimeout(updateVisibleCount, 0),
+      setTimeout(updateVisibleCount, 50),
+      setTimeout(updateVisibleCount, 200),
+      setTimeout(updateVisibleCount, 500)
+    ];
+    
+    const handleResize = () => {
+      clearTimeout(handleResize.timer);
+      handleResize.timer = setTimeout(updateVisibleCount, 100);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      timers.forEach(timer => clearTimeout(timer));
+      clearTimeout(handleResize.timer);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [tags]);
+  
+  const visibleTags = tags.slice(0, visibleCount);
+  const remainingCount = tags.length - visibleCount;
+  
+  return (
+    <div ref={containerRef} className="flex items-center gap-1 overflow-hidden">
+      {visibleTags.map((tag, index) => (
+        <span 
+          key={`${tag}-${index}-${visibleCount}`}
+          className="inline-block px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-lg whitespace-nowrap flex-shrink-0"
+        >
+          {tag}
+        </span>
+      ))}
+      {remainingCount > 0 && (
+        <span 
+          className="inline-block px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-lg whitespace-nowrap flex-shrink-0"
+        >
+          +{remainingCount}
+        </span>
+      )}
+    </div>
+  );
+};
 
 function AppContent() {
   const [darkMode, setDarkMode] = useState(() => {
@@ -29,6 +139,22 @@ function AppContent() {
 
   // Games data
   const gamesData = [
+    {
+      id: 0,
+      title: "Minecraft Server",
+      developer: "BNTU Community",
+      category: "survival",
+      price: 0,
+      originalPrice: null,
+      discount: 0,
+      rating: 4.9,
+      image: "https://i.ibb.co/cSdYNv9R/IMG-20260301-114010-042.png",
+      description: "Официальный Minecraft сервер студентов БНТУ. Выживание, мини-игры и дружное сообщество!",
+      tags: ["Выживание", "Мультиплеер", "Бесплатно", "Сообщество"],
+      featured: true,
+      serverUrl: "https://serverbntu.ru/",
+      serverIP: "serverbntu.ru"
+    },
     {
       id: 1,
       title: "Cyber Racing 2077",
@@ -255,7 +381,7 @@ function AppContent() {
 
   // Преобразование расписания из API в формат для отображения
   const getScheduleForDay = (day) => {
-    if (!userSchedule || !userSchedule.Schedule) return [];
+    if (!userSchedule) return [];
     
     const dayMapping = {
       'Пн': 'Понедельник',
@@ -269,24 +395,25 @@ function AppContent() {
     
     const fullDayName = dayMapping[day];
     
-    // Выбираем неделю (0 - первая неделя, 1 - вторая неделя)
-    const weekIndex = weekType === 'upper' ? 0 : 1;
+    // Выбираем тип недели
+    const weekTypeKey = weekType; // 'upper' или 'lower'
     
-    // Проверяем, что неделя существует
-    if (!userSchedule.Schedule[weekIndex]) return [];
+    // Проверяем, что день существует в расписании
+    if (!userSchedule[fullDayName]) return [];
     
-    const daySchedule = userSchedule.Schedule[weekIndex];
+    // Проверяем, что тип недели существует для этого дня
+    if (!userSchedule[fullDayName][weekTypeKey]) return [];
     
-    if (!daySchedule || !daySchedule[fullDayName]) return [];
+    const daySchedule = userSchedule[fullDayName][weekTypeKey];
     
-    return daySchedule[fullDayName].map((item, index) => ({
+    return daySchedule.map((item, index) => ({
       id: index + 1,
-      time: item.Time,
-      subject: item.Matter,
-      teacher: item.Teacher,
-      frame: item.Frame,
-      classroom: item.Classroom,
-      type: getLessonType(item.Matter)
+      time: item.time,
+      subject: item.subject,
+      teacher: item.teacher,
+      frame: item.type,
+      classroom: item.classroom,
+      type: getLessonType(item.subject)
     }));
   };
 
@@ -477,94 +604,80 @@ function AppContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, selectedCategory]);
 
-  // News data
-  const newsData = [
-    {
-      id: 1,
-      title: "Открытие новой лаборатории робототехники в БНТУ",
-      excerpt: "В Белорусском национальном техническом университете открыли современную лабораторию робототехники, оснащенную последними моделями промышленных роботов.",
-      content: "В Белорусском национальном техническом университете открыли современную лабораторию робототехники, оснащенную последними моделями промышленных роботов. Новая лаборатория позволит студентам изучать передовые технологии автоматизации и программирования роботизированных систем.",
-      category: "academic",
-      author: "Пресс-центр БНТУ",
-      date: "2024-02-25",
-      imageUrl: "",
-      featured: true,
-      readTime: "3 мин"
-    },
-    {
-      id: 2,
-      title: "Студенты БНТУ победили в международном конкурсе IT-проектов",
-      excerpt: "Команда студентов факультета информационных технологий заняла первое место в международном конкурсе инновационных IT-проектов.",
-      content: "Команда студентов факультета информационных технологий заняла первое место в международном конкурсе инновационных IT-проектов. Проект посвящен разработке системы умного управления городским транспортом.",
-      category: "achievements",
-      author: "Отдел по работе со студентами",
-      date: "2024-02-23",
-      imageUrl: "",
-      featured: true,
-      readTime: "4 мин"
-    },
-    {
-      id: 3,
-      title: "Прием заявлений на летнюю практику 2024",
-      excerpt: "Открыт прием заявлений на прохождение летней производственной практики на ведущих предприятиях страны.",
-      content: "Открыт прием заявлений на прохождение летней производственной практики на ведущих предприятиях страны. Студентам предложены места на крупных промышленных предприятиях и в IT-компаниях.",
-      category: "education",
-      author: "Деканат",
-      date: "2024-02-20",
-      imageUrl: "",
-      featured: false,
-      readTime: "2 мин"
-    },
-    {
-      id: 4,
-      title: "День открытых дверей в БНТУ",
-      excerpt: "Приглашаем абитуриентов и их родителей на день открытых дверей, который состоится 15 марта.",
-      content: "Приглашаем абитуриентов и их родителей на день открытых дверей, который состоится 15 марта. Гости смогут посетить лекции, познакомиться с преподавателями и узнать о специальностях.",
-      category: "events",
-      author: "Приемная комиссия",
-      date: "2024-02-18",
-      imageUrl: "",
-      featured: false,
-      readTime: "3 мин"
-    },
-    {
-      id: 5,
-      title: "Новые образовательные программы в области искусственного интеллекта",
-      excerpt: "БНТУ запускает новые магистерские программы по направлению 'Искусственный интеллект и машинное обучение'.",
-      content: "БНТУ запускает новые магистерские программы по направлению 'Искусственный интеллект и машинное обучение'. Программы разработаны совместно с ведущими IT-компаниями.",
-      category: "education",
-      author: "Управление образования",
-      date: "2024-02-15",
-      imageUrl: "",
-      featured: false,
-      readTime: "5 мин"
-    },
-    {
-      id: 6,
-      title: "Спортивные достижения студентов БНТУ",
-      excerpt: "Сборные команды университета завоевали призовые места в республиканских соревнованиях по баскетболу и волейболу.",
-      content: "Сборные команды университета завоевали призовые места в республиканских соревнованиях по баскетболу и волейболу. Студенты показали отличные результаты и принесли славу университету.",
-      category: "sports",
-      author: "Спортивный отдел",
-      date: "2024-02-12",
-      imageUrl: "",
-      featured: false,
-      readTime: "2 мин"
+  // News state
+  const [newsData, setNewsData] = useState([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsSearchQuery, setNewsSearchQuery] = useState('');
+  const [newsSortBy, setNewsSortBy] = useState('date_desc'); // По умолчанию новые сначала
+  const [isNewsSortModalOpen, setIsNewsSortModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [newsPage, setNewsPage] = useState(1);
+  const [newsTotal, setNewsTotal] = useState(0);
+  const newsPageSize = 6;
+  const newsMaxPage = Math.max(1, Math.ceil(newsTotal / newsPageSize));
+
+  // Load news from API
+  const loadNews = async (page = 1, search = '', sortBy = 'date_desc') => {
+    setNewsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('page', page);
+      params.set('page_size', newsPageSize);
+      if (search) params.set('search', search);
+      if (sortBy) params.set('sort_by', sortBy);
+      
+      const response = await fetch(`/api/news?${params.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setNewsData(data.items || []);
+          setNewsTotal(data.total || 0);
+          setNewsPage(data.page || page);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading news:', error);
+    } finally {
+      setNewsLoading(false);
     }
-  ];
+  };
+
+  // Load news when component mounts or news tab becomes active
+  useEffect(() => {
+    if (activeTab === 'news') {
+      loadNews(newsPage, newsSearchQuery, newsSortBy);
+    }
+  }, [activeTab, newsPage, newsSearchQuery, newsSortBy]);
+
+  // When search or sort changes, reset to page 1 and fetch
+  useEffect(() => {
+    if (activeTab === 'news') {
+      setNewsPage(1);
+      loadNews(1, newsSearchQuery, newsSortBy);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newsSearchQuery, newsSortBy]);
 
   const newsCategories = [
     { id: 'all', name: 'Все новости' },
-    { id: 'academic', name: 'Академические' },
+    { id: 'academic', name: 'Университет' },
     { id: 'achievements', name: 'Достижения' },
-    { id: 'education', name: 'Образование' },
-    { id: 'events', name: 'Мероприятия' },
+    { id: 'education', name: 'Студенты' },
+    { id: 'events', name: 'Ректорат' },
     { id: 'sports', name: 'Спорт' }
   ];
 
-  // Filter news based on category
+  // Filter news based on category and search
   const filteredNews = newsData.filter(item => {
-    return selectedNewsCategory === 'all' || item.category === selectedNewsCategory;
+    const categoryMatch = selectedNewsCategory === 'all' || item.category === selectedNewsCategory;
+    
+    if (!newsSearchQuery) return categoryMatch;
+    
+    const searchLower = newsSearchQuery.toLowerCase();
+    const titleMatch = item.title.toLowerCase().includes(searchLower);
+    const excerptMatch = item.excerpt.toLowerCase().includes(searchLower);
+    
+    return categoryMatch && (titleMatch || excerptMatch);
   });
 
   // Filter games based on category
@@ -572,22 +685,43 @@ function AppContent() {
     return selectedGameCategory === 'all' || item.category === selectedGameCategory;
   });
 
-  // Format date
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ru-RU', { 
+  // Format date from timestamp
+  const formatDate = (timestamp) => {
+    const date = new Date(timestamp * 1000); // Convert Unix timestamp to milliseconds
+    const options = { 
       day: 'numeric', 
       month: 'long', 
-      year: 'numeric' 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    };
+    
+    // Форматируем дату и убираем "г."
+    let formatted = date.toLocaleDateString('ru-RU', options);
+    return formatted.replace(' г. в', '');
+  };
+
+  // Render tags wrapper
+  const renderTags = (tags = []) => {
+    if (!tags || tags.length === 0) return null;
+    
+    // Дополнительная очистка тегов от # на фронтенде
+    const cleanTags = tags.map(tag => {
+      if (typeof tag === 'string') {
+        return tag.replace(/^#+/, ''); // Удаляем все # в начале
+      }
+      return tag;
     });
+    
+    return <TagsContainer tags={cleanTags} />;
   };
 
   return (
     <div className={`${darkMode ? 'dark' : ''} min-h-screen flex flex-col font-sans selection:bg-emerald-500 selection:text-white`}>
-      <div className="flex-grow bg-gray-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 transition-colors duration-500 relative">
+      <div className="flex-1 bg-gray-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 transition-colors duration-500 relative flex flex-col">
         
         {/* --- Header --- */}
-        {!isLoginModalOpen && !isCategoryModalOpen && !isSortModalOpen && (
+        {!isLoginModalOpen && !isCategoryModalOpen && !isSortModalOpen && !isProfileModalOpen && (
           <Header 
             activeTab={activeTab}
             setActiveTab={setActiveTab}
@@ -596,11 +730,13 @@ function AppContent() {
             setIsLoginModalOpen={setIsLoginModalOpen}
             isMobileMenuOpen={isMobileMenuOpen}
             setIsMobileMenuOpen={setIsMobileMenuOpen}
+            isProfileModalOpen={isProfileModalOpen}
+            setIsProfileModalOpen={setIsProfileModalOpen}
           />
         )}
 
         {/* --- Main Content --- */}
-        <main className="container mx-auto px-4 pt-8 pb-12 relative z-10">
+        <main className="container mx-auto px-4 pt-8 pb-12 relative z-10 flex-1">
           
           {/* HOME TAB */}
           {activeTab === 'home' && (
@@ -1393,6 +1529,31 @@ function AppContent() {
                 </p>
               </div>
 
+              {/* Search Bar with Sort Button */}
+              <div className="max-w-2xl mx-auto mb-8">
+                <div className="flex gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Поиск новостей..."
+                      value={newsSearchQuery}
+                      onChange={(e) => setNewsSearchQuery(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300"
+                    />
+                  </div>
+                  <button
+                    onClick={() => setIsNewsSortModalOpen(true)}
+                    className="flex items-center justify-center w-12 h-12 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex-shrink-0"
+                    title="Сортировка"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
               {/* Category Filter */}
               <div className="flex flex-wrap justify-center gap-3 mb-8">
                 {newsCategories.map(category => (
@@ -1411,39 +1572,59 @@ function AppContent() {
               </div>
 
               {/* Featured News */}
-              {filteredNews.filter(item => item.featured).length > 0 && (
+              {newsPage === 1 && filteredNews.length > 0 && !newsSearchQuery && (
                 <div className="mb-12">
-                  <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">Важные новости</h3>
+                  <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">Последние новости</h3>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {filteredNews.filter(item => item.featured).map((item) => (
+                    {filteredNews.slice(0, 2).map((item) => (
                       <div
                         key={item.id}
                         className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-800/30 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                       >
-                        <div className="flex items-start justify-between mb-4">
-                          <span className="inline-block px-3 py-1 bg-emerald-500 text-white text-xs font-medium rounded-lg">
-                            {newsCategories.find(cat => cat.id === item.category)?.name}
-                          </span>
-                          <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {item.readTime}
-                          </span>
-                        </div>
-                        <h3 className="font-bold text-xl text-slate-900 dark:text-white mb-3 line-clamp-2">
-                          {item.title}
-                        </h3>
-                        <p className="text-slate-600 dark:text-slate-400 mb-4 line-clamp-3">
-                          {item.excerpt}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                            <Calendar className="w-4 h-4" />
-                            {formatDate(item.date)}
+                        <div className="flex flex-col h-full">
+                          {/* Изображение новости */}
+                          {item.imageUrl && (
+                            <div className="relative h-48 rounded-xl overflow-hidden mb-4">
+                              <img 
+                                src={item.imageUrl} 
+                                alt={item.title}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.parentElement.style.display = 'none';
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+                            </div>
+                          )}
+                          
+                          {/* Дата в левом верхнем углу */}
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                              <Calendar className="w-4 h-4" />
+                              {formatDate(item.timestamp)}
+                            </div>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {item.readTime}
+                            </span>
                           </div>
-                          <button className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium text-sm transition-colors">
-                            Читать далее
-                            <ArrowRight className="w-4 h-4" />
-                          </button>
+                          <h3 className="font-bold text-xl text-slate-900 dark:text-white mb-3 line-clamp-2">
+                            {item.title}
+                          </h3>
+                          <p className="text-slate-600 dark:text-slate-400 mb-4 line-clamp-3 flex-grow">
+                            {item.excerpt}
+                          </p>
+                          {/* Теги и кнопка со стрелочкой в самом низу */}
+                          <div className="flex items-center justify-between mt-auto">
+                            <div className="flex-1 mr-3 min-w-0">
+                              {renderTags(item.tags)}
+                            </div>
+                            <button className="flex items-center gap-2 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg flex-shrink-0">
+                              Читать
+                              <ArrowRight className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1456,36 +1637,57 @@ function AppContent() {
                 <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">
                   {selectedNewsCategory === 'all' ? 'Все новости' : newsCategories.find(cat => cat.id === selectedNewsCategory)?.name}
                 </h3>
-                {filteredNews.filter(item => !item.featured).length > 0 ? (
+                {filteredNews.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredNews.filter(item => !item.featured).map((item) => (
+                    {filteredNews.map((item) => (
                       <div
                         key={item.id}
                         className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                       >
-                        <div className="flex items-start justify-between mb-4">
-                          <span className="inline-block px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-lg">
-                            {newsCategories.find(cat => cat.id === item.category)?.name}
-                          </span>
-                          <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {item.readTime}
-                          </span>
-                        </div>
-                        <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-3 line-clamp-2">
-                          {item.title}
-                        </h3>
-                        <p className="text-slate-600 dark:text-slate-400 mb-4 line-clamp-3">
-                          {item.excerpt}
-                        </p>
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
-                            <Calendar className="w-4 h-4" />
-                            {formatDate(item.date)}
+                        <div className="flex flex-col h-full">
+                          {/* Изображение новости */}
+                          {item.imageUrl && (
+                            <div className="relative h-40 rounded-xl overflow-hidden mb-4">
+                              <img 
+                                src={item.imageUrl} 
+                                alt={item.title}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.parentElement.style.display = 'none';
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+                            </div>
+                          )}
+                          
+                          {/* Дата в левом верхнем углу */}
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                              <Calendar className="w-4 h-4" />
+                              {formatDate(item.timestamp)}
+                            </div>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {item.readTime}
+                            </span>
                           </div>
-                          <button className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium transition-colors">
-                            Подробнее
-                          </button>
+                          <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-3 line-clamp-2">
+                            {item.title}
+                          </h3>
+                          <p className="text-slate-600 dark:text-slate-400 mb-4 line-clamp-3 flex-grow">
+                            {item.excerpt}
+                          </p>
+                          {/* Теги и кнопка со стрелочкой в самом низу */}
+                          <div className="flex items-center justify-between text-sm mt-auto">
+                            <div className="flex-1 mr-3 min-w-0">
+                              {renderTags(item.tags)}
+                            </div>
+                            <button className="flex items-center gap-2 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg flex-shrink-0">
+                              Читать
+                              <ArrowRight className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1509,6 +1711,168 @@ function AppContent() {
                     </button>
                   </div>
                 )}
+
+              {/* News Pagination */}
+              {newsTotal > newsPageSize && (
+                <div className="flex items-center justify-center mt-10">
+                  <div className="flex items-center gap-2 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-white/50 dark:border-slate-700/50 rounded-2xl p-2 shadow-lg">
+                    {/* First button */}
+                    <button
+                      onClick={() => setNewsPage(1)}
+                      disabled={newsPage === 1}
+                      title="В начало"
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                        newsPage === 1 
+                          ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed' 
+                          : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                      }`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                      </svg>
+                    </button>
+
+                    {/* Previous button */}
+                    <button
+                      onClick={() => newsPage > 1 && setNewsPage(newsPage - 1)}
+                      disabled={newsPage === 1}
+                      title="Предыдущая"
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                        newsPage === 1 
+                          ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed' 
+                          : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                      }`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+
+                    {/* Page input */}
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="1"
+                        max={newsMaxPage}
+                        value={newsPage}
+                        onChange={(e) => {
+                          const page = parseInt(e.target.value);
+                          if (page >= 1 && page <= newsMaxPage) {
+                            setNewsPage(page);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            const page = parseInt(e.target.value);
+                            if (page >= 1 && page <= newsMaxPage) {
+                              setNewsPage(page);
+                            }
+                          }
+                        }}
+                        className="w-12 px-1.5 py-2 bg-emerald-500 dark:bg-emerald-600 text-white rounded-xl text-sm font-medium shadow-sm text-center focus:outline-none focus:ring-2 focus:ring-emerald-400 [-moz-appearance:_textfield] [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none"
+                      />
+                      <div className="text-slate-400 dark:text-slate-500 text-sm font-medium px-1">
+                        из
+                      </div>
+                      <div className="px-3 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-medium">
+                        {newsMaxPage}
+                      </div>
+                    </div>
+
+                    {/* Next button */}
+                    <button
+                      onClick={() => {
+                        if (newsPage < newsMaxPage) setNewsPage(newsPage + 1);
+                      }}
+                      disabled={newsPage >= newsMaxPage}
+                      title="Следующая"
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                        newsPage >= newsMaxPage 
+                          ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed' 
+                          : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                      }`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+
+                    {/* Last button */}
+                    <button
+                      onClick={() => setNewsPage(newsMaxPage)}
+                      disabled={newsPage === newsMaxPage}
+                      title="В конец"
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                        newsPage === newsMaxPage 
+                          ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed' 
+                          : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                      }`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+              </div>
+            </div>
+          )}
+
+          {/* News Sort Modal */}
+          {isNewsSortModalOpen && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
+              <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-hidden flex flex-col">
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b border-white/20 dark:border-slate-700/50">
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+                    <svg className="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                    </svg>
+                    Сортировка
+                  </h2>
+                  <button
+                    onClick={() => setIsNewsSortModalOpen(false)}
+                    className="w-10 h-10 rounded-2xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-white/10 dark:hover:bg-slate-700/10 transition-all duration-300"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Sort Options */}
+                <div className="p-6 overflow-y-auto flex-1">
+                  <div className="space-y-3">
+                    {[
+                      { id: 'date_desc', name: 'Свежие', icon: '📅' },
+                      { id: 'date_asc', name: 'Старые', icon: '📅' },
+                      { id: 'title_asc', name: 'По алфавиту (А-Я)', icon: '🔤' },
+                      { id: 'title_desc', name: 'По алфавиту (Я-А)', icon: '🔤' },
+                    ].map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => {
+                          setNewsSortBy(option.id);
+                          setIsNewsSortModalOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 ${
+                          newsSortBy === option.id
+                            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                            : 'bg-white/50 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-700/80 border border-transparent hover:border-gray-200 dark:hover:border-slate-600'
+                        }`}
+                      >
+                        <span className="text-2xl">{option.icon}</span>
+                        <span className="font-medium">{option.name}</span>
+                        {newsSortBy === option.id && (
+                          <svg className="w-5 h-5 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -1548,7 +1912,11 @@ function AppContent() {
                     {filteredGames.filter(item => item.featured).map((game) => (
                       <div
                         key={game.id}
-                        className="group relative bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-200 dark:border-slate-700 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
+                        className={`group relative bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 ${
+                          game.serverUrl 
+                            ? 'border-gray-200 dark:border-slate-700' 
+                            : 'border-gray-200 dark:border-slate-700'
+                        }`}
                       >
                         {/* Game Image */}
                         <div className="relative h-48 overflow-hidden">
@@ -1562,7 +1930,12 @@ function AppContent() {
                               -{game.discount}%
                             </div>
                           )}
-                          {game.price === 0 && (
+                          {game.serverUrl ? (
+                            <div className="absolute top-3 left-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1">
+                              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                              Онлайн
+                            </div>
+                          ) : game.price === 0 && (
                             <div className="absolute top-3 left-3 bg-emerald-500 text-white px-3 py-1 rounded-lg text-sm font-bold">
                               Бесплатно
                             </div>
@@ -1625,10 +1998,40 @@ function AppContent() {
                                 </>
                               )}
                             </div>
-                            <button className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2">
-                              <Download className="w-4 h-4" />
-                              {game.price === 0 ? 'Получить' : 'Купить'}
-                            </button>
+                            {game.serverUrl ? (
+                              // Minecraft Server Buttons
+                              <div className="flex gap-2">
+                                <a
+                                  href={game.serverUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-1"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                  </svg>
+                                  Сайт
+                                </a>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(game.serverIP);
+                                    // Можно добавить уведомление о копировании
+                                  }}
+                                  className="px-3 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-1"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                  </svg>
+                                  IP
+                                </button>
+                              </div>
+                            ) : (
+                              // Regular Game Button
+                              <button className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2">
+                                <Download className="w-4 h-4" />
+                                {game.price === 0 ? 'Получить' : 'Купить'}
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1736,16 +2139,140 @@ function AppContent() {
             </div>
           )}
         </main>
+
+        {/* Footer */}
+        <footer className="bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="text-center text-sm text-slate-500 dark:text-slate-400">
+              <p>© 2026 BentumWeb. Все права защищены.</p>
+            </div>
+          </div>
+        </footer>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="text-center text-sm text-slate-500 dark:text-slate-400">
-            <p>© 2026 BentumWeb. Все права защищены.</p>
+      {/* Profile Modal */}
+      {isProfileModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
+          <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-hidden flex flex-col">
+            {/* Header with Banner */}
+            <div className="relative h-32">
+              {/* Banner */}
+              <img 
+                src="https://i.pinimg.com/1200x/b3/40/bd/b340bd28445da4ab7609576bc3fc125f.jpg"
+                alt="Profile Banner"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+              
+              {/* Avatar - positioned lower */}
+              <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2">
+                <img 
+                  src="https://i.pinimg.com/736x/fc/55/e6/fc55e68d174bf0d2cb038d699c01f172.jpg"
+                  alt="Profile Avatar"
+                  className="w-32 h-32 rounded-2xl object-cover border-4 border-white dark:border-slate-800"
+                />
+              </div>
+              
+              {/* Edit Button */}
+              <button
+                className="absolute top-4 right-16 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 border border-white/30"
+              >
+                <Edit className="w-5 h-5" />
+              </button>
+              
+              {/* Close Button */}
+              <button
+                onClick={() => setIsProfileModalOpen(false)}
+                className="absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 border border-white/30"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Profile Content */}
+            <div className="p-6 overflow-y-auto flex-1 pt-20">
+
+              {/* Full Name */}
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 text-center">
+                {user?.fullname || 'Пользователь'}
+              </h3>
+
+              <div className="w-full space-y-6">
+                {/* Faculty */}
+                <div className="text-left flex items-center gap-3">
+                  <GraduationCap className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  <p className="text-base font-medium text-slate-900 dark:text-white">
+                    {user?.faculty || 'Не указан'}
+                  </p>
+                </div>
+
+                {/* Group Number */}
+                <div className="text-left flex items-center gap-3">
+                  <Book className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  <p className="text-base font-medium text-slate-900 dark:text-white">
+                    {user?.student_code?.slice(0, 8) || 'Не указана'}
+                  </p>
+                </div>
+
+                {/* Course */}
+                <div className="text-left flex items-center gap-3">
+                  <Backpack className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  <p className="text-base font-medium text-slate-900 dark:text-white">
+                    {(() => {
+                      if (!user?.student_code) return 'Не указан';
+                      const groupLastTwo = user.student_code.slice(6, 8);
+                      const currentYear = new Date().getFullYear();
+                      const groupYear = parseInt(groupLastTwo) + 2000;
+                      const course = currentYear - groupYear + 1;
+                      
+                      // Учитываем учебный год (сентябрь-июнь)
+                      const currentMonth = new Date().getMonth();
+                      let finalCourse;
+                      if (currentMonth < 8) { // до сентября
+                        finalCourse = course - 1;
+                      } else { // с сентября
+                        finalCourse = course;
+                      }
+                      
+                      // Если курс 0 или меньше, делаем 1 курс
+                      if (finalCourse <= 0) finalCourse = 1;
+                      
+                      return finalCourse > 0 && finalCourse <= 5 ? `${finalCourse} курс` : 'Не указан';
+                    })()}
+                  </p>
+                </div>
+
+                {/* Registration Date */}
+                <div className="text-left flex items-center gap-3 mb-8">
+                  <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  <p className="text-base font-medium text-slate-900 dark:text-white">
+                    {user?.created_at ? new Date(user.created_at).toLocaleDateString('ru-RU', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
+                    }) : 'Не указана'}
+                  </p>
+                </div>
+
+                {/* Logout Button */}
+                <button
+                  onClick={() => {
+                    logout();
+                    setIsProfileModalOpen(false);
+                    setActiveTab('home');
+                  }}
+                  className="w-full px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center justify-center gap-2 mt-8"
+                >
+                  <LogOut className="w-5 h-5" />
+                  Выйти
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </footer>
+      )}
 
       {/* Login Modal */}
       <LoginModal 
