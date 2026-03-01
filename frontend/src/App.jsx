@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header.jsx';
 import ScheduleItem from './components/ScheduleItem.jsx';
 import LoginModal from './components/LoginModal.jsx';
@@ -155,10 +155,17 @@ function AppContent() {
   ];
 
   useEffect(() => {
-    const today = new Date().getDay();
-    const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-    if (today !== 0) setSelectedDay(days[today]);
-    else setSelectedDay('Пн');
+    const today = getTodayDay();
+    if (today) {
+      setSelectedDay(today);
+    } else {
+      // Если сегодня воскресенье, показываем завтра (понедельник)
+      const tomorrow = getTomorrowDay();
+      if (tomorrow) {
+        setSelectedDay(tomorrow);
+      }
+    }
+    setWeekType(getWeekType());
 
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
@@ -292,36 +299,41 @@ function AppContent() {
   };
 
   // Получение времени в московской часовой зоне (UTC+3)
-  const getMoscowTime = () => {
+  const getMoscowTime = useCallback(() => {
     const now = new Date();
     // Получаем UTC время и добавляем 3 часа для МСК
     const moscowTime = new Date(now.getTime() + (3 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60 * 1000));
     return moscowTime;
-  };
+  }, []);
 
   // Определение сегодняшнего и завтрашнего дня
-  const getTodayDay = () => {
+  const getTodayDay = useCallback(() => {
     const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
     const moscowTime = getMoscowTime();
     const today = moscowTime.getDay();
-    // Преобразуем день недели: 0(Вс) -> 6(Сб), 1(Пн) -> 0(Пн), и т.д.
-    const adjustedDay = today === 0 ? 6 : today - 1;
-    return days[adjustedDay] || 'Пн'; // fallback на Пн
-  };
+    
+    // Воскресенье (0) -> нет пар, возвращаем null
+    if (today === 0) return null;
+    
+    // Пн (1) -> индекс 0, Вт (2) -> индекс 1, ..., Сб (6) -> индекс 5
+    return days[today - 1];
+  }, [getMoscowTime]);
 
-  const getTomorrowDay = () => {
+  const getTomorrowDay = useCallback(() => {
     const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
     const moscowTime = getMoscowTime();
     const today = moscowTime.getDay();
     const tomorrow = (today + 1) % 7;
-    // Для завтрашнего дня: 0(Вс) -> undefined (выходной), 1(Пн) -> 0(Пн), 2(Вт) -> 1(Вт), и т.д.
-    if (tomorrow === 0) return undefined; // Воскресенье - нет занятий
-    const adjustedTomorrow = tomorrow - 1;
-    return days[adjustedTomorrow] || 'Вт'; // fallback на Вт
-  };
+    
+    // Если завтра воскресенье (0) -> нет пар, возвращаем null
+    if (tomorrow === 0) return null;
+    
+    // Если завтра понедельник (1) -> индекс 0, Вт (2) -> индекс 1, ..., Сб (6) -> индекс 5
+    return days[tomorrow - 1];
+  }, [getMoscowTime]);
 
   // Определение недели (верхняя/нижняя) начиная с 1 сентября 2025
-  const getWeekType = () => {
+  const getWeekType = useCallback(() => {
     const moscowTime = getMoscowTime();
     const startDate = new Date('2025-09-01T00:00:00'); // 1 сентября 2025
     const diffTime = moscowTime.getTime() - startDate.getTime();
@@ -329,18 +341,36 @@ function AppContent() {
     
     // Нечетные недели - верхние, четные - нижние
     return diffWeeks % 2 === 0 ? 'upper' : 'lower';
-  };
+  }, [getMoscowTime]);
 
   // Обработчики быстрых кнопок
-  const handleQuickDaySelect = (dayType) => {
+  const handleQuickDaySelect = useCallback((dayType) => {
+    console.log('handleQuickDaySelect called with:', dayType);
+    console.log('getTodayDay():', getTodayDay());
+    console.log('getTomorrowDay():', getTomorrowDay());
+    
     if (dayType === 'today') {
-      setSelectedDay(getTodayDay());
-      setWeekType(getWeekType()); // Автоматически определяем неделю
+      const todayDay = getTodayDay();
+      console.log('Today branch, todayDay:', todayDay);
+      if (todayDay) {
+        setSelectedDay(todayDay);
+        setWeekType(getWeekType()); // Автоматически определяем неделю
+        console.log('Set selectedDay to:', todayDay);
+      } else {
+        console.log('Сегодня воскресенье - не делаем ничего');
+      }
     } else if (dayType === 'tomorrow') {
-      setSelectedDay(getTomorrowDay());
-      setWeekType(getWeekType()); // Автоматически определяем неделю
+      const tomorrowDay = getTomorrowDay();
+      console.log('Tomorrow branch, tomorrowDay:', tomorrowDay);
+      if (tomorrowDay) {
+        setSelectedDay(tomorrowDay);
+        setWeekType(getWeekType()); // Автоматически определяем неделю
+        console.log('Set selectedDay to:', tomorrowDay);
+      } else {
+        console.log('Завтра воскресенье - не делаем ничего');
+      }
     }
-  };
+  }, []);
 
   const currentSchedule = getScheduleForDay(selectedDay);
 
@@ -557,15 +587,17 @@ function AppContent() {
       <div className="flex-grow bg-gray-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 transition-colors duration-500 relative">
         
         {/* --- Header --- */}
-        <Header 
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          darkMode={darkMode}
-          toggleTheme={toggleTheme}
-          setIsLoginModalOpen={setIsLoginModalOpen}
-          isMobileMenuOpen={isMobileMenuOpen}
-          setIsMobileMenuOpen={setIsMobileMenuOpen}
-        />
+        {!isLoginModalOpen && !isCategoryModalOpen && !isSortModalOpen && (
+          <Header 
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            darkMode={darkMode}
+            toggleTheme={toggleTheme}
+            setIsLoginModalOpen={setIsLoginModalOpen}
+            isMobileMenuOpen={isMobileMenuOpen}
+            setIsMobileMenuOpen={setIsMobileMenuOpen}
+          />
+        )}
 
         {/* --- Main Content --- */}
         <main className="container mx-auto px-4 pt-8 pb-12 relative z-10">
@@ -704,15 +736,17 @@ function AppContent() {
 
               {/* Quick Day Buttons */}
               <div className="flex gap-3 mb-4">
-                {/* Debug: {JSON.stringify(quickDayButtons)} */}
+                {/* Debug: Сегодня={getTodayDay()}, Завтра={getTomorrowDay()}, Выбран={selectedDay} */}
                 {quickDayButtons.map((button) => (
                   <button
                     key={button.id}
                     onClick={() => handleQuickDaySelect(button.id)}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                      (button.id === 'today' && selectedDay === getTodayDay() && weekType === getWeekType()) ||
-                      (button.id === 'tomorrow' && selectedDay === getTomorrowDay() && weekType === getWeekType())
+                      (button.id === 'today' && getTodayDay() && selectedDay === getTodayDay() && weekType === getWeekType()) ||
+                      (button.id === 'tomorrow' && getTomorrowDay() && selectedDay === getTomorrowDay() && weekType === getWeekType())
                         ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                        : button.id === 'today' && !getTodayDay()
+                        ? 'bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-slate-600'
                         : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-gray-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:text-emerald-600 dark:hover:text-emerald-400'
                     }`}
                   >
@@ -1144,7 +1178,7 @@ function AppContent() {
 
           {/* Category Modal */}
           {isCategoryModalOpen && (
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
               <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-white/20 dark:border-slate-700/50">
@@ -1255,8 +1289,8 @@ function AppContent() {
 
           {/* Sort Modal */}
           {isSortModalOpen && (
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
+              <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-hidden flex flex-col">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-white/20 dark:border-slate-700/50">
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
@@ -1276,7 +1310,7 @@ function AppContent() {
                 </div>
 
                 {/* Sort Options */}
-                <div className="p-6">
+                <div className="p-6 overflow-y-auto flex-1">
                   <div className="space-y-3">
                     {[
                       { id: 'default', name: 'По умолчанию', icon: '📋' },
