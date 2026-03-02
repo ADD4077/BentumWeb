@@ -1,17 +1,9 @@
 @echo off
 echo Starting BNTU Bot Backend (using py launcher)...
 
-REM Попытка перейти по первому пути (текущий проект)
-cd /d "d:\BENTUM WEB\BentumWeb\backend" 2>nul
+cd /d ".\backend" 2>nul
 if %errorlevel% equ 0 (
     echo Found project at: d:\BENTUM WEB\BentumWeb\backend
-    goto :found
-)
-
-REM Попытка перейти по второму пути (старый проект)
-cd /d "C:\Users\Amfisak\Documents\GitHub\BentumWeb\backend" 2>nul
-if %errorlevel% equ 0 (
-    echo Found project at: C:\Users\Amfisak\Documents\GitHub\BentumWeb\backend
     goto :found
 )
 
@@ -54,15 +46,11 @@ if errorlevel 1 (
 
 REM Install dependencies
 echo Installing dependencies...
-py -m pip install -r requirements.txt
-if errorlevel 1 (
-    echo Failed to install requirements.txt!
-    echo Trying to install essential packages manually...
-    py -m pip install django djangorestframework django-cors-headers
-)
+
+.\venv\Scripts\python.exe -m pip install -r ..\requirements.txt
 
 REM Start Django server
 echo Starting Django server...
-py manage.py runserver
+.\venv\Scripts\python.exe manage.py runserver
 
 pause

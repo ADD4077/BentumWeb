@@ -1,17 +1,9 @@
 @echo off
 echo Starting BNTU Bot Frontend...
 
-REM Попытка перейти по первому пути (текущий проект)
-cd /d "d:\BENTUM WEB\BentumWeb\frontend" 2>nul
+cd /d ".\frontend" 2>nul
 if %errorlevel% equ 0 (
     echo Found project at: d:\BENTUM WEB\BentumWeb\frontend
-    goto :found
-)
-
-REM Попытка перейти по второму пути (старый проект)
-cd /d "C:\Users\Amfisak\Documents\GitHub\BentumWeb\frontend" 2>nul
-if %errorlevel% equ 0 (
-    echo Found project at: C:\Users\Amfisak\Documents\GitHub\BentumWeb\frontend
     goto :found
 )
 
