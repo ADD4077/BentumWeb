@@ -109,7 +109,7 @@ function AppContent() {
   const [selectedGameCategory, setSelectedGameCategory] = useState('all');
   const [weekType, setWeekType] = useState('upper');
   const [gameScores, setGameScores] = useState({});
-  const { loading, isAuthenticated, user } = useAuth();
+  const { loading, isAuthenticated, user, logout } = useAuth();
   const gamesData = [
     {
       id: 0,
@@ -269,7 +269,7 @@ function AppContent() {
     const startDate = new Date('2025-09-01T00:00:00');
     const diffTime = moscowTime.getTime() - startDate.getTime();
     const diffWeeks = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000));
-    return diffWeeks % 2 === 0 ? 'upper' : 'lower';
+    return diffWeeks % 2 === 0 ? 'lower' : 'upper';
   }, [getMoscowTime]);
   const handleQuickDaySelect = useCallback((dayType) => {
     console.log('handleQuickDaySelect called with:', dayType);
