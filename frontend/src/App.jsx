@@ -7,26 +7,18 @@ import TeamCarousel from './components/TeamCarousel.jsx';
 import { ArrowRight, Backpack, Book, BookOpen, Calendar, ChevronRight, Clock, Download, Edit, ExternalLink, Filter, Gamepad2, GraduationCap, LogIn, LogOut, Moon, Search, Star, Sun, User } from 'lucide-react';
 import { daysOfWeek, quickDayButtons, groupInfo, features, teamMembers } from './utils/constants.js';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
-
-// TagsContainer component for dynamic tag rendering
 const TagsContainer = ({ tags }) => {
   const [visibleCount, setVisibleCount] = useState(1);
   const containerRef = useRef(null);
-  
   useEffect(() => {
     const updateVisibleCount = () => {
       if (!containerRef.current || !tags.length) return;
-      
       const container = containerRef.current;
       const containerWidth = container.offsetWidth;
-      
-      // Если контейнер слишком узкий
       if (containerWidth < 80) {
         setVisibleCount(1);
         return;
       }
-      
-      // Создаем временный элемент для точного измерения
       const measureElement = document.createElement('span');
       measureElement.style.visibility = 'hidden';
       measureElement.style.position = 'absolute';
@@ -36,29 +28,21 @@ const TagsContainer = ({ tags }) => {
       measureElement.style.whiteSpace = 'nowrap';
       measureElement.style.borderRadius = '8px';
       document.body.appendChild(measureElement);
-      
-      // Измеряем ширину "+N"
       measureElement.textContent = '+99';
       const plusWidth = measureElement.offsetWidth;
-      
-      const gap = 4; // gap-1 = 4px
+      const gap = 4;
       let totalWidth = 0;
       let maxTags = 1;
-      
-      // Измеряем каждый тег
       for (let i = 0; i < tags.length; i++) {
         measureElement.textContent = tags[i];
         const tagWidth = measureElement.offsetWidth;
-        
         const remainingTags = tags.length - i - 1;
         const needsPlus = remainingTags > 0;
-        
         if (i === 0) {
           totalWidth = tagWidth;
           maxTags = 1;
         } else {
           const nextWidth = totalWidth + gap + tagWidth + (needsPlus ? plusWidth + gap : 0);
-          
           if (nextWidth <= containerWidth) {
             totalWidth += gap + tagWidth;
             maxTags++;
@@ -67,36 +51,28 @@ const TagsContainer = ({ tags }) => {
           }
         }
       }
-      
       document.body.removeChild(measureElement);
       setVisibleCount(Math.max(1, maxTags));
     };
-    
-    // Несколько попыток измерения для корректного рендеринга
     const timers = [
       setTimeout(updateVisibleCount, 0),
       setTimeout(updateVisibleCount, 50),
       setTimeout(updateVisibleCount, 200),
       setTimeout(updateVisibleCount, 500)
     ];
-    
     const handleResize = () => {
       clearTimeout(handleResize.timer);
       handleResize.timer = setTimeout(updateVisibleCount, 100);
     };
-    
     window.addEventListener('resize', handleResize);
-    
     return () => {
       timers.forEach(timer => clearTimeout(timer));
       clearTimeout(handleResize.timer);
       window.removeEventListener('resize', handleResize);
     };
   }, [tags]);
-  
   const visibleTags = tags.slice(0, visibleCount);
   const remainingCount = tags.length - visibleCount;
-  
   return (
     <div ref={containerRef} className="flex items-center gap-1 overflow-hidden">
       {visibleTags.map((tag, index) => (
@@ -117,10 +93,8 @@ const TagsContainer = ({ tags }) => {
     </div>
   );
 };
-
 function AppContent() {
   const [darkMode, setDarkMode] = useState(() => {
-    // Восстанавливаем тему из localStorage при загрузке
     const savedTheme = localStorage.getItem('darkMode');
     return savedTheme !== null ? JSON.parse(savedTheme) : true;
   });
@@ -136,8 +110,6 @@ function AppContent() {
   const [weekType, setWeekType] = useState('upper');
   const [gameScores, setGameScores] = useState({});
   const { loading, isAuthenticated, user } = useAuth();
-
-  // Games data
   const gamesData = [
     {
       id: 0,
@@ -156,30 +128,24 @@ function AppContent() {
       serverIP: "serverbntu.ru"
     }
   ];
-
   const gameCategories = [
     { id: 'all', name: 'Все игры' }
   ];
-
   useEffect(() => {
     const today = getTodayDay();
     if (today) {
       setSelectedDay(today);
     } else {
-      // Если сегодня воскресенье, показываем завтра (понедельник)
       const tomorrow = getTomorrowDay();
       if (tomorrow) {
         setSelectedDay(tomorrow);
       }
     }
     setWeekType(getWeekType());
-
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  // Инициализация темы при загрузке
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -187,13 +153,9 @@ function AppContent() {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
-
-  // Сохраняем тему в localStorage при изменении
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
   }, [darkMode]);
-
-  // Добавление CSS анимации
   useEffect(() => {
     const style = document.createElement('style');
     style.textContent = `
@@ -209,42 +171,33 @@ function AppContent() {
       }
     `;
     document.head.appendChild(style);
-    
     return () => {
       document.head.removeChild(style);
     };
   }, []);
-
   const toggleTheme = () => {
     setDarkMode(!darkMode);
-    // Добавляем/убираем класс dark у html элемента
     if (!darkMode) {
         document.documentElement.classList.add('dark');
     } else {
         document.documentElement.classList.remove('dark');
     }
   };
-
   const [userSchedule, setUserSchedule] = useState(null);
   const [scheduleLoading, setScheduleLoading] = useState(false);
-
-  // Загрузка расписания пользователя
   useEffect(() => {
     if (isAuthenticated && user?.student_code) {
       loadUserSchedule();
     }
   }, [isAuthenticated, user?.student_code]);
-
   const loadUserSchedule = async () => {
     if (!user?.student_code) return;
-    
     setScheduleLoading(true);
     try {
       const response = await fetch('http://localhost:8000/api/schedule', {
         method: 'GET',
         credentials: 'include'
       });
-      
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -259,11 +212,8 @@ function AppContent() {
       setScheduleLoading(false);
     }
   };
-
-  // Преобразование расписания из API в формат для отображения
   const getScheduleForDay = (day) => {
     if (!userSchedule) return [];
-    
     const dayMapping = {
       'Пн': 'Понедельник',
       'Вт': 'Вторник', 
@@ -273,20 +223,11 @@ function AppContent() {
       'Сб': 'Суббота',
       'Вс': 'Воскресенье'
     };
-    
     const fullDayName = dayMapping[day];
-    
-    // Выбираем тип недели
-    const weekTypeKey = weekType; // 'upper' или 'lower'
-    
-    // Проверяем, что день существует в расписании
+    const weekTypeKey = weekType;
     if (!userSchedule[fullDayName]) return [];
-    
-    // Проверяем, что тип недели существует для этого дня
     if (!userSchedule[fullDayName][weekTypeKey]) return [];
-    
     const daySchedule = userSchedule[fullDayName][weekTypeKey];
-    
     return daySchedule.map((item, index) => ({
       id: index + 1,
       time: item.time,
@@ -297,72 +238,49 @@ function AppContent() {
       type: getLessonType(item.subject)
     }));
   };
-
-  // Определение типа занятия по названию
   const getLessonType = (subject) => {
     if (subject.includes('(Лекц.)') || subject.includes('Лекция')) return 'Лекция';
     if (subject.includes('(Лаб.)') || subject.includes('Лабораторная')) return 'Лабораторная';
     if (subject.includes('(Практ.)') || subject.includes('Практика')) return 'Практика';
     return 'Лекция';
   };
-
-  // Получение времени в московской часовой зоне (UTC+3)
   const getMoscowTime = useCallback(() => {
     const now = new Date();
-    // Получаем UTC время и добавляем 3 часа для МСК
     const moscowTime = new Date(now.getTime() + (3 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60 * 1000));
     return moscowTime;
   }, []);
-
-  // Определение сегодняшнего и завтрашнего дня
   const getTodayDay = useCallback(() => {
     const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
     const moscowTime = getMoscowTime();
     const today = moscowTime.getDay();
-    
-    // Воскресенье (0) -> нет пар, возвращаем null
     if (today === 0) return null;
-    
-    // Пн (1) -> индекс 0, Вт (2) -> индекс 1, ..., Сб (6) -> индекс 5
     return days[today - 1];
   }, [getMoscowTime]);
-
   const getTomorrowDay = useCallback(() => {
     const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
     const moscowTime = getMoscowTime();
     const today = moscowTime.getDay();
     const tomorrow = (today + 1) % 7;
-    
-    // Если завтра воскресенье (0) -> нет пар, возвращаем null
     if (tomorrow === 0) return null;
-    
-    // Если завтра понедельник (1) -> индекс 0, Вт (2) -> индекс 1, ..., Сб (6) -> индекс 5
     return days[tomorrow - 1];
   }, [getMoscowTime]);
-
-  // Определение недели (верхняя/нижняя) начиная с 1 сентября 2025
   const getWeekType = useCallback(() => {
     const moscowTime = getMoscowTime();
-    const startDate = new Date('2025-09-01T00:00:00'); // 1 сентября 2025
+    const startDate = new Date('2025-09-01T00:00:00');
     const diffTime = moscowTime.getTime() - startDate.getTime();
     const diffWeeks = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000));
-    
-    // Нечетные недели - верхние, четные - нижние
     return diffWeeks % 2 === 0 ? 'upper' : 'lower';
   }, [getMoscowTime]);
-
-  // Обработчики быстрых кнопок
   const handleQuickDaySelect = useCallback((dayType) => {
     console.log('handleQuickDaySelect called with:', dayType);
     console.log('getTodayDay():', getTodayDay());
     console.log('getTomorrowDay():', getTomorrowDay());
-    
     if (dayType === 'today') {
       const todayDay = getTodayDay();
       console.log('Today branch, todayDay:', todayDay);
       if (todayDay) {
         setSelectedDay(todayDay);
-        setWeekType(getWeekType()); // Автоматически определяем неделю
+        setWeekType(getWeekType());
         console.log('Set selectedDay to:', todayDay);
       } else {
         console.log('Сегодня воскресенье - не делаем ничего');
@@ -372,17 +290,14 @@ function AppContent() {
       console.log('Tomorrow branch, tomorrowDay:', tomorrowDay);
       if (tomorrowDay) {
         setSelectedDay(tomorrowDay);
-        setWeekType(getWeekType()); // Автоматически определяем неделю
+        setWeekType(getWeekType());
         console.log('Set selectedDay to:', tomorrowDay);
       } else {
         console.log('Завтра воскресенье - не делаем ничего');
       }
     }
   }, []);
-
   const currentSchedule = getScheduleForDay(selectedDay);
-
-  // Literature data
   const categories = [
     { id: 'all', name: 'Все' },
     { id: 'Автомобили', name: 'Автомобили' },
@@ -426,8 +341,6 @@ function AppContent() {
     { id: 'Высшая математика', name: 'Высшая математика' },
     { id: 'Программное обеспечение информационных систем и технологий', name: 'Программное обеспечение' }
   ];
-
-  // Literature pagination state and loader
   const [literatureItems, setLiteratureItems] = useState([]);
   const [literatureTotal, setLiteratureTotal] = useState(0);
   const [literaturePage, setLiteraturePage] = useState(1);
@@ -439,7 +352,6 @@ function AppContent() {
   const [selectedCategories, setSelectedCategories] = useState(['all']);
   const [sortBy, setSortBy] = useState('default');
   const [isSortModalOpen, setIsSortModalOpen] = useState(false);
-
   const fetchLiterature = async (page = 1) => {
     setLiteratureLoading(true);
     try {
@@ -453,7 +365,6 @@ function AppContent() {
       if (sortBy !== 'default') {
         params.set('sort', sortBy);
       }
-
       const res = await fetch(`/api/literature?${params.toString()}`);
       if (!res.ok) throw new Error('Ошибка запроса литературы');
       const data = await res.json();
@@ -468,36 +379,27 @@ function AppContent() {
       setLiteratureLoading(false);
     }
   };
-
-  // When page changes or when the literature tab becomes active, load data
   useEffect(() => {
     if (activeTab === 'literature') {
       fetchLiterature(literaturePage);
     }
   }, [activeTab, literaturePage, selectedCategories, sortBy]);
-
-  // When search or category changes, reset to page 1 and fetch
   useEffect(() => {
     if (activeTab === 'literature') {
       setLiteraturePage(1);
       fetchLiterature(1);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, selectedCategory]);
-
-  // News state
   const [newsData, setNewsData] = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsSearchQuery, setNewsSearchQuery] = useState('');
-  const [newsSortBy, setNewsSortBy] = useState('date_desc'); // По умолчанию новые сначала
+  const [newsSortBy, setNewsSortBy] = useState('date_desc');
   const [isNewsSortModalOpen, setIsNewsSortModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [newsPage, setNewsPage] = useState(1);
   const [newsTotal, setNewsTotal] = useState(0);
   const newsPageSize = 6;
   const newsMaxPage = Math.max(1, Math.ceil(newsTotal / newsPageSize));
-
-  // Load news from API
   const loadNews = async (page = 1, search = '', sortBy = 'date_desc') => {
     setNewsLoading(true);
     try {
@@ -506,7 +408,6 @@ function AppContent() {
       params.set('page_size', newsPageSize);
       if (search) params.set('search', search);
       if (sortBy) params.set('sort_by', sortBy);
-      
       const response = await fetch(`/api/news?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
@@ -522,23 +423,17 @@ function AppContent() {
       setNewsLoading(false);
     }
   };
-
-  // Load news when component mounts or news tab becomes active
   useEffect(() => {
     if (activeTab === 'news') {
       loadNews(newsPage, newsSearchQuery, newsSortBy);
     }
   }, [activeTab, newsPage, newsSearchQuery, newsSortBy]);
-
-  // When search or sort changes, reset to page 1 and fetch
   useEffect(() => {
     if (activeTab === 'news') {
       setNewsPage(1);
       loadNews(1, newsSearchQuery, newsSortBy);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newsSearchQuery, newsSortBy]);
-
   const newsCategories = [
     { id: 'all', name: 'Все новости' },
     { id: 'academic', name: 'Университет' },
@@ -547,28 +442,19 @@ function AppContent() {
     { id: 'events', name: 'Ректорат' },
     { id: 'sports', name: 'Спорт' }
   ];
-
-  // Filter news based on category and search
   const filteredNews = newsData.filter(item => {
     const categoryMatch = selectedNewsCategory === 'all' || item.category === selectedNewsCategory;
-    
     if (!newsSearchQuery) return categoryMatch;
-    
     const searchLower = newsSearchQuery.toLowerCase();
     const titleMatch = item.title.toLowerCase().includes(searchLower);
     const excerptMatch = item.excerpt.toLowerCase().includes(searchLower);
-    
     return categoryMatch && (titleMatch || excerptMatch);
   });
-
-  // Filter games based on category
   const filteredGames = gamesData.filter(item => {
     return selectedGameCategory === 'all' || item.category === selectedGameCategory;
   });
-
-  // Format date from timestamp
   const formatDate = (timestamp) => {
-    const date = new Date(timestamp * 1000); // Convert Unix timestamp to milliseconds
+    const date = new Date(timestamp * 1000);
     const options = { 
       day: 'numeric', 
       month: 'long', 
@@ -576,32 +462,22 @@ function AppContent() {
       hour: '2-digit',
       minute: '2-digit'
     };
-    
-    // Форматируем дату и убираем "г."
     let formatted = date.toLocaleDateString('ru-RU', options);
     return formatted.replace(' г. в', '');
   };
-
-  // Render tags wrapper
   const renderTags = (tags = []) => {
     if (!tags || tags.length === 0) return null;
-    
-    // Дополнительная очистка тегов от # на фронтенде
     const cleanTags = tags.map(tag => {
       if (typeof tag === 'string') {
-        return tag.replace(/^#+/, ''); // Удаляем все # в начале
+        return tag.replace(/^#+/, '');
       }
       return tag;
     });
-    
     return <TagsContainer tags={cleanTags} />;
   };
-
   return (
     <div className={`${darkMode ? 'dark' : ''} min-h-screen flex flex-col font-sans selection:bg-emerald-500 selection:text-white`}>
       <div className="flex-1 bg-gray-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 transition-colors duration-500 relative flex flex-col">
-        
-        {/* --- Header --- */}
         {!isLoginModalOpen && !isCategoryModalOpen && !isSortModalOpen && !isProfileModalOpen && (
           <Header 
             activeTab={activeTab}
@@ -615,11 +491,7 @@ function AppContent() {
             setIsProfileModalOpen={setIsProfileModalOpen}
           />
         )}
-
-        {/* --- Main Content --- */}
         <main className="container mx-auto px-4 pt-8 pb-12 relative z-10 flex-1">
-          
-          {/* HOME TAB */}
           {activeTab === 'home' && (
             <div className="flex flex-col items-center">
               <div className="text-center max-w-4xl mx-auto mb-20 mt-10">
@@ -642,12 +514,10 @@ function AppContent() {
                   </span>
                 </span>
                 </h1>
-                
                 <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 mb-10 leading-relaxed max-w-2xl mx-auto">
                   Персональный ассистент, который знает, где ваша следующая пара. 
                   Уведомления, навигация по корпусам и синхронизация с группой — всё в одном месте.
                 </p>
-                
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                   {!isAuthenticated && (
                     <button 
@@ -666,19 +536,14 @@ function AppContent() {
                   </button>
                 </div>
               </div>
-
-              {/* Features Section */}
               <div className="w-full max-w-6xl mx-auto mt-20">
-                {/* Первая строка - особый макет */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                  {/* Первая карточка - прямоугольная 2:1 */}
                   <div className="lg:col-span-2">
                     <FeatureCard 
                       title={features[0].title}
                       description={features[0].description}
                     />
                   </div>
-                  {/* Вторая карточка - квадратная 1:1 */}
                   <div className="lg:col-span-1">
                     <FeatureCard 
                       title={features[1].title}
@@ -686,28 +551,20 @@ function AppContent() {
                     />
                   </div>
                 </div>
-                
-                {/* Вторая строка - обычная сетка */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-                  {/* Третья карточка */}
                   <FeatureCard 
                     title={features[2].title}
                     description={features[2].description}
                   />
-                  {/* Четвертая карточка */}
                   <FeatureCard 
                     title={features[3].title}
                     description={features[3].description}
                   />
                 </div>
               </div>
-
-              {/* Team Carousel Section */}
               <TeamCarousel teamMembers={teamMembers} />
             </div>
           )}
-
-          {/* SCHEDULE TAB */}
           {activeTab === 'schedule' && (
             <div className="max-w-4xl mx-auto">
               <div className="flex flex-col md:flex-row justify-between items-end md:items-center mb-10 gap-6 w-full">
@@ -721,8 +578,6 @@ function AppContent() {
                     <span className="text-sm">{user?.faculty || groupInfo.faculty}</span>
                                       </div>
                 </div>
-
-                {/* Week Toggle */}
                 <div className="relative bg-white dark:bg-slate-800 p-1.5 rounded-2xl flex shadow-inner border border-gray-200 dark:border-slate-700">
                   <div 
                     className={`absolute top-1.5 bottom-1.5 rounded-xl bg-white dark:bg-slate-700 transition-all duration-300 ease-out shadow-sm`}
@@ -731,7 +586,6 @@ function AppContent() {
                       width: 'calc(50% - 6px)'
                     }}
                   ></div>
-                  
                   <button
                     onClick={() => setWeekType('upper')}
                     className={`relative z-10 px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 w-36 ${
@@ -750,10 +604,7 @@ function AppContent() {
                   </button>
                 </div>
               </div>
-
-              {/* Quick Day Buttons */}
               <div className="flex gap-3 mb-4">
-                {/* Debug: Сегодня={getTodayDay()}, Завтра={getTomorrowDay()}, Выбран={selectedDay} */}
                 {quickDayButtons.map((button) => (
                   <button
                     key={button.id}
@@ -771,8 +622,6 @@ function AppContent() {
                   </button>
                 ))}
               </div>
-
-              {/* Days Navigation */}
               <div className="flex overflow-x-auto px-3 py-2 pb-6 gap-3 mb-2">
                 {daysOfWeek.map((day) => (
                   <button
@@ -788,8 +637,6 @@ function AppContent() {
                   </button>
                 ))}
               </div>
-
-              {/* Schedule List */}
               <div className="space-y-4">
                 {scheduleLoading ? (
                   <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -825,8 +672,6 @@ function AppContent() {
               </div>
             </div>
           )}
-
-          {/* LITERATURE TAB */}
           {activeTab === 'literature' && (
             <div className="max-w-6xl mx-auto">
               <div className="text-center mb-10">
@@ -835,10 +680,7 @@ function AppContent() {
                   Учебные материалы, пособия и методические указания для студентов БНТУ
                 </p>
               </div>
-
-              {/* Search and Filter */}
               <div className="flex flex-row gap-2 mb-8">
-                {/* Search */}
                 <div className="flex-1 relative">
                   <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
                   <input
@@ -849,8 +691,6 @@ function AppContent() {
                     className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                 </div>
-
-                {/* Category Filter */}
                 <button
                   onClick={() => setIsCategoryModalOpen(true)}
                   className="flex items-center justify-center w-12 h-12 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex-shrink-0"
@@ -858,8 +698,6 @@ function AppContent() {
                 >
                   <Filter className="w-5 h-5" />
                 </button>
-
-                {/* Sort Button */}
                 <button
                   onClick={() => setIsSortModalOpen(true)}
                   className="flex items-center justify-center w-12 h-12 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex-shrink-0"
@@ -870,17 +708,11 @@ function AppContent() {
                   </svg>
                 </button>
               </div>
-
-              {/* Active Filters */}
               <div className="mb-6">
-                {/* Results count */}
                 <div className="text-sm text-slate-600 dark:text-slate-400 mb-3">
                   Найдено материалов: <span className="font-medium text-slate-900 dark:text-white">{literatureTotal}</span>
                 </div>
-                
-                {/* Active filters display */}
                 <div className="flex flex-wrap gap-2 items-center">
-                  {/* Search filter */}
                   {searchQuery && (
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 rounded-full text-sm font-medium">
                       <Search className="w-4 h-4" />
@@ -895,8 +727,6 @@ function AppContent() {
                       </button>
                     </div>
                   )}
-                  
-                  {/* Categories filter */}
                   {selectedCategories.length > 0 && !selectedCategories.includes('all') && (
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
                       <Filter className="w-4 h-4" />
@@ -914,8 +744,6 @@ function AppContent() {
                       </button>
                     </div>
                   )}
-                  
-                  {/* Sort filter */}
                   {sortBy !== 'default' && (
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-full text-sm font-medium">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -949,8 +777,6 @@ function AppContent() {
                       </button>
                     </div>
                   )}
-                  
-                  {/* Clear all filters */}
                   {(searchQuery || (selectedCategories.length > 0 && !selectedCategories.includes('all')) || sortBy !== 'default') && (
                     <button
                       onClick={() => {
@@ -966,8 +792,6 @@ function AppContent() {
                   )}
                 </div>
               </div>
-
-              {/* Literature Grid */}
               {literatureItems.length > 0 ? (
                 <div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -976,7 +800,6 @@ function AppContent() {
                       key={item.id}
                       className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between h-full"
                     >
-                      {/* Header */}
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/20 rounded-md flex items-center justify-center overflow-hidden">
@@ -996,8 +819,6 @@ function AppContent() {
                           </div>
                         </div>
                       </div>
-
-                      {/* Content */}
                       <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-2 line-clamp-2">
                         {item.title}
                       </h3>
@@ -1007,8 +828,6 @@ function AppContent() {
                       <p className="text-sm text-slate-500 dark:text-slate-500 mb-4 line-clamp-3">
                         {item.description}
                       </p>
-
-                      {/* Actions */}
                       <div className="flex gap-2">
                         { (item.downloadUrl || item.download_url) ? (
                           <a
@@ -1033,7 +852,6 @@ function AppContent() {
                             Скачать
                           </button>
                         )}
-
                         { (item.downloadUrl || item.download_url) ? (
                           <a
                             href={item.downloadUrl || item.download_url}
@@ -1055,11 +873,8 @@ function AppContent() {
                     </div>
                   ))}
                   </div>
-
-                  {/* Pagination controls */}
                   <div className="flex items-center justify-center mt-10">
                     <div className="flex items-center gap-2 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-white/50 dark:border-slate-700/50 rounded-2xl p-2 shadow-lg">
-                      {/* First button */}
                       <button
                         onClick={() => setLiteraturePage(1)}
                         disabled={literaturePage === 1}
@@ -1074,8 +889,6 @@ function AppContent() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
                         </svg>
                       </button>
-
-                      {/* Previous button */}
                       <button
                         onClick={() => literaturePage > 1 && setLiteraturePage(literaturePage - 1)}
                         disabled={literaturePage === 1}
@@ -1090,8 +903,6 @@ function AppContent() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                         </svg>
                       </button>
-
-                      {/* Page input */}
                       <div className="flex items-center gap-1">
                         <input
                           type="number"
@@ -1121,8 +932,6 @@ function AppContent() {
                           {literatureMaxPage}
                         </div>
                       </div>
-
-                      {/* Next button */}
                       <button
                         onClick={() => {
                           if (literaturePage < literatureMaxPage) setLiteraturePage(literaturePage + 1);
@@ -1139,8 +948,6 @@ function AppContent() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </button>
-
-                      {/* Last button */}
                       <button
                         onClick={() => setLiteraturePage(literatureMaxPage)}
                         disabled={literaturePage === literatureMaxPage}
@@ -1192,12 +999,9 @@ function AppContent() {
               )}
             </div>
           )}
-
-          {/* Category Modal */}
           {isCategoryModalOpen && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
               <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden">
-                {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-white/20 dark:border-slate-700/50">
                   <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
                     <Filter className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
@@ -1212,8 +1016,6 @@ function AppContent() {
                     </svg>
                   </button>
                 </div>
-
-                {/* Search inside modal */}
                 <div className="px-6 pt-3 pb-3">
                   <div className="relative">
                     <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5 opacity-60" />
@@ -1226,8 +1028,6 @@ function AppContent() {
                     />
                   </div>
                 </div>
-
-                {/* Categories Grid */}
                 <div className="px-6 pt-1 pb-6 overflow-y-auto max-h-[50vh]">
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {categories
@@ -1267,8 +1067,6 @@ function AppContent() {
                       ))}
                   </div>
                 </div>
-
-                {/* Footer */}
                 <div className="flex items-center justify-between p-6 border-t border-white/20 dark:border-slate-700/50">
                   <div className="text-sm text-slate-500 dark:text-slate-400">
                     Выбрано: <span className="font-medium text-emerald-600 dark:text-emerald-400">
@@ -1303,12 +1101,9 @@ function AppContent() {
               </div>
             </div>
           )}
-
-          {/* Sort Modal */}
           {isSortModalOpen && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
               <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-hidden flex flex-col">
-                {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-white/20 dark:border-slate-700/50">
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
                     <svg className="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1325,8 +1120,6 @@ function AppContent() {
                     </svg>
                   </button>
                 </div>
-
-                {/* Sort Options */}
                 <div className="p-6 overflow-y-auto flex-1">
                   <div className="space-y-3">
                     {[
@@ -1368,8 +1161,6 @@ function AppContent() {
                     ))}
                   </div>
                 </div>
-
-                {/* Footer */}
                 <div className="flex items-center justify-between p-6 border-t border-white/20 dark:border-slate-700/50">
                   <div className="text-sm text-slate-500 dark:text-slate-400">
                     Текущая: <span className="font-medium text-emerald-600 dark:text-emerald-400">
@@ -1399,8 +1190,6 @@ function AppContent() {
               </div>
             </div>
           )}
-
-          {/* NEWS TAB */}
           {activeTab === 'news' && (
             <div className="max-w-6xl mx-auto">
               <div className="text-center mb-10">
@@ -1409,8 +1198,6 @@ function AppContent() {
                   Актуальные события, достижения и важные объявления БНТУ
                 </p>
               </div>
-
-              {/* Search Bar with Sort Button */}
               <div className="max-w-2xl mx-auto mb-8">
                 <div className="flex gap-3">
                   <div className="relative flex-1">
@@ -1434,8 +1221,6 @@ function AppContent() {
                   </button>
                 </div>
               </div>
-
-              {/* Category Filter */}
               <div className="flex flex-wrap justify-center gap-3 mb-8">
                 {newsCategories.map(category => (
                   <button
@@ -1451,8 +1236,6 @@ function AppContent() {
                   </button>
                 ))}
               </div>
-
-              {/* Featured News */}
               {newsPage === 1 && filteredNews.length > 0 && !newsSearchQuery && (
                 <div className="mb-12">
                   <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">Последние новости</h3>
@@ -1463,7 +1246,6 @@ function AppContent() {
                         className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-800/30 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                       >
                         <div className="flex flex-col h-full">
-                          {/* Изображение новости */}
                           {item.imageUrl && (
                             <div className="relative h-48 rounded-xl overflow-hidden mb-4">
                               <img 
@@ -1478,8 +1260,6 @@ function AppContent() {
                               <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
                             </div>
                           )}
-                          
-                          {/* Дата в левом верхнем углу */}
                           <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                               <Calendar className="w-4 h-4" />
@@ -1496,7 +1276,6 @@ function AppContent() {
                           <p className="text-slate-600 dark:text-slate-400 mb-4 line-clamp-3 flex-grow">
                             {item.excerpt}
                           </p>
-                          {/* Теги и кнопка со стрелочкой в самом низу */}
                           <div className="flex items-center justify-between mt-auto">
                             <div className="flex-1 mr-3 min-w-0">
                               {renderTags(item.tags)}
@@ -1512,8 +1291,6 @@ function AppContent() {
                   </div>
                 </div>
               )}
-
-              {/* Regular News Grid */}
               <div>
                 <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">
                   {selectedNewsCategory === 'all' ? 'Все новости' : newsCategories.find(cat => cat.id === selectedNewsCategory)?.name}
@@ -1526,7 +1303,6 @@ function AppContent() {
                         className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                       >
                         <div className="flex flex-col h-full">
-                          {/* Изображение новости */}
                           {item.imageUrl && (
                             <div className="relative h-40 rounded-xl overflow-hidden mb-4">
                               <img 
@@ -1541,8 +1317,6 @@ function AppContent() {
                               <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
                             </div>
                           )}
-                          
-                          {/* Дата в левом верхнем углу */}
                           <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                               <Calendar className="w-4 h-4" />
@@ -1559,7 +1333,6 @@ function AppContent() {
                           <p className="text-slate-600 dark:text-slate-400 mb-4 line-clamp-3 flex-grow">
                             {item.excerpt}
                           </p>
-                          {/* Теги и кнопка со стрелочкой в самом низу */}
                           <div className="flex items-center justify-between text-sm mt-auto">
                             <div className="flex-1 mr-3 min-w-0">
                               {renderTags(item.tags)}
@@ -1592,12 +1365,9 @@ function AppContent() {
                     </button>
                   </div>
                 )}
-
-              {/* News Pagination */}
               {newsTotal > newsPageSize && (
                 <div className="flex items-center justify-center mt-10">
                   <div className="flex items-center gap-2 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-white/50 dark:border-slate-700/50 rounded-2xl p-2 shadow-lg">
-                    {/* First button */}
                     <button
                       onClick={() => setNewsPage(1)}
                       disabled={newsPage === 1}
@@ -1612,8 +1382,6 @@ function AppContent() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
                       </svg>
                     </button>
-
-                    {/* Previous button */}
                     <button
                       onClick={() => newsPage > 1 && setNewsPage(newsPage - 1)}
                       disabled={newsPage === 1}
@@ -1628,8 +1396,6 @@ function AppContent() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
                     </button>
-
-                    {/* Page input */}
                     <div className="flex items-center gap-1">
                       <input
                         type="number"
@@ -1659,8 +1425,6 @@ function AppContent() {
                         {newsMaxPage}
                       </div>
                     </div>
-
-                    {/* Next button */}
                     <button
                       onClick={() => {
                         if (newsPage < newsMaxPage) setNewsPage(newsPage + 1);
@@ -1677,8 +1441,6 @@ function AppContent() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </button>
-
-                    {/* Last button */}
                     <button
                       onClick={() => setNewsPage(newsMaxPage)}
                       disabled={newsPage === newsMaxPage}
@@ -1699,12 +1461,9 @@ function AppContent() {
               </div>
             </div>
           )}
-
-          {/* News Sort Modal */}
           {isNewsSortModalOpen && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
               <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-hidden flex flex-col">
-                {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-white/20 dark:border-slate-700/50">
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
                     <svg className="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1721,8 +1480,6 @@ function AppContent() {
                     </svg>
                   </button>
                 </div>
-
-                {/* Sort Options */}
                 <div className="p-6 overflow-y-auto flex-1">
                   <div className="space-y-3">
                     {[
@@ -1757,8 +1514,6 @@ function AppContent() {
               </div>
             </div>
           )}
-
-          {/* GAMES TAB */}
           {activeTab === 'games' && (
             <div className="max-w-7xl mx-auto">
               <div className="text-center mb-10">
@@ -1767,8 +1522,6 @@ function AppContent() {
                   Лучшие игры для студентов БНТУ - отдыхайте с пользой
                 </p>
               </div>
-
-              {/* Category Filter */}
               <div className="flex flex-wrap justify-center gap-3 mb-8">
                 {gameCategories.map(category => (
                   <button
@@ -1784,8 +1537,6 @@ function AppContent() {
                   </button>
                 ))}
               </div>
-
-              {/* Featured Games */}
               {filteredGames.filter(item => item.featured).length > 0 && (
                 <div className="mb-12">
                   <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">Рекомендуемые игры</h3>
@@ -1799,7 +1550,6 @@ function AppContent() {
                             : 'border-gray-200 dark:border-slate-700'
                         }`}
                       >
-                        {/* Game Image */}
                         <div className="relative h-48 overflow-hidden">
                           <img 
                             src={game.image} 
@@ -1823,8 +1573,6 @@ function AppContent() {
                           )}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                         </div>
-
-                        {/* Game Info */}
                         <div className="p-6">
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1">
@@ -1842,12 +1590,9 @@ function AppContent() {
                               </span>
                             </div>
                           </div>
-
                           <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 line-clamp-2">
                             {game.description}
                           </p>
-
-                          {/* Tags */}
                           <div className="flex flex-wrap gap-2 mb-4">
                             {game.tags.slice(0, 3).map((tag, index) => (
                               <span 
@@ -1858,8 +1603,6 @@ function AppContent() {
                               </span>
                             ))}
                           </div>
-
-                          {/* Price and Action */}
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               {game.price === 0 ? (
@@ -1880,7 +1623,6 @@ function AppContent() {
                               )}
                             </div>
                             {game.serverUrl ? (
-                              // Minecraft Server Buttons
                               <div className="flex gap-2">
                                 <a
                                   href={game.serverUrl}
@@ -1896,7 +1638,6 @@ function AppContent() {
                                 <button
                                   onClick={() => {
                                     navigator.clipboard.writeText(game.serverIP);
-                                    // Можно добавить уведомление о копировании
                                   }}
                                   className="px-3 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-1"
                                 >
@@ -1907,7 +1648,6 @@ function AppContent() {
                                 </button>
                               </div>
                             ) : (
-                              // Regular Game Button
                               <button className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2">
                                 <Download className="w-4 h-4" />
                                 {game.price === 0 ? 'Получить' : 'Купить'}
@@ -1920,8 +1660,6 @@ function AppContent() {
                   </div>
                 </div>
               )}
-
-              {/* All Games Grid */}
               <div>
                 <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">
                   {selectedGameCategory === 'all' ? 'Все игры' : gameCategories.find(cat => cat.id === selectedGameCategory)?.name}
@@ -1933,7 +1671,6 @@ function AppContent() {
                         key={game.id}
                         className="group bg-white dark:bg-slate-800 rounded-xl overflow-hidden border border-gray-200 dark:border-slate-700 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
                       >
-                        {/* Game Image */}
                         <div className="relative h-32 overflow-hidden">
                           <img 
                             src={game.image} 
@@ -1951,8 +1688,6 @@ function AppContent() {
                             </div>
                           )}
                         </div>
-
-                        {/* Game Info */}
                         <div className="p-4">
                           <h4 className="font-bold text-sm text-slate-900 dark:text-white mb-1 line-clamp-1">
                             {game.title}
@@ -1960,16 +1695,12 @@ function AppContent() {
                           <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
                             {game.developer}
                           </p>
-
-                          {/* Rating */}
                           <div className="flex items-center gap-1 mb-3">
                             <Star className="w-3 h-3 text-yellow-500 fill-current" />
                             <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
                               {game.rating}
                             </span>
                           </div>
-
-                          {/* Price and Action */}
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1">
                               {game.price === 0 ? (
@@ -2020,8 +1751,6 @@ function AppContent() {
             </div>
           )}
         </main>
-
-        {/* Footer */}
         <footer className="bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div className="text-center text-sm text-slate-500 dark:text-slate-400">
@@ -2030,22 +1759,16 @@ function AppContent() {
           </div>
         </footer>
       </div>
-
-      {/* Profile Modal */}
       {isProfileModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
           <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-hidden flex flex-col">
-            {/* Header with Banner */}
             <div className="relative h-32">
-              {/* Banner */}
               <img 
                 src="https://i.pinimg.com/1200x/b3/40/bd/b340bd28445da4ab7609576bc3fc125f.jpg"
                 alt="Profile Banner"
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-              
-              {/* Avatar - positioned lower */}
               <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2">
                 <img 
                   src="https://i.pinimg.com/736x/fc/55/e6/fc55e68d174bf0d2cb038d699c01f172.jpg"
@@ -2053,15 +1776,11 @@ function AppContent() {
                   className="w-32 h-32 rounded-2xl object-cover border-4 border-white dark:border-slate-800"
                 />
               </div>
-              
-              {/* Edit Button */}
               <button
                 className="absolute top-4 right-16 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 border border-white/30"
               >
                 <Edit className="w-5 h-5" />
               </button>
-              
-              {/* Close Button */}
               <button
                 onClick={() => setIsProfileModalOpen(false)}
                 className="absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 border border-white/30"
@@ -2071,33 +1790,23 @@ function AppContent() {
                 </svg>
               </button>
             </div>
-
-            {/* Profile Content */}
             <div className="p-6 overflow-y-auto flex-1 pt-20">
-
-              {/* Full Name */}
               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 text-center">
                 {user?.fullname || 'Пользователь'}
               </h3>
-
               <div className="w-full space-y-6">
-                {/* Faculty */}
                 <div className="text-left flex items-center gap-3">
                   <GraduationCap className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   <p className="text-base font-medium text-slate-900 dark:text-white">
                     {user?.faculty || 'Не указан'}
                   </p>
                 </div>
-
-                {/* Group Number */}
                 <div className="text-left flex items-center gap-3">
                   <Book className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   <p className="text-base font-medium text-slate-900 dark:text-white">
                     {user?.student_code?.slice(0, 8) || 'Не указана'}
                   </p>
                 </div>
-
-                {/* Course */}
                 <div className="text-left flex items-center gap-3">
                   <Backpack className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   <p className="text-base font-medium text-slate-900 dark:text-white">
@@ -2107,25 +1816,18 @@ function AppContent() {
                       const currentYear = new Date().getFullYear();
                       const groupYear = parseInt(groupLastTwo) + 2000;
                       const course = currentYear - groupYear + 1;
-                      
-                      // Учитываем учебный год (сентябрь-июнь)
                       const currentMonth = new Date().getMonth();
                       let finalCourse;
-                      if (currentMonth < 8) { // до сентября
+                      if (currentMonth < 8) {
                         finalCourse = course - 1;
-                      } else { // с сентября
+                      } else {
                         finalCourse = course;
                       }
-                      
-                      // Если курс 0 или меньше, делаем 1 курс
                       if (finalCourse <= 0) finalCourse = 1;
-                      
                       return finalCourse > 0 && finalCourse <= 5 ? `${finalCourse} курс` : 'Не указан';
                     })()}
                   </p>
                 </div>
-
-                {/* Registration Date */}
                 <div className="text-left flex items-center gap-3 mb-8">
                   <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   <p className="text-base font-medium text-slate-900 dark:text-white">
@@ -2136,8 +1838,6 @@ function AppContent() {
                     }) : 'Не указана'}
                   </p>
                 </div>
-
-                {/* Logout Button */}
                 <button
                   onClick={() => {
                     logout();
@@ -2154,8 +1854,6 @@ function AppContent() {
           </div>
         </div>
       )}
-
-      {/* Login Modal */}
       <LoginModal 
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
@@ -2163,7 +1861,6 @@ function AppContent() {
     </div>
   );
 }
-
 function App() {
   return (
     <AuthProvider>
@@ -2171,5 +1868,4 @@ function App() {
     </AuthProvider>
   );
 }
-
 export default App;

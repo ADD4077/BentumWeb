@@ -1,6 +1,5 @@
-// Данные расписания БНТУ
 export const scheduleData = {
-  upper: { // 1 Неделя
+  upper: {
     'Пн': [
       { id: 1, time: '08:00 - 09:35', subject: 'Высшая математика', type: 'Лекция', room: '324', building: '11к', teacher: 'Иванов И.И.' },
       { id: 2, time: '09:55 - 11:30', subject: 'Физика', type: 'Лабораторная', room: '210', building: '8к', teacher: 'Петров П.П.' },
@@ -19,7 +18,7 @@ export const scheduleData = {
     ],
     'Сб': []
   },
-  lower: { // 2 Неделя
+  lower: {
     'Пн': [
       { id: 1, time: '09:55 - 11:30', subject: 'Философия', type: 'Семинар', room: '301', building: '11к', teacher: 'Смирнова О.Г.' },
     ],

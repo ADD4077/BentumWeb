@@ -1,21 +1,15 @@
-// LoginModal компонент - модальное окно входа
 import React, { useState } from 'react';
 import { LogIn } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
-
 function LoginModal({ isOpen, onClose }) {
   const [studentCode, setStudentCode] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
-
   if (!isOpen) return null;
-
   const validateForm = () => {
     const newErrors = {};
-
-    // Валидация студенческого кода
     if (!studentCode) {
       newErrors.studentCode = 'Это поле обязательно';
     } else if (!/^\d+$/.test(studentCode)) {
@@ -23,8 +17,6 @@ function LoginModal({ isOpen, onClose }) {
     } else if (studentCode.length !== 10) {
       newErrors.studentCode = 'Не менее 10 цифр';
     }
-
-    // Валидация пароля
     if (!password) {
       newErrors.password = 'Это поле обязательно';
     } else if (!/^\d+$/.test(password)) {
@@ -32,11 +24,9 @@ function LoginModal({ isOpen, onClose }) {
     } else if (password.length !== 7) {
       newErrors.password = 'Не менее 7 цифр';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleSubmit = async (e) => {
     console.log('LoginModal: handleSubmit called');
     e.preventDefault();
@@ -65,31 +55,24 @@ function LoginModal({ isOpen, onClose }) {
       console.log('LoginModal: validation failed');
     }
   };
-
   const handleStudentCodeChange = (e) => {
     const value = e.target.value;
-    // Разрешаем только цифры
     if (/^\d*$/.test(value)) {
       setStudentCode(value);
-      // Очищаем ошибку при вводе
       if (errors.studentCode) {
         setErrors({ ...errors, studentCode: '' });
       }
     }
   };
-
   const handlePasswordChange = (e) => {
     const value = e.target.value;
-    // Разрешаем только цифры
     if (/^\d*$/.test(value)) {
       setPassword(value);
-      // Очищаем ошибку при вводе
       if (errors.password) {
         setErrors({ ...errors, password: '' });
       }
     }
   };
-  
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
       <div className="bg-white dark:bg-[#0B0F19] border border-gray-200 dark:border-slate-700 rounded-3xl w-full max-w-md p-8 shadow-2xl relative">
@@ -99,7 +82,6 @@ function LoginModal({ isOpen, onClose }) {
         >
           ✕
         </button>
-        
         <div className="text-center mb-8">
           <div className="inline-flex justify-center items-center w-16 h-16 bg-gradient-to-tr from-emerald-400 to-teal-600 rounded-3xl text-white mb-6 shadow-lg shadow-emerald-500/30">
             <LogIn className="w-8 h-8" />
@@ -107,7 +89,6 @@ function LoginModal({ isOpen, onClose }) {
           <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Вход</h2>
           <p className="text-slate-500 text-sm mt-3">Войдите в личный кабинет, чтобы получить доступ к функционалу</p>
         </div>
-
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div>
             <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 ml-1">Номер студенческого</label>
@@ -145,13 +126,11 @@ function LoginModal({ isOpen, onClose }) {
               <p className="text-red-500 text-sm mt-2 ml-1">{errors.password}</p>
             )}
           </div>
-          
           {errors.general && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-3">
               <p className="text-red-600 dark:text-red-400 text-sm">{errors.general}</p>
             </div>
           )}
-          
           <button 
             type="submit"
             disabled={isLoading}
@@ -167,7 +146,6 @@ function LoginModal({ isOpen, onClose }) {
             )}
           </button>
         </form>
-
         <div className="mt-8 text-center text-sm">
           <span className="text-slate-500">Как войти? </span>
           <a href="#" className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">Инструкция</a>
@@ -176,5 +154,4 @@ function LoginModal({ isOpen, onClose }) {
     </div>
   );
 }
-
 export default LoginModal;

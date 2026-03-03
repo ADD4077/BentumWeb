@@ -147,13 +147,11 @@ def save_data(request):
 
         request.session.set_expiry(SESSION_MAX_AGE_SECONDS)
         
-        # Явно сохраняем сессию
         request.session.save()
 
         _enforce_session_limits(user.student_code, request.session.session_key)
         
         
-        # Создаем ответ с cookie
         response_data = {
             "success": True,
             "message": "Регистрация прошла успешно",
@@ -172,7 +170,6 @@ def save_data(request):
             status=200
         )
         
-        # Устанавливаем cookie явно
         response.set_cookie(
             'sessionid',
             request.session.session_key,
@@ -211,15 +208,12 @@ def dashboard(request):
             status=405
         )
     
-    # Получаем student_code из query параметра (приоритет)
     student_code = request.GET.get('student_code')
     
     
-    # Если student_code нет в query параметре, пробуем взять из сессии
     if not student_code:
         student_code = request.session.get('student_code')
     
-    # Проверяем авторизацию через сессию
     if not request.session.get('is_authenticated') or not student_code:
         return JsonResponse(
             {"detail": "Пользователь не авторизован"},
@@ -229,7 +223,6 @@ def dashboard(request):
     try:
         user = User.objects.get(student_code=student_code)
         
-        # Дополнительная проверка безопасности: соответствие student_code сессии
         session_student_code = request.session.get('student_code')
         if session_student_code != student_code:
             return JsonResponse(
@@ -268,7 +261,6 @@ def logout(request):
     """
     try:
         session_key = request.session.session_key
-        # Очищаем сессию
         request.session.flush()
 
         if session_key:
@@ -334,12 +326,10 @@ def get_schedule(request):
             status=405
         )
     
-    # Отладочная информация
     print(f"Session data: {dict(request.session)}")
     print(f"Is authenticated: {request.session.get('is_authenticated')}")
     print(f"Student code: {request.session.get('student_code')}")
     
-    # Проверяем авторизацию
     if not request.session.get('is_authenticated'):
         return JsonResponse(
             {"detail": "Требуется авторизация"},
@@ -354,27 +344,22 @@ def get_schedule(request):
         )
     
     try:
-        # Путь к базе данных
         db_path = os.path.join(settings.BASE_DIR, 'schedules', 'schedules.db')
         
         print(f"Looking for schedule database: {db_path}")
         print(f"Database exists: {os.path.exists(db_path)}")
         
-        # Проверяем существование базы данных
         if not os.path.exists(db_path):
             return JsonResponse(
                 {"detail": "База данных расписаний не найдена"},
                 status=404
             )
         
-        # Подключаемся к базе данных
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
-        # Ищем расписание для группы (первые 8 цифр student_code)
         group_id = student_code[:8]
         
-        # Получаем расписание из базы данных
         cursor.execute("""
             SELECT day, week, time, matter, frame, teacher, classroom 
             FROM schedules 
@@ -391,20 +376,17 @@ def get_schedule(request):
                 status=404
             )
         
-        # Формируем данные в том же формате, что и JSON
         schedule_data = {}
         
         for row in rows:
             day, week, time, matter, frame, teacher, classroom = row
             
-            # Создаем структуру дня и недели если нужно
             if day not in schedule_data:
                 schedule_data[day] = {}
             week_type = 'upper' if week == 1 else 'lower'
             if week_type not in schedule_data[day]:
                 schedule_data[day][week_type] = []
             
-            # Добавляем занятие
             schedule_data[day][week_type].append({
                 "time": time,
                 "subject": matter,
@@ -454,7 +436,6 @@ def get_literature(request):
         if not size and size != 0:
             return None
 
-        # Число в чистом виде
         if isinstance(size, (int, float)):
             try:
                 return f"{float(size):.2f}"
@@ -462,9 +443,7 @@ def get_literature(request):
                 return str(size)
 
         s = str(size).strip()
-        # Автоисправление формата "1000.Kb" -> "1000KB"
         s = re.sub(r'([0-9]+)\.([kKmMgGtT]?)\s*([bB])', r'\1\2\3', s)
-        # Пытаемся матчить число и опциональную единицу
         m = re.match(r"^\s*([0-9]+(?:[.,][0-9]+)?)\s*([kKmMgGtT]?\s*[bB])?\s*$", s)
         if not m:
             return s
@@ -473,7 +452,6 @@ def get_literature(request):
         unit = (m.group(2) or '').replace(' ', '')
         unit = unit.upper() if unit else ''
 
-        # Приводим единицу к общепринятому виду (KB/MB/GB/B)
         if unit in ('B', ''):
             unit = 'B' if unit == 'B' else ''
         elif unit in ('KB', 'K B'):
@@ -485,7 +463,6 @@ def get_literature(request):
 
         try:
             val = float(num)
-            # Округляем до 2 знаков
             formatted = f"{val:.2f}"
             return f"{formatted}{unit}"
         except Exception:
@@ -499,7 +476,6 @@ def get_literature(request):
             return 0
         
         s = str(size_str).strip()
-        # Матчим число и единицу (включаем форматы типа "1000.Kb")
         m = re.match(r"^\s*([0-9]+(?:[.,][0-9]*)?)\s*([kKmMgGtT]?\s*[bB])?\s*$", s)
         if not m:
             return 0
@@ -508,7 +484,6 @@ def get_literature(request):
             num = float(m.group(1).replace(',', '.'))
             unit = (m.group(2) or '').replace(' ', '').upper()
             
-            # Конвертируем в байты
             multipliers = {
                 'B': 1,
                 'KB': 1024,
@@ -536,39 +511,32 @@ def get_literature(request):
     category = (request.GET.get('category') or '').strip()
 
     try:
-        # Путь к базе данных
         db_path = os.path.join(settings.BASE_DIR, 'books', 'literature.db')
         
         if not os.path.exists(db_path):
             return JsonResponse({"detail": "База данных литературы не найдена"}, status=404)
 
-        # Подключаемся к базе данных
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        # Формируем SQL запрос с фильтрацией
         where_conditions = []
         params = []
 
-        # Фильтрация по категориям
         categories = request.GET.getlist('category')
         if categories and 'all' not in categories:
             placeholders = ','.join(['?' for _ in categories])
             where_conditions.append(f"category IN ({placeholders})")
             params.extend(categories)
 
-        # Поисковый фильтр
         if search:
             where_conditions.append("(LOWER(title) LIKE ? OR LOWER(authors) LIKE ? OR LOWER(description) LIKE ?)")
             search_param = f"%{search}%"
             params.extend([search_param, search_param, search_param])
 
-        # Формируем WHERE
         where_clause = ""
         if where_conditions:
             where_clause = "WHERE " + " AND ".join(where_conditions)
 
-        # Сортировка
         order_clause = "ORDER BY title ASC"
         sort_param = request.GET.get('sort', 'default')
         if sort_param != 'default':
@@ -589,9 +557,7 @@ def get_literature(request):
             elif sort_param == 'size_asc':
                 order_clause = "ORDER BY title ASC"  # Временная сортировка, будем сортировать в Python
 
-        # Для сортировки по размеру получаем все данные, иначе - используем пагинацию в SQL
         if sort_param in ['size_desc', 'size_asc']:
-            # Получаем все данные для сортировки по размеру
             query = f"""
                 SELECT rowid, title, faculty, category, authors, publishing_date, 
                        description, image_url, download_size, download_link
@@ -602,7 +568,6 @@ def get_literature(request):
             all_rows = cursor.fetchall()
             conn.close()
             
-            # Формируем все данные
             all_items = []
             for row in all_rows:
                 (rowid, title, faculty, category, authors, publishing_date, 
@@ -622,18 +587,15 @@ def get_literature(request):
                     'image_url': image_url
                 })
             
-            # Сортировка по размеру
             reverse = sort_param == 'size_desc'
             all_items.sort(key=lambda x: _parse_size(x.get('downloadSizeRaw', '') or '0'), reverse=reverse)
             
-            # Применяем пагинацию
             total = len(all_items)
             start = (page - 1) * page_size
             end = start + page_size
             items = all_items[start:end]
             
         else:
-            # Обычная сортировка через SQL с пагинацией
             count_query = f"SELECT COUNT(*) FROM literature {where_clause}"
             cursor.execute(count_query, params)
             total = cursor.fetchone()[0]
@@ -654,7 +616,6 @@ def get_literature(request):
             rows = cursor.fetchall()
             conn.close()
 
-            # Формируем данные
             items = []
             for row in rows:
                 (rowid, title, faculty, category, authors, publishing_date, 
@@ -717,46 +678,37 @@ def get_news(request):
     sort_by = (request.GET.get('sort_by') or 'date_desc').strip()
 
     try:
-        # Путь к базе данных
         db_path = os.path.join(settings.BASE_DIR, 'news', 'times_news.db')
         
         if not os.path.exists(db_path):
             return JsonResponse({"detail": "База данных новостей не найдена"}, status=404)
 
-        # Подключаемся к базе данных
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        # Формируем SQL запрос с фильтрацией
         where_conditions = []
         params = []
 
-        # Фильтр по категории
         if category and category != 'all':
             where_conditions.append("tags LIKE ?")
             params.append(f"%{category}%")
 
-        # Поисковый фильтр
         if search:
             where_conditions.append("(LOWER(title) LIKE ? OR LOWER(summary) LIKE ?)")
             search_param = f"%{search}%"
             params.extend([search_param, search_param])
 
-        # Формируем WHERE
         where_clause = ""
         if where_conditions:
             where_clause = "WHERE " + " AND ".join(where_conditions)
 
-        # Получаем общее количество
         count_query = f"SELECT COUNT(*) FROM news {where_clause}"
         cursor.execute(count_query, params)
         total = cursor.fetchone()[0]
 
-        # Пагинация
         offset = (page - 1) * page_size
         limit_clause = f"LIMIT {page_size} OFFSET {offset}"
 
-        # Определяем сортировку
         order_by = "timestamp DESC"  # По умолчанию новые сначала
         if sort_by == 'date_asc':
             order_by = "timestamp ASC"
@@ -765,7 +717,6 @@ def get_news(request):
         elif sort_by == 'title_desc':
             order_by = "title DESC"
 
-        # Основной запрос с динамической сортировкой
         query = f"""
             SELECT id, title, link, date, summary, tags, image_url, reading_time, timestamp
             FROM news 
@@ -778,12 +729,10 @@ def get_news(request):
         rows = cursor.fetchall()
         conn.close()
 
-        # Формируем данные в нужном формате
         items = []
         for row in rows:
             (news_id, title, link, date, summary, tags, image_url, reading_time, timestamp) = row
             
-            # Определяем категорию из тегов
             news_category = 'general'  # категория по умолчанию
             if tags:
                 tags_lower = tags.lower()
@@ -794,20 +743,15 @@ def get_news(request):
                 elif 'events' in tags_lower or 'мероприятия' in tags_lower:
                     news_category = 'events'
             
-            # Передаем timestamp для корректной сортировки и конвертации на фронтенде
             
-            # Парсим теги из строки
             parsed_tags = []
             if tags:
-                # Разделяем теги по запятым или другим разделителям
                 import re
                 tag_list = re.split(r'[,;]\s*', tags.strip())
                 parsed_tags = []
                 for tag in tag_list:
                     clean_tag = tag.strip()
-                    # Удаляем все # в начале и другие символы
                     clean_tag = re.sub(r'^#+', '', clean_tag)
-                    # Удаляем лишние пробелы
                     clean_tag = clean_tag.strip()
                     if clean_tag:
                         parsed_tags.append(clean_tag)

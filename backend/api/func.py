@@ -11,7 +11,6 @@ def authorize(login: str, password: str) -> Union[bool, tuple[str, str]]:
     try:
         print(f"[AUTH] Attempting authorize with login={login}")
         
-        # Получаем страницу логина
         session = requests.Session()
         response = session.get("https://bntu.by/user/login", verify=False)
         print(f"[AUTH] Login page status: {response.status_code}")
@@ -33,7 +32,6 @@ def authorize(login: str, password: str) -> Union[bool, tuple[str, str]]:
         
         data = {"_token": token, "username": login, "password": password}
         
-        # Отправляем запрос авторизации
         response = session.post(
             "https://bntu.by/user/auth", headers=headers, data=data, verify=False
         )
@@ -63,7 +61,6 @@ def authorize(login: str, password: str) -> Union[bool, tuple[str, str]]:
             return fullname, faculty
         else:
             print(f"[AUTH] Authorization failed: not redirected to pay page")
-            # Выведем часть ответа для отладки
             print(f"[AUTH] Response content preview: {content[:500]}...")
             return False
             
