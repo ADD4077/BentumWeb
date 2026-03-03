@@ -49,7 +49,6 @@ def save_data(request):
 
 
     try:
-        # Правильно декодируем JSON из request.body
         if isinstance(request.body, bytes):
             body_str = request.body.decode('utf-8')
         else:
@@ -61,7 +60,6 @@ def save_data(request):
         red_code = data.get("studentRedCode") # Правильное имя поля
         print(f"Student Code: {student_code}, Red Code: {red_code}") # Debug print
 
-        # 1. Валидация длины
         if not student_code or not red_code:
             return JsonResponse(
                 {"detail": "Отсутствуют обязательные поля"},
@@ -74,12 +72,9 @@ def save_data(request):
                 status=400
             )
 
-        # Проверяем, существует ли пользователь в базе
         existing_user = User.objects.filter(student_code=student_code).first()
         if existing_user:
-            # Если пользователь существует, выполняем вход и редирект в личный кабинет
             
-            # Сохраняем сессию
             request.session['student_code'] = existing_user.student_code
             request.session['fullname'] = existing_user.fullname
             request.session['faculty'] = existing_user.faculty
@@ -87,13 +82,11 @@ def save_data(request):
 
             request.session.set_expiry(SESSION_MAX_AGE_SECONDS)
             
-            # Явно сохраняем сессию
             request.session.save()
 
             _enforce_session_limits(existing_user.student_code, request.session.session_key)
             
             
-            # Создаем ответ с cookie
             response_data = {
                 "success": True,
                 "message": "Вход выполнен успешно",
@@ -112,7 +105,6 @@ def save_data(request):
                 status=200
             )
             
-            # Устанавливаем cookie явно
             response.set_cookie(
                 'sessionid',
                 request.session.session_key,
@@ -136,11 +128,9 @@ def save_data(request):
                 status=401
             )
         
-        # Если authorize вернул кортеж с данными
         fullname, faculty = auth_result
         print(f"Authorization successful. Fullname: {fullname}, Faculty: {faculty}")
         
-        # Создаем нового пользователя
         user = User.objects.create(
             fullname=fullname,
             faculty=faculty,
@@ -150,7 +140,6 @@ def save_data(request):
         )
         print(f"User created: {user.student_code}")
                 
-        # Сохраняем сессию
         request.session['student_code'] = user.student_code
         request.session['fullname'] = user.fullname
         request.session['faculty'] = user.faculty
