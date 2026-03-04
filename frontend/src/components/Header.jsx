@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { LogOut, GraduationCap, Sun, Moon, User } from 'lucide-react';
+import { LogOut, GraduationCap, Sun, Moon, User, MessageCircle } from 'lucide-react';
 function BurgerIcon({ isOpen }) {
   const baseLineStyle = {
     position: 'absolute',
@@ -40,7 +40,7 @@ function BurgerIcon({ isOpen }) {
     </span>
   );
 }
-function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModalOpen, isMobileMenuOpen, setIsMobileMenuOpen, isProfileModalOpen, setIsProfileModalOpen }) {
+function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModalOpen, setIsSupportModalOpen, isMobileMenuOpen, setIsMobileMenuOpen, isProfileModalOpen, setIsProfileModalOpen }) {
   const { isAuthenticated, user, logout } = useAuth();
   const [isHeaderPill, setIsHeaderPill] = useState(!isMobileMenuOpen);
   const headerRef = useRef(null);
@@ -124,6 +124,12 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                     className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'games' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                   >
                     Игровая
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('about')}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'about' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+                  >
+                    О проекте
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
@@ -318,8 +324,29 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                 >
                   Игровая
                 </button>
+                <button 
+                  onClick={() => {
+                    setActiveTab('about');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'about' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+                >
+                  О проекте
+                </button>
               </nav>
             )}
+            <div className="border-t border-gray-200 dark:border-slate-700 pt-3 mt-3">
+              <button 
+                onClick={() => {
+                  setIsSupportModalOpen(true);
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 flex items-center gap-3"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Поддержка
+              </button>
+            </div>
               </div>
                 </div>
               </div>

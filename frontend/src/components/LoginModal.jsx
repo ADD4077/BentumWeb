@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { LogIn } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
-function LoginModal({ isOpen, onClose }) {
+function LoginModal({ isOpen, onClose, onInstructionOpen }) {
   const [studentCode, setStudentCode] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
@@ -75,7 +75,7 @@ function LoginModal({ isOpen, onClose }) {
   };
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#0B0F19] border border-gray-200 dark:border-slate-700 rounded-3xl w-full max-w-md p-8 shadow-2xl relative">
+      <div className="bg-white dark:bg-[#0B0F19] border border-gray-200 dark:border-slate-700 rounded-3xl w-full max-w-md p-8 shadow-2xl relative custom-scrollbar">
         <button 
           onClick={onClose}
           className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
@@ -148,7 +148,12 @@ function LoginModal({ isOpen, onClose }) {
         </form>
         <div className="mt-8 text-center text-sm">
           <span className="text-slate-500">Как войти? </span>
-          <a href="#" className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">Инструкция</a>
+          <button 
+            onClick={onInstructionOpen}
+            className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline transition-colors"
+          >
+            Инструкция
+          </button>
         </div>
       </div>
     </div>

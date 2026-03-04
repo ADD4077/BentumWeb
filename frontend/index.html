@@ -34,6 +34,65 @@
         body {
             font-family: 'Inter', sans-serif;
         }
+        
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+        
+        @keyframes colorShift {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+        
+        /* Кастомные скроллбары для модальных окон */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(16, 185, 129, 0.3);
+            border-radius: 3px;
+            transition: background 0.3s ease;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(16, 185, 129, 0.5);
+        }
+        
+        /* Темная тема для скроллбаров */
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(52, 211, 153, 0.2);
+        }
+        
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(52, 211, 153, 0.4);
+        }
+        
+        /* Firefox */
+        .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(16, 185, 129, 0.3) transparent;
+        }
+        
+        .dark .custom-scrollbar {
+            scrollbar-color: rgba(52, 211, 153, 0.2) transparent;
+        }
     </style>
   </head>
   <body>

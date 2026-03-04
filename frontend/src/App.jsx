@@ -2,8 +2,12 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import Header from './components/Header.jsx';
 import ScheduleItem from './components/ScheduleItem.jsx';
 import LoginModal from './components/LoginModal.jsx';
+import SupportModal from './components/SupportModal.jsx';
+import InstructionModal from './components/InstructionModal.jsx';
 import FeatureCard from './components/FeatureCard.jsx';
 import TeamCarousel from './components/TeamCarousel.jsx';
+import AboutPage from './components/AboutPage.jsx';
+import NotFoundPage from './components/NotFoundPage.jsx';
 import { ArrowRight, Backpack, Book, BookOpen, Calendar, ChevronRight, Clock, Download, Edit, ExternalLink, Filter, Gamepad2, GraduationCap, LogIn, LogOut, Moon, Search, Star, Sun, User } from 'lucide-react';
 import { daysOfWeek, quickDayButtons, groupInfo, features, teamMembers } from './utils/constants.js';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
@@ -98,9 +102,24 @@ function AppContent() {
     const savedTheme = localStorage.getItem('darkMode');
     return savedTheme !== null ? JSON.parse(savedTheme) : true;
   });
-  const [activeTab, setActiveTab] = useState('home'); 
+  const [activeTab, setActiveTab] = useState('home');
+  
+  // Определяем 404 страницу на основе URL
+  useEffect(() => {
+    const currentPath = window.location.pathname;
+    const validPaths = ['/', '/home', '/about', '/schedule', '/literature', '/news', '/games'];
+    const isValidPath = validPaths.some(path => 
+      currentPath === path || currentPath.startsWith(path + '/')
+    );
+    
+    if (!isValidPath && currentPath !== '/') {
+      setActiveTab('404');
+    }
+  }, []); 
   const [selectedDay, setSelectedDay] = useState('Пн');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const [isInstructionModalOpen, setIsInstructionModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -478,13 +497,14 @@ function AppContent() {
   return (
     <div className={`${darkMode ? 'dark' : ''} min-h-screen flex flex-col font-sans selection:bg-emerald-500 selection:text-white`}>
       <div className="flex-1 bg-gray-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 transition-colors duration-500 relative flex flex-col">
-        {!isLoginModalOpen && !isCategoryModalOpen && !isSortModalOpen && !isProfileModalOpen && (
+        {!isLoginModalOpen && !isSupportModalOpen && !isInstructionModalOpen && !isCategoryModalOpen && !isSortModalOpen && !isProfileModalOpen && (
           <Header 
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             darkMode={darkMode}
             toggleTheme={toggleTheme}
             setIsLoginModalOpen={setIsLoginModalOpen}
+            setIsSupportModalOpen={setIsSupportModalOpen}
             isMobileMenuOpen={isMobileMenuOpen}
             setIsMobileMenuOpen={setIsMobileMenuOpen}
             isProfileModalOpen={isProfileModalOpen}
@@ -529,6 +549,7 @@ function AppContent() {
                     </button>
                   )}
                   <button 
+                    onClick={() => setActiveTab('about')}
                     className="w-full sm:w-auto px-8 py-4 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-slate-900 dark:text-white border border-gray-200 dark:border-slate-700 rounded-3xl font-bold text-lg transition-all hover:-translate-y-1 flex items-center justify-center gap-2 shadow-lg shadow-slate-200/20 dark:shadow-none"
                   >
                     <span>Узнать больше</span>
@@ -564,6 +585,12 @@ function AppContent() {
               </div>
               <TeamCarousel teamMembers={teamMembers} />
             </div>
+          )}
+          {activeTab === 'about' && (
+            <AboutPage darkMode={darkMode} />
+          )}
+          {activeTab === '404' && (
+            <NotFoundPage />
           )}
           {activeTab === 'schedule' && (
             <div className="max-w-4xl mx-auto">
@@ -1001,7 +1028,7 @@ function AppContent() {
           )}
           {isCategoryModalOpen && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
-              <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden">
+              <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col">
                 <div className="flex items-center justify-between p-6 border-b border-white/20 dark:border-slate-700/50">
                   <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
                     <Filter className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
@@ -1028,7 +1055,7 @@ function AppContent() {
                     />
                   </div>
                 </div>
-                <div className="px-6 pt-1 pb-6 overflow-y-auto max-h-[50vh]">
+                <div className="px-6 pt-1 pb-6 overflow-y-auto flex-1 custom-scrollbar">
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {categories
                       .filter(cat => cat.name.toLowerCase().includes(categorySearchQuery.toLowerCase()))
@@ -1067,7 +1094,7 @@ function AppContent() {
                       ))}
                   </div>
                 </div>
-                <div className="flex items-center justify-between p-6 border-t border-white/20 dark:border-slate-700/50">
+                <div className="flex items-center justify-between p-6 border-t border-white/20 dark:border-slate-700/50 mb-0">
                   <div className="text-sm text-slate-500 dark:text-slate-400">
                     Выбрано: <span className="font-medium text-emerald-600 dark:text-emerald-400">
                       {selectedCategories.includes('all') 
@@ -1120,7 +1147,7 @@ function AppContent() {
                     </svg>
                   </button>
                 </div>
-                <div className="p-6 overflow-y-auto flex-1">
+                <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
                   <div className="space-y-3">
                     {[
                       { id: 'default', name: 'По умолчанию', icon: '📋' },
@@ -1790,7 +1817,7 @@ function AppContent() {
                 </svg>
               </button>
             </div>
-            <div className="p-6 overflow-y-auto flex-1 pt-20">
+            <div className="p-6 overflow-y-auto flex-1 pt-20 custom-scrollbar">
               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 text-center">
                 {user?.fullname || 'Пользователь'}
               </h3>
@@ -1857,6 +1884,21 @@ function AppContent() {
       <LoginModal 
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
+        onInstructionOpen={() => setIsInstructionModalOpen(true)}
+      />
+      <SupportModal 
+        isOpen={isSupportModalOpen}
+        onClose={() => setIsSupportModalOpen(false)}
+        darkMode={darkMode}
+      />
+      <InstructionModal 
+        isOpen={isInstructionModalOpen}
+        onClose={() => setIsInstructionModalOpen(false)}
+        darkMode={darkMode}
+        onSupportOpen={() => {
+          setIsInstructionModalOpen(false);
+          setIsSupportModalOpen(true);
+        }}
       />
     </div>
   );

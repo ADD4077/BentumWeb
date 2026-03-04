@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 Demo - BentumWeb</title>
+    <script>
+        // Функция для перехода на 404 страницу
+        function show404() {
+            window.location.hash = '#404';
+            window.location.reload();
+        }
+        
+        // Функция для возврата на главную
+        function goHome() {
+            window.location.hash = '#home';
+            window.location.reload();
+        }
+    </script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .demo-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .demo-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #10b981, #059669);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .demo-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .demo-button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-404 {
+            background: linear-gradient(45deg, #ef4444, #dc2626);
+            color: white;
+        }
+        
+        .btn-404:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+        }
+        
+        .btn-home {
+            background: linear-gradient(45deg, #10b981, #059669);
+            color: white;
+        }
+        
+        .btn-home:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+        
+        .demo-info {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8fafc;
+            border-left: 4px solid #10b981;
+            border-radius: 8px;
+            text-align: left;
+        }
+        
+        .demo-info h3 {
+            margin: 0 0 10px 0;
+            color: #1e293b;
+            font-size: 1.2rem;
+        }
+        
+        .demo-info p {
+            margin: 0;
+            color: #64748b;
+            line-height: 1.6;
+        }
+        
+        .demo-features {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .feature-card {
+            padding: 20px;
+            background: #f1f5f9;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .feature-title {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 5px;
+        }
+        
+        .feature-desc {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1 class="demo-title">Демонстрация 404 страницы</h1>
+        
+        <div class="demo-buttons">
+            <button class="demo-button btn-404" onclick="show404()">
+                🚫 Показать 404
+            </button>
+            <button class="demo-button btn-home" onclick="goHome()">
+                🏠 На главную
+            </button>
+        </div>
+        
+        <div class="demo-info">
+            <h3>Как это работает?</h3>
+            <p>
+                При переходе на несуществующий URL (например, /invalid-page), 
+                приложение автоматически определяет это и показывает страницу 404.
+            </p>
+            <p>
+                Страница 404 имеет красивый дизайн с анимациями, 
+                интерактивными элементами и полезными ссылками для навигации.
+            </p>
+        </div>
+        
+        <div class="demo-features">
+            <div class="feature-card">
+                <div class="feature-icon">🎨</div>
+                <div class="feature-title">Современный дизайн</div>
+                <div class="feature-desc">Градиенты, анимации и адаптивность</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔍</div>
+                <div class="feature-title">Умный поиск</div>
+                <div class="feature-desc">Поиск по сайту прямо из 404</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <div class="feature-title">Полезные ссылки</div>
+                <div class="feature-desc">Быстрый доступ к основным разделам</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
