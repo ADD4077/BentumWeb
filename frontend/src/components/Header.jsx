@@ -125,12 +125,6 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                   >
                     Игровая
                   </button>
-                  <button 
-                    onClick={() => setActiveTab('about')}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'about' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
-                  >
-                    О проекте
-                  </button>
                 </div>
                 <div className="flex items-center gap-2">
                   <button 
@@ -192,7 +186,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                   </button>
                   <button 
                     onClick={() => setIsLoginModalOpen(true)}
-                    className="px-6 py-2.5 text-sm font-semibold text-white bg-slate-900 dark:bg-emerald-600 hover:bg-slate-800 dark:hover:bg-emerald-500 rounded-full transition-all shadow-lg shadow-emerald-500/20"
+                    className="px-6 py-2.5 text-sm font-semibold text-slate-900 dark:text-white bg-slate-200 dark:bg-emerald-600 hover:bg-slate-300 dark:hover:bg-emerald-500 rounded-full transition-all shadow-lg shadow-emerald-500/20"
                   >
                     Войти
                   </button>
@@ -214,7 +208,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                   </button>
                   <button 
                     onClick={() => setIsLoginModalOpen(true)}
-                    className="px-4 py-2 text-sm font-semibold text-white bg-slate-900 dark:bg-emerald-600 hover:bg-slate-800 dark:hover:bg-emerald-500 rounded-full transition-all shadow-lg shadow-emerald-500/20"
+                    className="px-4 py-2 text-sm font-semibold text-slate-900 dark:text-white bg-slate-200 dark:bg-emerald-600 hover:bg-slate-300 dark:hover:bg-emerald-500 rounded-full transition-all shadow-lg shadow-emerald-500/20"
                   >
                     Войти
                   </button>
@@ -271,7 +265,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                     setIsLoginModalOpen(true);
                     setIsMobileMenuOpen(false);
                   }}
-                  className="w-full text-left px-4 py-3 text-sm font-semibold text-white bg-slate-900 dark:bg-emerald-600 hover:bg-slate-800 dark:hover:bg-emerald-500 rounded-2xl transition-all shadow-lg shadow-emerald-500/20"
+                  className="w-full text-left px-4 py-3 text-sm font-semibold text-slate-900 dark:text-white bg-slate-200 dark:bg-emerald-600 hover:bg-slate-300 dark:hover:bg-emerald-500 rounded-2xl transition-all shadow-lg shadow-emerald-500/20"
                 >
                   Войти
                 </button>
