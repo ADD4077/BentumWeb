@@ -8,6 +8,8 @@ import FeatureCard from './components/FeatureCard.jsx';
 import TeamCarousel from './components/TeamCarousel.jsx';
 import AboutPage from './components/AboutPage.jsx';
 import NotFoundPage from './components/NotFoundPage.jsx';
+import BannedPage from './components/BannedPage.jsx';
+import AdminPanel from './components/AdminPanel.jsx';
 import ProfileEditModal from './components/ProfileEditModal.jsx';
 import { ArrowRight, Backpack, Book, BookOpen, Calendar, ChevronRight, Clock, Download, Edit, ExternalLink, Filter, Gamepad2, GraduationCap, LogIn, LogOut, Moon, Search, Star, Sun, User } from 'lucide-react';
 import { daysOfWeek, quickDayButtons, groupInfo, features, teamMembers } from './utils/constants.js';
@@ -103,7 +105,12 @@ function AppContent() {
     const savedTheme = localStorage.getItem('darkMode');
     return savedTheme !== null ? JSON.parse(savedTheme) : true;
   });
-  const [activeTab, setActiveTab] = useState('home');
+  const [activeTab, setActiveTab] = useState(() => {
+    // Читаем сохраненный таб из localStorage или используем 'home'
+    return localStorage.getItem('activeTab') || 'home';
+  });
+  const [isBanned, setIsBanned] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   
   // Определяем 404 страницу на основе URL
   useEffect(() => {
@@ -115,6 +122,113 @@ function AppContent() {
     
     if (!isValidPath && currentPath !== '/') {
       setActiveTab('404');
+    }
+  }, []);
+
+  // Проверка статуса блокировки пользователя
+  useEffect(() => {
+    const checkBannedStatus = () => {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const token = localStorage.getItem('token');
+      
+      // Администраторы не могут быть забанены
+      if (token && (user.email?.includes('admin') || user.id === 1 || user.fullname?.includes('Admin'))) {
+        setIsBanned(false);
+        return;
+      }
+      
+      // Имитация проверки блокировки (в реальном приложении здесь будет API запрос)
+      if (token && user.id === 'banned_user') {
+        setIsBanned(true);
+      }
+      
+      // Можно добавить проверку по дате блокировки
+      const banEndDate = localStorage.getItem('banEndDate');
+      if (banEndDate && new Date(banEndDate) > new Date()) {
+        setIsBanned(true);
+      }
+    };
+
+    checkBannedStatus();
+  }, []);
+
+  // Сохраняем activeTab в localStorage
+  useEffect(() => {
+    if (activeTab !== 'home') {
+      localStorage.setItem('activeTab', activeTab);
+    } else {
+      localStorage.removeItem('activeTab');
+    }
+  }, [activeTab]);
+
+  // Автоматически открываем модальное окно поддержки если activeTab === 'support'
+  useEffect(() => {
+    if (activeTab === 'support') {
+      setIsSupportModalOpen(true);
+      // Сбрасываем таб чтобы не открывать снова
+      setActiveTab('home');
+    }
+  }, [activeTab]);
+
+  // Автоматически открываем модальное окно входа если activeTab === 'login'
+  useEffect(() => {
+    if (activeTab === 'login') {
+      setIsLoginModalOpen(true);
+      // Сбрасываем таб чтобы не открывать снова
+      setActiveTab('home');
+    }
+  }, [activeTab]);
+
+  // Автоматически открываем модальное окно профиля если установлен флаг
+  useEffect(() => {
+    const shouldOpenProfileModal = localStorage.getItem('openProfileModal');
+    if (shouldOpenProfileModal === 'true') {
+      setIsProfileModalOpen(true);
+      // Очищаем флаг после использования
+      localStorage.removeItem('openProfileModal');
+    }
+  }, []);
+
+  // Проверка прав администратора
+  useEffect(() => {
+    const checkAdminRights = () => {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const token = localStorage.getItem('token');
+      
+      // Простая проверка - если email содержит admin или пользователь с ID 1
+      if (token && (user.email?.includes('admin') || user.id === 1 || user.fullname?.includes('Admin'))) {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdminRights();
+  }, []);
+
+  // Читаем данные из URL параметров при первой загрузке
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const userParam = urlParams.get('user');
+    const tokenParam = urlParams.get('token');
+    const banEndDateParam = urlParams.get('banEndDate');
+    
+    if (userParam && tokenParam) {
+      try {
+        const user = JSON.parse(userParam);
+        localStorage.setItem('user', userParam);
+        localStorage.setItem('token', tokenParam);
+        if (banEndDateParam) {
+          localStorage.setItem('banEndDate', banEndDateParam);
+        }
+        
+        // Очищаем URL чтобы параметры не оставались в адресной строке
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        console.log('Данные пользователя загружены из URL параметров:', user);
+      } catch (error) {
+        console.error('Ошибка при загрузке данных из URL:', error);
+      }
     }
   }, []); 
   const [selectedDay, setSelectedDay] = useState('Пн');
@@ -583,28 +697,34 @@ function AppContent() {
   return (
     <div className={`${darkMode ? 'dark' : ''} min-h-screen flex flex-col font-sans selection:bg-emerald-500 selection:text-white`}>
       <div className="flex-1 bg-gray-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 transition-colors duration-500 relative flex flex-col">
-        {!isLoginModalOpen && !isSupportModalOpen && !isInstructionModalOpen && !isCategoryModalOpen && !isSortModalOpen && !isProfileModalOpen && !isProfileEditModalOpen && (
-          <Header 
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            darkMode={darkMode}
-            toggleTheme={toggleTheme}
-            setIsLoginModalOpen={setIsLoginModalOpen}
-            setIsSupportModalOpen={setIsSupportModalOpen}
-            isMobileMenuOpen={isMobileMenuOpen}
-            setIsMobileMenuOpen={setIsMobileMenuOpen}
-            isProfileModalOpen={isProfileModalOpen}
-            setIsProfileModalOpen={setIsProfileModalOpen}
-          />
-        )}
-        <main className="container mx-auto px-4 pt-8 pb-12 relative z-10 flex-1">
-          {activeTab === 'home' && (
-            <div className="flex flex-col items-center">
-              <div className="text-center max-w-4xl mx-auto mb-20 mt-10">
-                <span className="inline-flex text-lg md:text-xl text-emerald-600 font-medium mb-4 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-500 rounded-full items-center gap-2" style={{ animation: 'float 3s ease-in-out infinite' }}>
-                  <Star className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-                  <span>Новая версия 2.0 уже доступна</span>
-                </span>
+        {/* Если пользователь заблокирован, показываем страницу бана */}
+        {isBanned ? (
+          <BannedPage />
+        ) : (
+          <>
+            {!isLoginModalOpen && !isSupportModalOpen && !isInstructionModalOpen && !isCategoryModalOpen && !isSortModalOpen && !isProfileModalOpen && (
+              <Header 
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                darkMode={darkMode}
+                toggleTheme={toggleTheme}
+                setIsLoginModalOpen={setIsLoginModalOpen}
+                setIsSupportModalOpen={setIsSupportModalOpen}
+                isMobileMenuOpen={isMobileMenuOpen}
+                setIsMobileMenuOpen={setIsMobileMenuOpen}
+                isProfileModalOpen={isProfileModalOpen}
+                setIsProfileModalOpen={setIsProfileModalOpen}
+              />
+            )}
+            <main className="container mx-auto px-4 pt-8 pb-12 relative z-10 flex-1">
+              {activeTab === 'home' && (
+                <div className="flex flex-col items-center">
+                  <div className="text-center max-w-4xl mx-auto mb-20 mt-10">
+                    <span className="inline-flex text-lg md:text-xl text-emerald-600 font-medium mb-4 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-500 rounded-full items-center gap-2" style={{ animation: 'float 3s ease-in-out infinite' }}>
+                      <Star className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                      <span>Новая версия 2.0 уже доступна</span>
+                      <Star className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                    </span>
                 <h1 className="text-5xl md:text-7xl font-bold mb-8 tracking-tight text-slate-900 dark:text-white leading-[1.1]">
                   Умное расписание <br />
                   <span className="relative inline-block">
@@ -674,6 +794,9 @@ function AppContent() {
           )}
           {activeTab === 'about' && (
             <AboutPage darkMode={darkMode} />
+          )}
+          {activeTab === 'admin' && isAdmin && (
+            <AdminPanel />
           )}
           {activeTab === '404' && (
             <NotFoundPage />
@@ -1871,6 +1994,8 @@ function AppContent() {
             </div>
           </div>
         </footer>
+          </>
+        )}
       </div>
       {isProfileModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
@@ -1967,6 +2092,8 @@ function AppContent() {
                     logout();
                     setIsProfileModalOpen(false);
                     setActiveTab('home');
+                    // Перезагружаем страницу чтобы применить изменения
+                    window.location.reload();
                   }}
                   className="w-full px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center justify-center gap-2 mt-8"
                 >

@@ -54,10 +54,16 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await api.logout();
-      setIsAuthenticated(false);
-      setUser(null);
     } catch (error) {
       console.error('Logout error:', error);
+    } finally {
+      // Всегда очищаем данные локально
+      setIsAuthenticated(false);
+      setUser(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('banEndDate');
+      localStorage.removeItem('activeTab');
     }
   };
   const saveTheme = async (theme) => {

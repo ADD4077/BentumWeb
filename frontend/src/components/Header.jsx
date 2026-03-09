@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { LogOut, GraduationCap, Sun, Moon, User, MessageCircle } from 'lucide-react';
+import { LogOut, GraduationCap, Sun, Moon, User, MessageCircle, Settings } from 'lucide-react';
 function BurgerIcon({ isOpen }) {
   const baseLineStyle = {
     position: 'absolute',
@@ -43,7 +43,24 @@ function BurgerIcon({ isOpen }) {
 function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModalOpen, setIsSupportModalOpen, isMobileMenuOpen, setIsMobileMenuOpen, isProfileModalOpen, setIsProfileModalOpen }) {
   const { isAuthenticated, user, logout } = useAuth();
   const [isHeaderPill, setIsHeaderPill] = useState(!isMobileMenuOpen);
+  const [isAdmin, setIsAdmin] = useState(false);
   const headerRef = useRef(null);
+  
+  // Проверка прав администратора
+  useEffect(() => {
+    const checkAdminRights = () => {
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      const token = localStorage.getItem('token');
+      
+      if (token && (userData.email?.includes('admin') || userData.id === 1 || userData.fullname?.includes('Admin'))) {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdminRights();
+  }, [isAuthenticated]);
   useEffect(() => {
     if (isMobileMenuOpen) {
       setIsHeaderPill(false);
@@ -125,6 +142,14 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                   >
                     Игровая
                   </button>
+                  {isAdmin && (
+                    <button 
+                      onClick={() => setActiveTab('admin')}
+                      className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'admin' ? 'bg-purple-500 text-white shadow-sm' : 'text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300'}`}
+                    >
+                      Админка
+                    </button>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <button 
