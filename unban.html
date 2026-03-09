@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Разбанить пользователя</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .status {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #059669;
+        }
+        button.danger {
+            background: #ef4444;
+        }
+        button.danger:hover {
+            background: #dc2626;
+        }
+        .success {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔓 Разбанить аккаунт</h1>
+        
+        <div class="status" id="status">
+            <strong>Текущий статус:</strong><br>
+            <div id="statusContent">Загрузка...</div>
+        </div>
+        
+        <button onclick="unbanUser()">
+            🛠️ Разбанить пользователя
+        </button>
+        
+        <button onclick="clearAllData()" class="danger">
+            🗑️ Очистить все данные
+        </button>
+        
+        <button onclick="goToApp()">
+            🏠 Перейти в приложение
+        </button>
+        
+        <div class="success" id="success">
+            ✅ Готово! Теперь вы разбанены.
+        </div>
+    </div>
+
+    <script>
+        function updateStatus() {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const token = localStorage.getItem('token');
+            const banEndDate = localStorage.getItem('banEndDate');
+            
+            let statusText = `Token: ${token ? '✅' : '❌'}<br>`;
+            statusText += `User ID: ${user.id || 'не указан'}<br>`;
+            statusText += `User Name: ${user.fullname || 'не указан'}<br>`;
+            statusText += `Ban End Date: ${banEndDate || 'не указан'}`;
+            
+            document.getElementById('statusContent').innerHTML = statusText;
+        }
+        
+        function unbanUser() {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            
+            // Если это забаненный пользователь, меняем его статус
+            if (user.id === 'banned_user') {
+                user.id = '1';
+                user.fullname = 'User';
+                user.email = 'user@example.com';
+                localStorage.setItem('user', JSON.stringify(user));
+            }
+            
+            // Удаляем данные о бане
+            localStorage.removeItem('banEndDate');
+            localStorage.removeItem('banned');
+            localStorage.removeItem('banReason');
+            
+            updateStatus();
+            document.getElementById('success').style.display = 'block';
+        }
+        
+        function clearAllData() {
+            localStorage.clear();
+            updateStatus();
+            document.getElementById('success').style.display = 'block';
+        }
+        
+        function goToApp() {
+            window.location.href = 'http://localhost:5173';
+        }
+        
+        // Обновляем статус при загрузке
+        updateStatus();
+    </script>
+</body>
+</html>

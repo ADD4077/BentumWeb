@@ -11,6 +11,7 @@ import NotFoundPage from './components/NotFoundPage.jsx';
 import BannedPage from './components/BannedPage.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
 import ProfileEditModal from './components/ProfileEditModal.jsx';
+import SupportSuccessModal from './components/SupportSuccessModal.jsx';
 import { ArrowRight, Backpack, Book, BookOpen, Calendar, ChevronRight, Clock, Download, Edit, ExternalLink, Filter, Gamepad2, GraduationCap, LogIn, LogOut, Moon, Search, Star, Sun, User } from 'lucide-react';
 import { daysOfWeek, quickDayButtons, groupInfo, features, teamMembers } from './utils/constants.js';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
@@ -232,18 +233,22 @@ function AppContent() {
     }
   }, []); 
   const [selectedDay, setSelectedDay] = useState('Пн');
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
-  const [isInstructionModalOpen, setIsInstructionModalOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedNewsCategory, setSelectedNewsCategory] = useState('all');
   const [selectedGameCategory, setSelectedGameCategory] = useState('all');
   const [weekType, setWeekType] = useState('upper');
   const [gameScores, setGameScores] = useState({});
   const [userMedia, setUserMedia] = useState({ avatar_url: null, banner_url: null });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const [isSupportSuccessModalOpen, setIsSupportSuccessModalOpen] = useState(false);
+  const [isInstructionModalOpen, setIsInstructionModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isSortModalOpen, setIsSortModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isProfileEditModalOpen, setIsProfileEditModalOpen] = useState(false);
   const { loading, isAuthenticated, user, logout } = useAuth();
   
   const handleProfileUpdate = (updatedUser) => {
@@ -531,11 +536,9 @@ function AppContent() {
   const literaturePageSize = 6;
   const literatureMaxPage = Math.max(1, Math.ceil(literatureTotal / literaturePageSize));
   const [literatureLoading, setLiteratureLoading] = useState(false);
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [categorySearchQuery, setCategorySearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState(['all']);
   const [sortBy, setSortBy] = useState('default');
-  const [isSortModalOpen, setIsSortModalOpen] = useState(false);
   const fetchLiterature = async (page = 1) => {
     setLiteratureLoading(true);
     try {
@@ -579,8 +582,6 @@ function AppContent() {
   const [newsSearchQuery, setNewsSearchQuery] = useState('');
   const [newsSortBy, setNewsSortBy] = useState('date_desc');
   const [isNewsSortModalOpen, setIsNewsSortModalOpen] = useState(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isProfileEditModalOpen, setIsProfileEditModalOpen] = useState(false);
   const [newsPage, setNewsPage] = useState(1);
   const [newsTotal, setNewsTotal] = useState(0);
   const newsPageSize = 6;
@@ -2114,6 +2115,7 @@ function AppContent() {
         isOpen={isSupportModalOpen}
         onClose={() => setIsSupportModalOpen(false)}
         darkMode={darkMode}
+        onSuccess={() => setIsSupportSuccessModalOpen(true)}
       />
       <InstructionModal 
         isOpen={isInstructionModalOpen}
@@ -2124,13 +2126,22 @@ function AppContent() {
           setIsSupportModalOpen(true);
         }}
       />
-      <ProfileEditModal 
-        isOpen={isProfileEditModalOpen}
-        onClose={() => setIsProfileEditModalOpen(false)}
-        user={user}
-        onSave={handleProfileUpdate}
-        darkMode={darkMode}
-      />
+      {isProfileEditModalOpen && (
+        <ProfileEditModal 
+          isOpen={isProfileEditModalOpen}
+          onClose={() => setIsProfileEditModalOpen(false)}
+          darkMode={darkMode}
+          user={user}
+          onProfileUpdate={handleProfileUpdate}
+        />
+      )}
+      {isSupportSuccessModalOpen && (
+        <SupportSuccessModal 
+          isOpen={isSupportSuccessModalOpen}
+          onClose={() => setIsSupportSuccessModalOpen(false)}
+          darkMode={darkMode}
+        />
+      )}
     </div>
   );
 }

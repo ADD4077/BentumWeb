@@ -127,3 +127,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Media files settings
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Telegram Bot settings
+TELEGRAM_BOT_TOKEN = '7962554899:AAE--8q8vIlHqcPLVKM6gIwhT9Lg5NO81hM'  # Замените на токен вашего бота
+TELEGRAM_CHAT_ID = '-1003536495881'      # Замените на ID вашего канала/чата
+TELEGRAM_TOPIC_ID = 9                   # ID темы для заявок поддержки
+TELEGRAM_NEW_USERS_TOPIC_ID = 3  # ID темы для уведомлений о новых пользователях

@@ -14,6 +14,7 @@ from django.conf import settings
 
 from .models import User, UserSession
 from .func import authorize
+from .user_notification_service import UserNotificationService
 
 
 SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
@@ -139,6 +140,22 @@ def save_data(request):
             created_at=datetime.now(pytz.UTC)
         )
         print(f"User created: {user.student_code}")
+        
+        # Отправляем уведомление о новом пользователе в Telegram
+        try:
+            notification_service = UserNotificationService()
+            user_data = {
+                'id': user.id,
+                'fullname': user.fullname,
+                'email': f"{user.student_code.lower()}@bntu.by",  # Генерируем email на основе student_code
+                'student_code': user.student_code,
+                'faculty': user.faculty
+            }
+            notification_service.send_new_user_notification(user_data)
+            print(f"New user notification sent for {user.student_code}")
+        except Exception as e:
+            print(f"Error sending new user notification: {str(e)}")
+            # Не прерываем процесс авторизации если уведомление не отправилось
                 
         request.session['student_code'] = user.student_code
         request.session['fullname'] = user.fullname
