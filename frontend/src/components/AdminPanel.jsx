@@ -44,82 +44,136 @@ function AdminPanel() {
     setLoading(true);
     setIsRefreshing(true);
     try {
-      const mockUsers = [
-        {
-          id: 1,
-          fullname: 'Иванов Иван Иванович',
-          email: 'ivanov@example.com',
-          student_code: '12345678',
-          faculty: 'ФИТР',
-          registration_date: '2024-01-15',
-          last_login: '2024-03-09',
-          status: 'active',
-          avatar_url: null,
-          ban_reason: null,
-          ban_end_date: null
-        },
-        {
-          id: 2,
-          fullname: 'Петров Петр Петрович',
-          email: 'petrov@example.com',
-          student_code: '87654321',
-          faculty: 'ФТК',
-          registration_date: '2024-02-20',
-          last_login: '2024-03-08',
-          status: 'banned',
-          avatar_url: null,
-          ban_reason: 'Спам-активность',
-          ban_end_date: '2024-03-16'
-        },
-        {
-          id: 3,
-          fullname: 'Сидорова Анна Михайловна',
-          email: 'sidorova@example.com',
-          student_code: '11223344',
-          faculty: 'ЭФ',
-          registration_date: '2024-03-01',
-          last_login: '2024-03-09',
-          status: 'active',
-          avatar_url: null,
-          ban_reason: null,
-          ban_end_date: null
-        },
-        {
-          id: 4,
-          fullname: 'banned_user',
-          email: 'banned@example.com',
-          student_code: '99999999',
-          faculty: 'Тестовый',
-          registration_date: '2024-01-01',
-          last_login: '2024-03-01',
-          status: 'banned',
-          avatar_url: null,
-          ban_reason: 'Многократное нарушение правил сообщества',
-          ban_end_date: '2024-03-16'
-        }
-      ];
+      // Загружаем пользователей из реальной базы данных
+      const response = await fetch('/api/admin/users');
+      const data = await response.json();
       
-      localStorage.setItem('admin_users', JSON.stringify(mockUsers));
-      setUsers(mockUsers);
+      if (data.success) {
+        setUsers(data.users);
+        localStorage.setItem('admin_users', JSON.stringify(data.users));
+      } else {
+        // Если API недоступен, используем localStorage
+        const storedUsers = localStorage.getItem('admin_users');
+        if (storedUsers) {
+          setUsers(JSON.parse(storedUsers));
+        } else {
+          setUsers([]);
+        }
+      }
     } catch (error) {
       console.error('Error loading users:', error);
+      // При ошибке используем localStorage
+      const storedUsers = localStorage.getItem('admin_users');
+      if (storedUsers) {
+        setUsers(JSON.parse(storedUsers));
+      } else {
+        setUsers([]);
+      }
     } finally {
       setLoading(false);
       setIsRefreshing(false);
     }
   };
 
-  const loadStats = () => {
-    const mockStats = {
-      totalUsers: 4,
-      bannedUsers: 2,
-      activeUsers: 2,
-      newUsersToday: 1
-    };
-    setStats(mockStats);
+  const loadStats = async () => {
+    try {
+      // Загружаем статистику из реальной базы данных
+      const response = await fetch('/api/admin/users/stats');
+      const data = await response.json();
+      
+      if (data.success) {
+        setStats(data.stats);
+      } else {
+        // Если API недоступен, используем моковые данные
+        const mockStats = {
+          totalUsers: users.length,
+          bannedUsers: users.filter(u => u.status === 'banned').length,
+          activeUsers: users.filter(u => u.status === 'active').length,
+          newUsersToday: 0,
+          newUsersThisWeek: 0,
+          newUsersThisMonth: 0
+        };
+        setStats(mockStats);
+      }
+    } catch (error) {
+      console.error('Error loading stats:', error);
+      // При ошибке считаем из текущих пользователей
+      const mockStats = {
+        totalUsers: users.length,
+        bannedUsers: users.filter(u => u.status === 'banned').length,
+        activeUsers: users.filter(u => u.status === 'active').length,
+        newUsersToday: 0,
+        newUsersThisWeek: 0,
+        newUsersThisMonth: 0
+      };
+      setStats(mockStats);
+    }
   };
 
-  const handleBanUser = (userId, reason, duration) => {
+  const handleAddUser = async () => {
+    const faculties = ['ФИТР', 'МСФ', 'АТФ', 'ФТК', 'ЭФ', 'ТЭФ', 'ИИС'];
+    
+    const fullname = prompt('Введите ФИО нового пользователя:');
+    const email = prompt('Введите email (например, ivanov@student.bntu.by):');
+    const student_code = prompt('Введите код студента (8 цифр):');
+    const faculty = prompt('Выберите факультет:\n' + faculties.join(', '));
+    
+    // Проверяем, что все поля заполнены
+    if (!fullname || !email || !student_code || !faculty) {
+      alert('❌ Все поля обязательны для заполнения!');
+      return;
+    }
+    
+    // Проверяем формат кода студента
+    if (!/^\d{8}$/.test(student_code)) {
+      alert('❌ Код студента должен состоять из 8 цифр!');
+      return;
+    }
+    
+    // Проверяем email
+    if (!email.includes('@') || !email.includes('.')) {
+      alert('❌ Некорректный формат email!');
+      return;
+    }
+    
+    // Проверяем факультет
+    if (!faculties.includes(faculty)) {
+      alert('❌ Неверный факультет! Выберите из: ' + faculties.join(', '));
+      return;
+    }
+    
+    try {
+      // Отправляем запрос на создание пользователя
+      const response = await fetch('/api/admin/users/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullname,
+          email,
+          student_code,
+          faculty
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`✅ Пользователь успешно добавлен!\n\n👤 ${fullname}\n📧 ${email}\n🎓 ${student_code}\n🏫 ${faculty}`);
+        // Обновляем список пользователей
+        loadUsers();
+        loadStats();
+      } else {
+        alert(`❌ Ошибка при добавлении пользователя: ${data.detail}`);
+      }
+    } catch (error) {
+      console.error('Error adding user:', error);
+      alert('❌ Произошла ошибка при добавлении пользователя');
+    }
+  };
+
+  const handleBanUser = async (userId, reason, duration) => {
     const userToBan = users.find(u => u.id === userId);
     if (userToBan && (userToBan.email?.includes('admin') || userToBan.id === 1 || userToBan.fullname?.includes('Admin'))) {
       alert('❌ Нельзя забанить администратора!');
@@ -137,47 +191,39 @@ function AdminPanel() {
     
     if (!confirmBan) return;
     
-    const updatedUsers = users.map(user => {
-      if (user.id === userId) {
-        const banEndDate = new Date();
-        banEndDate.setDate(banEndDate.getDate() + (duration || 7));
-        
-        return {
-          ...user,
-          status: 'banned',
-          ban_reason: reason,
-          ban_end_date: banEndDate.toISOString().split('T')[0]
-        };
+    try {
+      // Отправляем запрос на бан пользователя
+      const response = await fetch('/api/admin/users/ban', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          reason: reason,
+          duration: duration
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`✅ УСПЕШНО ЗАБЛОКИРОВАНО!\n\n👤 ${userToBan.fullname}\n⚠️ Причина: ${reason}\n📅 До: ${userToBan.ban_end_date || 'недetermined'}`);
+        setHighlightedUserId(userId);
+        setTimeout(() => setHighlightedUserId(null), 3000);
+        // Обновляем список пользователей
+        loadUsers();
+        loadStats();
+      } else {
+        alert(`❌ Ошибка при блокировке пользователя: ${data.detail}`);
       }
-      return user;
-    });
-    
-    setUsers(updatedUsers);
-    localStorage.setItem('admin_users', JSON.stringify(updatedUsers));
-    
-    const bannedUser = updatedUsers.find(u => u.id === userId);
-    if (bannedUser && bannedUser.email === 'banned@example.com') {
-      localStorage.setItem('user', JSON.stringify({
-        id: 'banned_user',
-        fullname: bannedUser.fullname,
-        student_code: bannedUser.student_code,
-        faculty: bannedUser.faculty,
-        banned: true,
-        banReason: bannedUser.ban_reason,
-        banEndDate: bannedUser.ban_end_date
-      }));
-      localStorage.setItem('banEndDate', bannedUser.ban_end_date);
+    } catch (error) {
+      console.error('Error banning user:', error);
+      alert('❌ Произошла ошибка при блокировке пользователя');
     }
-    
-    loadStats();
-    
-    const user = updatedUsers.find(u => u.id === userId);
-    alert(`✅ УСПЕШНО ЗАБЛОКИРОВАНО!\n\n👤 ${user.fullname}\n⚠️ Причина: ${reason}\n📅 До: ${user.ban_end_date}`);
-    setHighlightedUserId(userId);
-    setTimeout(() => setHighlightedUserId(null), 3000);
   };
 
-  const handleUnbanUser = (userId) => {
+  const handleUnbanUser = async (userId) => {
     const userToUnban = users.find(u => u.id === userId);
     
     const confirmUnban = confirm(
@@ -191,34 +237,34 @@ function AdminPanel() {
     
     if (!confirmUnban) return;
     
-    const updatedUsers = users.map(user => {
-      if (user.id === userId) {
-        return {
-          ...user,
-          status: 'active',
-          ban_reason: null,
-          ban_end_date: null
-        };
+    try {
+      // Отправляем запрос на разбан пользователя
+      const response = await fetch('/api/admin/users/unban', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`✅ УСПЕШНО РАЗБЛОКИРОВАНО!\n\n👤 ${userToUnban.fullname}`);
+        setHighlightedUserId(userId);
+        setTimeout(() => setHighlightedUserId(null), 3000);
+        // Обновляем список пользователей
+        loadUsers();
+        loadStats();
+      } else {
+        alert(`❌ Ошибка при разблокировке пользователя: ${data.detail}`);
       }
-      return user;
-    });
-    
-    setUsers(updatedUsers);
-    localStorage.setItem('admin_users', JSON.stringify(updatedUsers));
-    
-    const unbannedUser = updatedUsers.find(u => u.id === userId);
-    if (unbannedUser && unbannedUser.email === 'banned@example.com') {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      localStorage.removeItem('banEndDate');
+    } catch (error) {
+      console.error('Error unbanning user:', error);
+      alert('❌ Произошла ошибка при разблокировке пользователя');
     }
-    
-    loadStats();
-    
-    const user = updatedUsers.find(u => u.id === userId);
-    alert(`✅ УСПЕШНО РАЗБЛОКИРОВАНО!\n\n👤 ${user.fullname}\n📧 ${user.email}\n✨ Теперь пользователь может снова использовать систему`);
-    setHighlightedUserId(userId);
-    setTimeout(() => setHighlightedUserId(null), 3000);
   };
 
   const handleViewProfile = (user) => {
@@ -282,6 +328,13 @@ function AdminPanel() {
               >
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 {isRefreshing ? 'Обновление...' : 'Обновить'}
+              </button>
+              <button
+                onClick={handleAddUser}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-colors"
+              >
+                <UserPlus className="w-4 h-4" />
+                Добавить пользователя
               </button>
               <div className="flex items-center gap-2 px-4 py-2 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-xl">
                 <Shield className="w-4 h-4" />

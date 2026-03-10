@@ -620,22 +620,22 @@ function AppContent() {
       fetchUserMedia();
     }
   }, [isProfileModalOpen, isAuthenticated]);
-  const loadNews = async (page = 1, search = '', sortBy = 'date_desc') => {
+  const loadNews = async (page = 1, search = '', sortBy = 'date_desc', category = 'all') => {
     setNewsLoading(true);
     try {
       const params = new URLSearchParams();
       params.set('page', page);
       params.set('page_size', newsPageSize);
       if (search) params.set('search', search);
-      if (sortBy) params.set('sort_by', sortBy);
+      if (sortBy !== 'date_desc') params.set('sort_by', sortBy);
+      if (category !== 'all') params.set('category', category);
       const response = await fetch(`/api/news?${params.toString()}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setNewsData(data.items || []);
-          setNewsTotal(data.total || 0);
-          setNewsPage(data.page || page);
-        }
+      const data = await response.json();
+      
+      if (data.success) {
+        setNewsData(data.items || []);
+        setNewsTotal(data.total || 0);
+        setNewsPage(data.page || page);
       }
     } catch (error) {
       console.error('Error loading news:', error);
@@ -645,15 +645,15 @@ function AppContent() {
   };
   useEffect(() => {
     if (activeTab === 'news') {
-      loadNews(newsPage, newsSearchQuery, newsSortBy);
+      loadNews(newsPage, newsSearchQuery, newsSortBy, selectedNewsCategory);
     }
-  }, [activeTab, newsPage, newsSearchQuery, newsSortBy]);
+  }, [activeTab, newsPage, newsSearchQuery, newsSortBy, selectedNewsCategory]);
   useEffect(() => {
     if (activeTab === 'news') {
       setNewsPage(1);
-      loadNews(1, newsSearchQuery, newsSortBy);
+      loadNews(1, newsSearchQuery, newsSortBy, selectedNewsCategory);
     }
-  }, [newsSearchQuery, newsSortBy]);
+  }, [newsSearchQuery, newsSortBy, selectedNewsCategory]);
   const newsCategories = [
     { id: 'all', name: 'Все новости' },
     { id: 'academic', name: 'Университет' },
@@ -662,14 +662,7 @@ function AppContent() {
     { id: 'events', name: 'Ректорат' },
     { id: 'sports', name: 'Спорт' }
   ];
-  const filteredNews = newsData.filter(item => {
-    const categoryMatch = selectedNewsCategory === 'all' || item.category === selectedNewsCategory;
-    if (!newsSearchQuery) return categoryMatch;
-    const searchLower = newsSearchQuery.toLowerCase();
-    const titleMatch = item.title.toLowerCase().includes(searchLower);
-    const excerptMatch = item.excerpt.toLowerCase().includes(searchLower);
-    return categoryMatch && (titleMatch || excerptMatch);
-  });
+  const filteredNews = newsData; // Убираем фильтрацию, так как она делается на бэкенде
   const filteredGames = gamesData.filter(item => {
     return selectedGameCategory === 'all' || item.category === selectedGameCategory;
   });

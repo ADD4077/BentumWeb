@@ -541,9 +541,24 @@ def get_literature(request):
 
         categories = request.GET.getlist('category')
         if categories and 'all' not in categories:
-            placeholders = ','.join(['?' for _ in categories])
-            where_conditions.append(f"category IN ({placeholders})")
-            params.extend(categories)
+            # Получаем все категории из базы данных
+            cursor.execute("SELECT DISTINCT category FROM literature WHERE category IS NOT NULL AND category != ''")
+            all_db_categories = [row[0] for row in cursor.fetchall()]
+            
+            # Находим категории, которые есть в базе но нет в запросе
+            missing_categories = [cat for cat in all_db_categories if cat not in categories]
+            
+            if missing_categories:
+                # Если есть недостающие категории, показываем все записи
+                # ИЛИ можно показывать только записи с выбранными категориями + записи с отсутствующими категориями
+                placeholders = ','.join(['?' for _ in categories + missing_categories])
+                where_conditions.append(f"category IN ({placeholders})")
+                params.extend(categories + missing_categories)
+            else:
+                # Если все категории покрыты, используем стандартный фильтр
+                placeholders = ','.join(['?' for _ in categories])
+                where_conditions.append(f"category IN ({placeholders})")
+                params.extend(categories)
 
         if search:
             where_conditions.append("(LOWER(title) LIKE ? OR LOWER(authors) LIKE ? OR LOWER(description) LIKE ?)")
@@ -707,8 +722,22 @@ def get_news(request):
         params = []
 
         if category and category != 'all':
-            where_conditions.append("tags LIKE ?")
-            params.append(f"%{category}%")
+            # Фильтруем по полным фразам из тегов
+            if category == 'academic':
+                where_conditions.append("(tags LIKE ? OR tags LIKE ?)")
+                params.extend(['%Преподаватели БНТУ%', '%БНТУ%'])
+            elif category == 'achievements':
+                where_conditions.append("(tags LIKE ? OR tags LIKE ?)")
+                params.extend(['%Спорт%', '%Культура%'])
+            elif category == 'education':
+                where_conditions.append("(tags LIKE ?)")
+                params.append('%Студенты%')
+            elif category == 'events':
+                where_conditions.append("(tags LIKE ? OR tags LIKE ?)")
+                params.extend(['%Мероприятие%', '%Преподаватели БНТУ%'])
+            elif category == 'sports':
+                where_conditions.append("(tags LIKE ?)")
+                params.append('%Спорт%')
 
         if search:
             where_conditions.append("(LOWER(title) LIKE ? OR LOWER(summary) LIKE ?)")
@@ -752,13 +781,22 @@ def get_news(request):
             
             news_category = 'general'  # категория по умолчанию
             if tags:
-                tags_lower = tags.lower()
-                if 'academic' in tags_lower or 'наука' in tags_lower:
-                    news_category = 'academic'
-                elif 'achievements' in tags_lower or 'достижения' in tags_lower:
-                    news_category = 'achievements'
-                elif 'events' in tags_lower or 'мероприятия' in tags_lower:
-                    news_category = 'events'
+                # Определяем категорию на основе того, по какому фильтру пришли
+                if category and category != 'all':
+                    news_category = category  # Просто присваиваем категорию фильтра
+                else:
+                    # Только для "all" определяем категорию по тегам
+                    tag_words = [word.strip().replace('#', '').lower() for word in tags.split(',')]
+                    if 'студенты' in tag_words:
+                        news_category = 'education'
+                    elif 'мероприятие' in tag_words:
+                        news_category = 'events'
+                    elif 'спорт' in tag_words:
+                        news_category = 'sports'
+                    elif 'культура' in tag_words:
+                        news_category = 'achievements'
+                    elif 'преподаватели бнту' in tag_words or 'бнту' in tag_words:
+                        news_category = 'academic'
             
             
             parsed_tags = []
