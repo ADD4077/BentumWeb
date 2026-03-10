@@ -102,6 +102,8 @@ const TagsContainer = ({ tags }) => {
   );
 };
 function AppContent() {
+  const { loading, isAuthenticated, user, logout } = useAuth();
+  
   const [darkMode, setDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('darkMode');
     return savedTheme !== null ? JSON.parse(savedTheme) : true;
@@ -112,6 +114,7 @@ function AppContent() {
   });
   const [isBanned, setIsBanned] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   
   // Определяем 404 страницу на основе URL
   useEffect(() => {
@@ -129,29 +132,18 @@ function AppContent() {
   // Проверка статуса блокировки пользователя
   useEffect(() => {
     const checkBannedStatus = () => {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const token = localStorage.getItem('token');
-      
-      // Администраторы не могут быть забанены
-      if (token && (user.email?.includes('admin') || user.id === 1 || user.fullname?.includes('Admin'))) {
+      // Если пользователь авторизован и забанен, показываем страницу бана
+      if (isAuthenticated && user?.is_banned) {
+        setIsBanned(true);
+      } else {
         setIsBanned(false);
-        return;
-      }
-      
-      // Имитация проверки блокировки (в реальном приложении здесь будет API запрос)
-      if (token && user.id === 'banned_user') {
-        setIsBanned(true);
-      }
-      
-      // Можно добавить проверку по дате блокировки
-      const banEndDate = localStorage.getItem('banEndDate');
-      if (banEndDate && new Date(banEndDate) > new Date()) {
-        setIsBanned(true);
       }
     };
 
-    checkBannedStatus();
-  }, []);
+    if (!loading) {
+      checkBannedStatus();
+    }
+  }, [isAuthenticated, user, loading]);
 
   // Сохраняем activeTab в localStorage
   useEffect(() => {
@@ -192,20 +184,15 @@ function AppContent() {
 
   // Проверка прав администратора
   useEffect(() => {
-    const checkAdminRights = () => {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const token = localStorage.getItem('token');
-      
-      // Простая проверка - если email содержит admin или пользователь с ID 1
-      if (token && (user.email?.includes('admin') || user.id === 1 || user.fullname?.includes('Admin'))) {
-        setIsAdmin(true);
-      } else {
-        setIsAdmin(false);
-      }
-    };
-
-    checkAdminRights();
-  }, []);
+    if (!isAuthenticated || !user) return; // Выходим если пользователь не авторизован или еще не загружен
+    
+    // Простая проверка - пользователь с ID 1 является админом
+    if (user.id === 1) {
+      setIsAdmin(true);
+    } else {
+      setIsAdmin(false);
+    }
+  }, [isAuthenticated, user]);
 
   // Читаем данные из URL параметров при первой загрузке
   useEffect(() => {
@@ -225,10 +212,7 @@ function AppContent() {
         
         // Очищаем URL чтобы параметры не оставались в адресной строке
         window.history.replaceState({}, document.title, window.location.pathname);
-        
-        console.log('Данные пользователя загружены из URL параметров:', user);
       } catch (error) {
-        console.error('Ошибка при загрузке данных из URL:', error);
       }
     }
   }, []); 
@@ -249,7 +233,6 @@ function AppContent() {
   const [isSortModalOpen, setIsSortModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isProfileEditModalOpen, setIsProfileEditModalOpen] = useState(false);
-  const { loading, isAuthenticated, user, logout } = useAuth();
   
   const handleProfileUpdate = (updatedUser) => {
     // Обновляем состояние пользователя с новыми URL медиа
@@ -258,7 +241,6 @@ function AppContent() {
         avatar_url: updatedUser.avatar_url,
         banner_url: updatedUser.banner_url
       });
-      console.log('Profile updated with media:', updatedUser);
     }
     setIsProfileEditModalOpen(false);
     setIsProfileModalOpen(false);
@@ -270,7 +252,6 @@ function AppContent() {
       // Получаем медиа с сервера
       const fetchUserMedia = async () => {
         try {
-          console.log('Fetching user media...');
           const response = await fetch('http://localhost:8000/api/profile/update', {
             method: 'GET',
             credentials: 'include'
@@ -278,12 +259,7 @@ function AppContent() {
           
           if (response.ok) {
             const data = await response.json();
-            console.log('User media response:', data);
             if (data.success && data.user) {
-              console.log('Setting user media:', {
-                avatar_url: data.user.avatar_url,
-                banner_url: data.user.banner_url
-              });
               setUserMedia({
                 avatar_url: data.user.avatar_url,
                 banner_url: data.user.banner_url
@@ -461,28 +437,17 @@ function AppContent() {
     return diffWeeks % 2 === 0 ? 'lower' : 'upper';
   }, [getMoscowTime]);
   const handleQuickDaySelect = useCallback((dayType) => {
-    console.log('handleQuickDaySelect called with:', dayType);
-    console.log('getTodayDay():', getTodayDay());
-    console.log('getTomorrowDay():', getTomorrowDay());
     if (dayType === 'today') {
       const todayDay = getTodayDay();
-      console.log('Today branch, todayDay:', todayDay);
       if (todayDay) {
         setSelectedDay(todayDay);
         setWeekType(getWeekType());
-        console.log('Set selectedDay to:', todayDay);
-      } else {
-        console.log('Сегодня воскресенье - не делаем ничего');
       }
     } else if (dayType === 'tomorrow') {
       const tomorrowDay = getTomorrowDay();
-      console.log('Tomorrow branch, tomorrowDay:', tomorrowDay);
       if (tomorrowDay) {
         setSelectedDay(tomorrowDay);
         setWeekType(getWeekType());
-        console.log('Set selectedDay to:', tomorrowDay);
-      } else {
-        console.log('Завтра воскресенье - не делаем ничего');
       }
     }
   }, []);
@@ -592,7 +557,6 @@ function AppContent() {
     if (isProfileModalOpen && isAuthenticated) {
       const fetchUserMedia = async () => {
         try {
-          console.log('Fetching user media on profile open...');
           const response = await fetch('http://localhost:8000/api/profile/update', {
             method: 'GET',
             credentials: 'include'
@@ -600,12 +564,7 @@ function AppContent() {
           
           if (response.ok) {
             const data = await response.json();
-            console.log('User media response on profile open:', data);
             if (data.success && data.user) {
-              console.log('Setting user media on profile open:', {
-                avatar_url: data.user.avatar_url,
-                banner_url: data.user.banner_url
-              });
               setUserMedia({
                 avatar_url: data.user.avatar_url,
                 banner_url: data.user.banner_url
@@ -1995,7 +1954,6 @@ function AppContent() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
           <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-hidden flex flex-col">
             <div className="relative h-32">
-              {console.log('Rendering banner, userMedia.banner_url:', userMedia.banner_url)}
               <img 
                 src={userMedia.banner_url ? `http://localhost:8000${userMedia.banner_url}` : "https://i.pinimg.com/1200x/b3/40/bd/b340bd28445da4ab7609576bc3fc125f.jpg"}
                 alt="Profile Banner"
@@ -2007,7 +1965,6 @@ function AppContent() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
               <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2">
-                {console.log('Rendering avatar, userMedia.avatar_url:', userMedia.avatar_url)}
                 <img 
                   src={userMedia.avatar_url ? `http://localhost:8000${userMedia.avatar_url}` : "https://i.pinimg.com/736x/fc/55/e6/fc55e68d174bf0d2cb038d699c01f172.jpg"}
                   alt="Profile Avatar"
@@ -2034,9 +1991,12 @@ function AppContent() {
               </button>
             </div>
             <div className="p-6 overflow-y-auto flex-1 pt-20 custom-scrollbar">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 text-center">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 text-center">
                 {user?.fullname || 'Пользователь'}
               </h3>
+              <div className="text-center text-xs text-slate-500 dark:text-slate-400 mb-6">
+                ID: {user?.id || 'не определен'}
+              </div>
               <div className="w-full space-y-6">
                 <div className="text-left flex items-center gap-3">
                   <GraduationCap className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />

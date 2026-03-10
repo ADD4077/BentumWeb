@@ -29,7 +29,7 @@ function BannedPage() {
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-slate-900 dark:via-red-900/20 dark:to-orange-900/20 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full">
         {/* Основной контейнер с анимацией */}
-        <div className="text-center space-y-8 animate-fade-in">
+        <div className="text-center space-y-8 animate-fade-in-up">
           
           {/* Иконка бана с анимацией */}
           <div className="relative inline-block">
@@ -159,37 +159,6 @@ function BannedPage() {
           </div>
         </div>
       </div>
-
-      {/* Стили для анимаций */}
-      <style jsx>{`
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @keyframes bounce-delay {
-          0%, 80%, 100% {
-            transform: translateY(0px);
-          }
-          40% {
-            transform: translateY(-10px);
-          }
-        }
-
-        .animate-fade-in {
-          animation: fade-in 0.8s ease-out;
-        }
-
-        .animate-bounce-delay {
-          animation: bounce-delay 2s ease-in-out infinite;
-        }
-      `}</style>
     </div>
   );
 }

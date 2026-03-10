@@ -2,7 +2,7 @@ import json
 import os
 import re
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.conf import settings
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -11,6 +11,7 @@ import pytz
 from django.contrib.sessions.models import Session
 from django.contrib.sessions.backends.db import SessionStore
 from django.conf import settings
+from django.core.cache import cache
 
 from .models import User, UserSession
 from .func import authorize
@@ -18,6 +19,37 @@ from .user_notification_service import UserNotificationService
 
 
 SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
+
+
+def _check_login_attempts(student_code: str, ip_address: str) -> tuple[bool, str]:
+    """Проверяет количество попыток входа для защиты от подбора пароля"""
+    
+    # Ключи для кэша
+    user_key = f"login_attempts_user:{student_code}"
+    ip_key = f"login_attempts_ip:{ip_address}"
+    
+    # Получаем текущие счетчики
+    user_attempts = cache.get(user_key, 0)
+    ip_attempts = cache.get(ip_key, 0)
+    
+    # Проверяем лимиты
+    if user_attempts >= 5:
+        return False, "Слишком много попыток входа. Попробуйте позже."
+    
+    if ip_attempts >= 10:
+        return False, "Слишком много попыток входа с этого IP. Попробуйте позже."
+    
+    # Увеличиваем счетчики
+    cache.set(user_key, user_attempts + 1, 15)  # 15 секунд
+    cache.set(ip_key, ip_attempts + 1, 15)      # 15 секунд
+    
+    return True, ""
+
+
+def _clear_login_attempts(student_code: str, ip_address: str):
+    """Сбрасывает счетчики попыток входа после успешной авторизации"""
+    cache.delete(f"login_attempts_user:{student_code}")
+    cache.delete(f"login_attempts_ip:{ip_address}")
 
 
 def _enforce_session_limits(student_code: str, current_session_key: str) -> None:
@@ -56,10 +88,8 @@ def save_data(request):
             body_str = request.body
         
         data = json.loads(body_str)
-        print(f"Received data: {data}") # Debug print
         student_code = data.get("studentCode")
-        red_code = data.get("studentRedCode") # Правильное имя поля
-        print(f"Student Code: {student_code}, Red Code: {red_code}") # Debug print
+        red_code = data.get("studentRedCode")
 
         if not student_code or not red_code:
             return JsonResponse(
@@ -73,8 +103,28 @@ def save_data(request):
                 status=400
             )
 
+        # Получаем IP адрес для проверки попыток входа
+        ip_address = request.META.get('REMOTE_ADDR', 'unknown')
+        
+        # Проверяем количество попыток входа
+        can_login, error_message = _check_login_attempts(student_code, ip_address)
+        if not can_login:
+            return JsonResponse(
+                {"detail": error_message},
+                status=429  # Too Many Requests
+            )
+
         existing_user = User.objects.filter(student_code=student_code).first()
         if existing_user:
+            # Проверяем пароль (bilet_code) для существующего пользователя
+            if existing_user.bilet_code != red_code:
+                return JsonResponse(
+                    {"detail": "Неверный пароль"},
+                    status=401
+                )
+            
+            # Сбрасываем счетчики попыток после успешного входа
+            _clear_login_attempts(student_code, ip_address)
             
             request.session['student_code'] = existing_user.student_code
             request.session['fullname'] = existing_user.fullname
@@ -88,40 +138,19 @@ def save_data(request):
             _enforce_session_limits(existing_user.student_code, request.session.session_key)
             
             
-            response_data = {
+            return JsonResponse({
                 "success": True,
                 "message": "Вход выполнен успешно",
-                "redirect": f"/api/dashboard?student_code={existing_user.student_code}",
                 "user": {
+                    "id": existing_user.id,
                     "fullname": existing_user.fullname,
-                    "faculty": existing_user.faculty,
                     "student_code": existing_user.student_code,
-                    "created_at": existing_user.created_at.isoformat()
+                    "faculty": existing_user.faculty,
+                    "is_banned": existing_user.is_banned
                 }
-            }
-            
-            response = HttpResponse(
-                json.dumps(response_data),
-                content_type='application/json',
-                status=200
-            )
-            
-            response.set_cookie(
-                'sessionid',
-                request.session.session_key,
-                max_age=SESSION_MAX_AGE_SECONDS,
-                httponly=True,
-                samesite='Lax',
-                secure=False,
-                path='/',
-            )
-            
-            
-            return response
+            }, status=200)
 
-        print(f"Calling authorize with student_code: {student_code}, red_code: {red_code}")
         auth_result = authorize(student_code, red_code)
-        print(f"Authorize result: {auth_result}")
         
         if auth_result is False:
             return JsonResponse(
@@ -129,8 +158,10 @@ def save_data(request):
                 status=401
             )
         
+        # Сбрасываем счетчики попыток после успешной авторизации
+        _clear_login_attempts(student_code, ip_address)
+        
         fullname, faculty = auth_result
-        print(f"Authorization successful. Fullname: {fullname}, Faculty: {faculty}")
         
         user = User.objects.create(
             fullname=fullname,
@@ -139,7 +170,9 @@ def save_data(request):
             bilet_code=red_code,
             created_at=datetime.now(pytz.UTC)
         )
-        print(f"User created: {user.student_code}")
+        
+        # Сбрасываем счетчики попыток после успешной регистрации
+        _clear_login_attempts(student_code, ip_address)
         
         # Отправляем уведомление о новом пользователе в Telegram
         try:
@@ -147,15 +180,13 @@ def save_data(request):
             user_data = {
                 'id': user.id,
                 'fullname': user.fullname,
-                'email': f"{user.student_code.lower()}@bntu.by",  # Генерируем email на основе student_code
                 'student_code': user.student_code,
                 'faculty': user.faculty
             }
             notification_service.send_new_user_notification(user_data)
-            print(f"New user notification sent for {user.student_code}")
         except Exception as e:
-            print(f"Error sending new user notification: {str(e)}")
             # Не прерываем процесс авторизации если уведомление не отправилось
+            pass
                 
         request.session['student_code'] = user.student_code
         request.session['fullname'] = user.fullname
@@ -174,6 +205,7 @@ def save_data(request):
             "message": "Регистрация прошла успешно",
             "redirect": f"/api/dashboard?student_code={user.student_code}",
             "user": {
+                "id": user.id,
                 "fullname": user.fullname,
                 "faculty": user.faculty,
                 "student_code": user.student_code,
@@ -200,14 +232,12 @@ def save_data(request):
         return response
 
     except json.JSONDecodeError:
-        print("JSONDecodeError: Invalid JSON received")
         return JsonResponse(
             {"detail": "Некорректный JSON"},
             status=400
         )
 
     except Exception as e:
-        print(f"An unexpected error occurred in save_data: {e}")
         return JsonResponse(
             {"detail": f"Ошибка сервера: {e}"},
             status=500
@@ -251,10 +281,12 @@ def dashboard(request):
             "success": True,
             "theme": request.session.get('theme', 'dark'),
             "user": {
+                "id": user.id,
                 "fullname": user.fullname,
                 "faculty": user.faculty,
                 "student_code": user.student_code,
-                "created_at": user.created_at.isoformat()
+                "created_at": user.created_at.isoformat(),
+                "is_banned": user.is_banned
             }
         }, status=200)
     
@@ -343,9 +375,6 @@ def get_schedule(request):
             status=405
         )
     
-    print(f"Session data: {dict(request.session)}")
-    print(f"Is authenticated: {request.session.get('is_authenticated')}")
-    print(f"Student code: {request.session.get('student_code')}")
     
     if not request.session.get('is_authenticated'):
         return JsonResponse(
@@ -362,9 +391,6 @@ def get_schedule(request):
     
     try:
         db_path = os.path.join(settings.BASE_DIR, 'schedules', 'schedules.db')
-        
-        print(f"Looking for schedule database: {db_path}")
-        print(f"Database exists: {os.path.exists(db_path)}")
         
         if not os.path.exists(db_path):
             return JsonResponse(
@@ -419,13 +445,11 @@ def get_schedule(request):
         }, status=200)
         
     except sqlite3.Error as e:
-        print(f"Database error: {e}")
         return JsonResponse(
             {"detail": "Ошибка базы данных расписаний"},
             status=500
         )
     except Exception as e:
-        print(f"Unexpected error: {e}")
         return JsonResponse(
             {"detail": f"Внутренняя ошибка сервера: {str(e)}"},
             status=500
@@ -675,10 +699,8 @@ def get_literature(request):
         }, status=200, json_dumps_params={'ensure_ascii': False})
 
     except sqlite3.Error as e:
-        print(f"Database error: {e}")
         return JsonResponse({"detail": "Ошибка базы данных литературы"}, status=500)
     except Exception as e:
-        print(f"Unexpected error: {e}")
         return JsonResponse({"detail": f"Внутренняя ошибка сервера: {str(e)}"}, status=500)
 
 
@@ -836,8 +858,6 @@ def get_news(request):
         }, status=200, json_dumps_params={'ensure_ascii': False})
 
     except sqlite3.Error as e:
-        print(f"Database error: {e}")
         return JsonResponse({"detail": "Ошибка базы данных новостей"}, status=500)
     except Exception as e:
-        print(f"Unexpected error: {e}")
         return JsonResponse({"detail": f"Внутренняя ошибка сервера: {str(e)}"}, status=500)

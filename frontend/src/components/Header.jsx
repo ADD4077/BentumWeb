@@ -48,19 +48,14 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
   
   // Проверка прав администратора
   useEffect(() => {
-    const checkAdminRights = () => {
-      const userData = JSON.parse(localStorage.getItem('user') || '{}');
-      const token = localStorage.getItem('token');
-      
-      if (token && (userData.email?.includes('admin') || userData.id === 1 || userData.fullname?.includes('Admin'))) {
-        setIsAdmin(true);
-      } else {
-        setIsAdmin(false);
-      }
-    };
-
-    checkAdminRights();
-  }, [isAuthenticated]);
+    if (!isAuthenticated || !user) return; // Выходим если пользователь не авторизован или еще не загружен
+    
+    if (user.id === 1) {
+      setIsAdmin(true);
+    } else {
+      setIsAdmin(false);
+    }
+  }, [isAuthenticated, user]);
   useEffect(() => {
     if (isMobileMenuOpen) {
       setIsHeaderPill(false);

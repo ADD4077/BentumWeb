@@ -98,19 +98,14 @@ class MediaStorage:
     def save_media(user, media_type, file_content, original_filename):
         """Сохраняет медиа с оптимизацией и дедупликацией"""
         try:
-            print(f"=== MEDIA STORAGE SAVE_MEDIA START ===")
-            print(f"Saving media: user={user.student_code}, type={media_type}, filename={original_filename}")
-            
             # Проверяем MIME тип
             from django.core.files.uploadedfile import InMemoryUploadedFile
             import mimetypes
             
             mime_type = mimetypes.guess_type(original_filename)[0] or 'image/jpeg'
-            print(f"MIME type: {mime_type}")
             
             # Получаем хеш файла
             file_hash = MediaOptimizer.get_file_hash(file_content)
-            print(f"File hash: {file_hash}")
             
             # Проверяем на дедупликацию
             existing_media = UserProfileMedia.objects.filter(
@@ -118,41 +113,29 @@ class MediaStorage:
             ).first()
             
             if existing_media:
-                print(f"Duplicate file found, reusing: {file_hash}")
                 return existing_media
-            
-            print(f"Creating new media record...")
             
             # Создаем оптимизированные версии
             sizes = MediaOptimizer.create_all_sizes(file_content, original_filename)
             
             # Сохраняем файлы
             base_path = f"users/{user.student_code}/{media_type}s"
-            print(f"Base path: {base_path}")
             
             # Оригинал (оптимизированный)
             original_path = f"{base_path}/{file_hash}_original.webp"
-            print(f"Original path: {original_path}")
-            print(f"Saving original file...")
             default_storage.save(original_path, ContentFile(sizes['large']['content']))
-            print(f"Original file saved")
             
             # Сохраняем миниатюры
-            print(f"Saving thumbnails...")
             for size_name, size_data in sizes.items():
                 if size_name != 'large':
                     path = f"{base_path}/{size_data['filename']}"
-                    print(f"Saving {size_name}: {path}")
                     default_storage.save(path, ContentFile(size_data['content']))
-            print(f"All thumbnails saved")
             
             # Получаем размеры изображения
             img = Image.open(io.BytesIO(file_content))
             width, height = img.size
-            print(f"Image size: {width}x{height}")
             
             # Создаем запись в БД
-            print(f"Creating DB record for media...")
             media = UserProfileMedia.objects.create(
                 user=user,
                 media_type=media_type,
@@ -164,10 +147,8 @@ class MediaStorage:
                 height=height,
                 is_active=False  # Неактивен до подтверждения
             )
-            print(f"DB record created: {media.id}")
             
             # Сохраняем оптимизированные версии
-            print(f"Saving optimized versions...")
             for size_name, size_data in sizes.items():
                 MediaOptimization.objects.create(
                     original_media=media,
@@ -175,14 +156,10 @@ class MediaStorage:
                     file_path=f"{base_path}/{size_data['filename']}",
                     file_size=size_data['size']
                 )
-            print(f"Optimized versions saved")
             
-            print(f"Media saved: {media.id} for user {user.student_code}")
-            print(f"=== MEDIA STORAGE SAVE_MEDIA END ===")
             return media
             
         except Exception as e:
-            print(f"ERROR IN SAVE_MEDIA: {e}")
             import traceback
             traceback.print_exc()
             raise

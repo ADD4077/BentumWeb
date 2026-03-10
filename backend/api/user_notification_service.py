@@ -1,6 +1,7 @@
 import requests
 import logging
 from django.conf import settings
+from django.utils import timezone
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -55,7 +56,7 @@ class UserNotificationService:
         """Форматирует сообщение о новом пользователе"""
         
         # Получаем текущее время
-        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        current_time = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
         
         # Определяем курс на основе номера группы
         course = self._get_course_from_student_code(user_data.get('student_code', ''))
@@ -64,7 +65,6 @@ class UserNotificationService:
 
 📋 <b>Информация о пользователе:</b>
 • <b>Имя:</b> {user_data.get('fullname', 'Не указано')}
-• <b>Email:</b> {user_data.get('email', 'Не указан')}
 • <b>Группа:</b> {user_data.get('student_code', 'Не указана')}
 • <b>Факультет:</b> {user_data.get('faculty', 'Не указан')}
 • <b>Курс:</b> {course}
@@ -90,8 +90,8 @@ class UserNotificationService:
             admission_year = 2000 + int(year_suffix)
             
             # Определяем текущий курс
-            current_year = datetime.now().year
-            current_month = datetime.now().month
+            current_year = timezone.now().year
+            current_month = timezone.now().month
             
             # Учебный год начинается в сентябре
             if current_month >= 9:
@@ -125,7 +125,7 @@ class UserNotificationService:
 
 ✅ Сервис уведомлений работает корректно
 📱 Тема для новых пользователей: {self.new_users_topic_id}
-⏰ Время теста: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+⏰ Время теста: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}
 
 <i>Это тестовое сообщение для проверки работы уведомлений</i>"""
             

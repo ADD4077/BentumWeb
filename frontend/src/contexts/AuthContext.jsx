@@ -13,16 +13,20 @@ export const AuthProvider = ({ children }) => {
     }
   }, [checked]);
   const checkAuth = async () => {
-    console.log('AuthContext: checkAuth called');
     try {
       const data = await api.getDashboard();
       if (data.success) {
         setIsAuthenticated(true);
-        setUser(data.user);
+        // Добавляем ID из localStorage если его нет в ответе API
+        const userData = data.user || {};
+        const localStorageUser = JSON.parse(localStorage.getItem('user') || '{}');
+        if (!userData.id && localStorageUser.id) {
+          userData.id = localStorageUser.id;
+        }
+        setUser(userData);
       }
     } catch (error) {
       if (error.response?.status === 401) {
-        console.log('AuthContext: User not authenticated (401)');
         setIsAuthenticated(false);
         setUser(null);
       } else {

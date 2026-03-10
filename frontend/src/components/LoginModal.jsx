@@ -28,21 +28,14 @@ function LoginModal({ isOpen, onClose, onInstructionOpen }) {
     return Object.keys(newErrors).length === 0;
   };
   const handleSubmit = async (e) => {
-    console.log('LoginModal: handleSubmit called');
     e.preventDefault();
-    console.log('LoginModal: form validation starting');
     if (validateForm()) {
-      console.log('LoginModal: validation passed');
       setIsLoading(true);
       try {
-        console.log('Attempting login with:', { studentCode, password: '***' });
         const result = await login(studentCode, password);
-        console.log('Login result:', result);
         if (result.success) {
-          console.log('LoginModal: login successful, closing modal');
           onClose();
         } else {
-          console.log('LoginModal: login failed:', result.error);
           setErrors({ general: result.error });
         }
       } catch (error) {
@@ -51,8 +44,6 @@ function LoginModal({ isOpen, onClose, onInstructionOpen }) {
       } finally {
         setIsLoading(false);
       }
-    } else {
-      console.log('LoginModal: validation failed');
     }
   };
   const handleStudentCodeChange = (e) => {

@@ -1,6 +1,11 @@
 @echo off
 echo Starting BNTU Bot Backend (using py launcher)...
 
+REM Убиваем все старые процессы Python
+echo Killing old Python processes...
+taskkill /F /IM python.exe >nul 2>&1
+timeout /t 2 >nul
+
 cd /d ".\backend" 2>nul
 if %errorlevel% equ 0 (
     echo Found project at: d:\BENTUM WEB\BentumWeb\backend

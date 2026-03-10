@@ -2,8 +2,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from rest_framework.decorators import api_view
-import sqlite3
-import os
+from .models import User
+from django.utils import timezone
 import json
 import re
 from datetime import datetime, timedelta
@@ -13,108 +13,114 @@ from django.conf import settings
 def get_all_users(request):
     """Получить всех пользователей для админки"""
     try:
-        db_path = os.path.join(settings.BASE_DIR, 'users', 'users.db')
+        # Проверяем что пользователь админ (ID = 1)
+        if not request.session.get('is_authenticated'):
+            return JsonResponse({"detail": "Требуется авторизация"}, status=401)
         
-        if not os.path.exists(db_path):
-            return JsonResponse({"detail": "База данных пользователей не найдена"}, status=404)
-
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        # Получаем текущего пользователя
+        try:
+            current_user = User.objects.get(student_code=request.session.get('student_code'))
+        except User.DoesNotExist:
+            return JsonResponse({"detail": "Пользователь не найден"}, status=404)
         
-        cursor.execute("""
-            SELECT id, fullname, email, student_code, faculty, 
-                   registration_date, last_login, status, avatar_url, 
-                   ban_reason, ban_end_date
-            FROM users 
-            ORDER BY registration_date DESC
-        """)
-        rows = cursor.fetchall()
-        conn.close()
+        # Проверяем что это админ
+        if current_user.id != 1:
+            return JsonResponse({"detail": "Доступ запрещен"}, status=403)
         
-        users = []
-        for row in rows:
-            (user_id, fullname, email, student_code, faculty, 
-             registration_date, last_login, status, avatar_url, 
-             ban_reason, ban_end_date) = row
-            
-            users.append({
-                'id': user_id,
-                'fullname': fullname,
-                'email': email,
-                'student_code': student_code,
-                'faculty': faculty,
-                'registration_date': registration_date,
-                'last_login': last_login,
-                'status': status,
-                'avatar_url': avatar_url,
-                'ban_reason': ban_reason,
-                'ban_end_date': ban_end_date
+        # Получаем всех пользователей
+        users = User.objects.all().order_by('-created_at')
+        
+        users_data = []
+        for user in users:
+            users_data.append({
+                'id': user.id,
+                'fullname': user.fullname,
+                'student_code': user.student_code,
+                'faculty': user.faculty,
+                'registration_date': user.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'last_login': None,  # Пока не храним last_login
+                'status': 'banned' if user.is_banned else 'active',
+                'avatar_url': None,  # Будет добавлено позже
+                'ban_reason': None,
+                'ban_end_date': None,
+                'is_banned': user.is_banned
             })
         
         return JsonResponse({
-            'success': True,
-            'users': users
+            "success": True,
+            "users": users_data
         })
         
     except Exception as e:
         return JsonResponse({
-            'success': False,
-            'detail': f'Ошибка при получении пользователей: {str(e)}'
+            "success": False,
+            "detail": f"Ошибка: {str(e)}"
         }, status=500)
 
 @api_view(['GET'])
 def get_users_stats(request):
     """Получить статистику пользователей"""
     try:
-        db_path = os.path.join(settings.BASE_DIR, 'users', 'users.db')
+        # Проверяем что пользователь админ (ID = 1)
+        if not request.session.get('is_authenticated'):
+            return JsonResponse({"detail": "Требуется авторизация"}, status=401)
         
-        if not os.path.exists(db_path):
-            return JsonResponse({"detail": "База данных пользователей не найдена"}, status=404)
-
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        # Получаем текущего пользователя
+        try:
+            current_user = User.objects.get(student_code=request.session.get('student_code'))
+        except User.DoesNotExist:
+            return JsonResponse({"detail": "Пользователь не найден"}, status=404)
         
-        cursor.execute("SELECT COUNT(*) FROM users")
-        total_users = cursor.fetchone()[0]
+        # Проверяем что это админ
+        if current_user.id != 1:
+            return JsonResponse({"detail": "Доступ запрещен"}, status=403)
         
-        cursor.execute("SELECT COUNT(*) FROM users WHERE status = 'active'")
-        active_users = cursor.fetchone()[0]
+        total_users = User.objects.count()
+        banned_users = User.objects.filter(is_banned=True).count()
+        active_users = total_users - banned_users
         
-        cursor.execute("SELECT COUNT(*) FROM users WHERE status = 'banned'")
-        banned_users = cursor.fetchone()[0]
-        
-        # Новые пользователи (сегодня)
-        cursor.execute("SELECT COUNT(*) FROM users WHERE registration_date = ?", (datetime.now().strftime('%Y-%m-%d'),))
-        new_users_today = cursor.fetchone()[0]
-        
-        conn.close()
+        # Новые пользователи сегодня
+        today = timezone.now().date()
+        new_users_today = User.objects.filter(created_at__date=today).count()
         
         return JsonResponse({
-            'success': True,
-            'stats': {
-                'totalUsers': total_users,
-                'activeUsers': active_users,
-                'bannedUsers': banned_users,
-                'newUsersToday': new_users_today,
-                'newUsersThisWeek': 0,
-                'newUsersThisMonth': 0
+            "success": True,
+            "stats": {
+                "totalUsers": total_users,
+                "bannedUsers": banned_users,
+                "activeUsers": active_users,
+                "newUsersToday": new_users_today
             }
         })
         
     except Exception as e:
         return JsonResponse({
-            'success': False,
-            'detail': f'Ошибка при получении статистики: {str(e)}'
+            "success": False,
+            "detail": f"Ошибка: {str(e)}"
         }, status=500)
 
 @api_view(['POST'])
 def create_user(request):
     """Создать нового пользователя"""
     try:
+        # Проверяем что пользователь админ (ID = 1)
+        if not request.session.get('is_authenticated'):
+            return JsonResponse({"detail": "Требуется авторизация"}, status=401)
+        
+        # Получаем текущего пользователя
+        try:
+            current_user = User.objects.get(student_code=request.session.get('student_code'))
+        except User.DoesNotExist:
+            return JsonResponse({"detail": "Пользователь не найден"}, status=404)
+        
+        # Проверяем что это админ
+        if current_user.id != 1:
+            return JsonResponse({"detail": "Доступ запрещен"}, status=403)
+        
         data = json.loads(request.body)
         
         # Валидация
-        required_fields = ['fullname', 'email', 'student_code', 'faculty']
+        required_fields = ['fullname', 'student_code', 'faculty']
         for field in required_fields:
             if not data.get(field):
                 return JsonResponse({
@@ -129,129 +135,97 @@ def create_user(request):
                 'detail': 'Код студента должен состоять из 8 цифр'
             }, status=400)
         
-        # Проверка формата email
-        if not re.match(r'^[^@]+@[^@]+\.[^@]+$', data['email']):
-            return JsonResponse({
-                'success': False,
-                'detail': 'Некорректный формат email'
-            }, status=400)
-        
-        db_path = os.path.join(settings.BASE_DIR, 'users', 'users.db')
-        
-        if not os.path.exists(db_path):
-            return JsonResponse({"detail": "База данных пользователей не найдена"}, status=404)
-
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
         # Проверка на дубликаты
-        cursor.execute("SELECT COUNT(*) FROM users WHERE email = ?", (data['email'],))
-        if cursor.fetchone()[0] > 0:
-            conn.close()
-            return JsonResponse({
-                'success': False,
-                'detail': 'Пользователь с таким email уже существует'
-            }, status=400)
-        
-        cursor.execute("SELECT COUNT(*) FROM users WHERE student_code = ?", (data['student_code'],))
-        if cursor.fetchone()[0] > 0:
-            conn.close()
+        if User.objects.filter(student_code=data['student_code']).exists():
             return JsonResponse({
                 'success': False,
                 'detail': 'Пользователь с таким кодом студента уже существует'
             }, status=400)
         
-        # Создание пользователя
-        today = datetime.now().strftime('%Y-%m-%d')
-        cursor.execute("""
-            INSERT INTO users (fullname, email, student_code, faculty, registration_date, last_login, status)
-            VALUES (?, ?, ?, ?, ?, ?, 'active')
-        """, (
-            data['fullname'], data['email'], data['student_code'], 
-            data['faculty'], today, today
-        ))
-        
-        user_id = cursor.lastrowid
-        conn.commit()
-        conn.close()
+        # Создаем пользователя
+        user = User.objects.create(
+            fullname=data['fullname'],
+            student_code=data['student_code'],
+            faculty=data['faculty'],
+            bilet_code='0000000',  # Пароль по умолчанию
+            is_banned=False
+        )
         
         return JsonResponse({
             'success': True,
-            'message': 'Пользователь успешно создан',
-            'user_id': user_id
+            'message': f'Пользователь {data["fullname"]} успешно создан'
         })
         
-    except json.JSONDecodeError:
-        return JsonResponse({
-            'success': False,
-            'detail': 'Некорректный формат данных'
-        }, status=400)
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'detail': f'Ошибка при создании пользователя: {str(e)}'
+            'detail': f"Ошибка: {str(e)}"
         }, status=500)
 
 @api_view(['POST'])
 def ban_user(request):
     """Забанить пользователя"""
     try:
+        # Проверяем что пользователь админ (ID = 1)
+        if not request.session.get('is_authenticated'):
+            return JsonResponse({"detail": "Требуется авторизация"}, status=401)
+        
+        # Получаем текущего пользователя
+        try:
+            current_user = User.objects.get(student_code=request.session.get('student_code'))
+        except User.DoesNotExist:
+            return JsonResponse({"detail": "Пользователь не найден"}, status=404)
+        
+        # Проверяем что это админ
+        if current_user.id != 1:
+            return JsonResponse({"detail": "Доступ запрещен"}, status=403)
+        
         data = json.loads(request.body)
         user_id = data.get('user_id')
         reason = data.get('reason', 'Причина не указана')
         duration = data.get('duration', 7)  # дней
         
-        if not user_id:
+        # Проверяем что не банят админа
+        user_to_ban = User.objects.get(id=user_id)
+        if user_to_ban.id == 1:
             return JsonResponse({
                 'success': False,
-                'detail': 'ID пользователя обязателен'
-            }, status=400)
+                'detail': 'Нельзя забанить администратора'
+            }, status=403)
         
-        # Расчет даты окончания бана
-        ban_end_date = (datetime.now() + timedelta(days=duration)).strftime('%Y-%m-%d')
-        
-        db_path = os.path.join(settings.BASE_DIR, 'users', 'users.db')
-        
-        if not os.path.exists(db_path):
-            return JsonResponse({"detail": "База данных пользователей не найдена"}, status=404)
-
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
-        # Проверка существования пользователя
-        cursor.execute("SELECT COUNT(*) FROM users WHERE id = ?", (user_id,))
-        if cursor.fetchone()[0] == 0:
-            conn.close()
-            return JsonResponse({
-                'success': False,
-                'detail': 'Пользователь не найден'
-            }, status=404)
-        
-        # Обновление статуса
-        cursor.execute("""
-            UPDATE users 
-            SET status = 'banned', ban_reason = ?, ban_end_date = ?
-            WHERE id = ?
-        """, (reason, ban_end_date, user_id))
-        
-        conn.commit()
-        conn.close()
+        # Баним пользователя
+        user_to_ban.is_banned = True
+        user_to_ban.save()
         
         return JsonResponse({
             'success': True,
-            'message': 'Пользователь заблокирован'
+            'message': f'Пользователь {user_to_ban.fullname} заблокирован'
         })
         
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'detail': f'Ошибка при блокировке пользователя: {str(e)}'
+            'detail': f"Ошибка: {str(e)}"
         }, status=500)
 
 @api_view(['POST'])
 def unban_user(request):
     """Разбанить пользователя"""
     try:
+        # Проверяем что пользователь админ (ID = 1)
+        if not request.session.get('is_authenticated'):
+            return JsonResponse({"detail": "Требуется авторизация"}, status=401)
+        
+        # Получаем текущего пользователя
+        try:
+            current_user = User.objects.get(student_code=request.session.get('student_code'))
+        except User.DoesNotExist:
+            return JsonResponse({"detail": "Пользователь не найден"}, status=404)
+        
+        # Проверяем что это админ
+        if current_user.id != 1:
+            return JsonResponse({"detail": "Доступ запрещен"}, status=403)
+        
         data = json.loads(request.body)
         user_id = data.get('user_id')
         
@@ -261,40 +235,18 @@ def unban_user(request):
                 'detail': 'ID пользователя обязателен'
             }, status=400)
         
-        db_path = os.path.join(settings.BASE_DIR, 'users', 'users.db')
-        
-        if not os.path.exists(db_path):
-            return JsonResponse({"detail": "База данных пользователей не найдена"}, status=404)
-
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
-        # Проверка существования пользователя
-        cursor.execute("SELECT COUNT(*) FROM users WHERE id = ?", (user_id,))
-        if cursor.fetchone()[0] == 0:
-            conn.close()
-            return JsonResponse({
-                'success': False,
-                'detail': 'Пользователь не найден'
-            }, status=404)
-        
-        # Обновление статуса
-        cursor.execute("""
-            UPDATE users 
-            SET status = 'active', ban_reason = NULL, ban_end_date = NULL
-            WHERE id = ?
-        """, (user_id,))
-        
-        conn.commit()
-        conn.close()
+        # Разбаниваем пользователя
+        user_to_unban = User.objects.get(id=user_id)
+        user_to_unban.is_banned = False
+        user_to_unban.save()
         
         return JsonResponse({
             'success': True,
-            'message': 'Пользователь разблокирован'
+            'message': f'Пользователь {user_to_unban.fullname} разблокирован'
         })
         
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'detail': f'Ошибка при разблокировке пользователя: {str(e)}'
+            'detail': f"Ошибка: {str(e)}"
         }, status=500)

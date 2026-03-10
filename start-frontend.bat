@@ -1,6 +1,11 @@
 @echo off
 echo Starting BNTU Bot Frontend...
 
+REM Убиваем все старые процессы Node.js
+echo Killing old Node.js processes...
+taskkill /F /IM node.exe >nul 2>&1
+timeout /t 2 >nul
+
 cd /d ".\frontend" 2>nul
 if %errorlevel% equ 0 (
     echo Found project at: d:\BENTUM WEB\BentumWeb\frontend

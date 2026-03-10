@@ -87,7 +87,6 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, darkMode }) => {
       });
 
       const result = await response.json();
-      console.log('Media upload result:', result);
       return result;
     } catch (error) {
       console.error('Media upload error:', error);

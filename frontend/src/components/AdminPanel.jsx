@@ -5,7 +5,6 @@ import {
   UserCheck, 
   Search, 
   Shield, 
-  Mail, 
   Calendar, 
   Clock, 
   AlertTriangle,
@@ -114,12 +113,11 @@ function AdminPanel() {
     const faculties = ['ФИТР', 'МСФ', 'АТФ', 'ФТК', 'ЭФ', 'ТЭФ', 'ИИС'];
     
     const fullname = prompt('Введите ФИО нового пользователя:');
-    const email = prompt('Введите email (например, ivanov@student.bntu.by):');
     const student_code = prompt('Введите код студента (8 цифр):');
     const faculty = prompt('Выберите факультет:\n' + faculties.join(', '));
     
     // Проверяем, что все поля заполнены
-    if (!fullname || !email || !student_code || !faculty) {
+    if (!fullname || !student_code || !faculty) {
       alert('❌ Все поля обязательны для заполнения!');
       return;
     }
@@ -130,15 +128,9 @@ function AdminPanel() {
       return;
     }
     
-    // Проверяем email
-    if (!email.includes('@') || !email.includes('.')) {
-      alert('❌ Некорректный формат email!');
-      return;
-    }
-    
     // Проверяем факультет
     if (!faculties.includes(faculty)) {
-      alert('❌ Неверный факультет! Выберите из: ' + faculties.join(', '));
+      alert('❌ Некорректный факультет! Выберите из списка.');
       return;
     }
     
@@ -151,7 +143,6 @@ function AdminPanel() {
         },
         body: JSON.stringify({
           fullname,
-          email,
           student_code,
           faculty
         })
@@ -160,7 +151,7 @@ function AdminPanel() {
       const data = await response.json();
       
       if (data.success) {
-        alert(`✅ Пользователь успешно добавлен!\n\n👤 ${fullname}\n📧 ${email}\n🎓 ${student_code}\n🏫 ${faculty}`);
+        alert(`✅ Пользователь успешно добавлен!\n\n👤 ${fullname}\n🎓 ${student_code}\n🏫 ${faculty}`);
         // Обновляем список пользователей
         loadUsers();
         loadStats();
@@ -175,7 +166,7 @@ function AdminPanel() {
 
   const handleBanUser = async (userId, reason, duration) => {
     const userToBan = users.find(u => u.id === userId);
-    if (userToBan && (userToBan.email?.includes('admin') || userToBan.id === 1 || userToBan.fullname?.includes('Admin'))) {
+    if (userToBan && (userToBan.id === 1 || userToBan.fullname?.includes('Admin'))) {
       alert('❌ Нельзя забанить администратора!');
       return;
     }
@@ -183,7 +174,7 @@ function AdminPanel() {
     const confirmBan = confirm(
       `🚫 ЗАБЛОКИРОВАТЬ ПОЛЬЗОВАЛЯ?\n\n` +
       `👤 Имя: ${userToBan.fullname}\n` +
-      `📧 Email: ${userToBan.email}\n` +
+      `🎓 Группа: ${userToBan.student_code}\n` +
       `⚠️ Причина: ${reason}\n` +
       `📅 Срок: ${duration} дней\n\n` +
       `Подтвердить блокировку?`
@@ -229,7 +220,7 @@ function AdminPanel() {
     const confirmUnban = confirm(
       `✅ РАЗБЛОКИРОВАТЬ ПОЛЬЗОВАЛЯ?\n\n` +
       `👤 Имя: ${userToUnban.fullname}\n` +
-      `📧 Email: ${userToUnban.email}\n` +
+      `🎓 Группа: ${userToUnban.student_code}\n` +
       `⚠️ Причина бана: ${userToUnban.ban_reason || 'Не указана'}\n` +
       `📅 Был забанен до: ${userToUnban.ban_end_date || 'Не указано'}\n\n` +
       `Подтвердить разблокировку?`
@@ -274,7 +265,6 @@ function AdminPanel() {
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.fullname.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          user.student_code.includes(searchQuery);
     
     const matchesFilter = filterStatus === 'all' || 
@@ -290,8 +280,6 @@ function AdminPanel() {
         return new Date(a.registration_date) - new Date(b.registration_date);
       case 'name':
         return a.fullname.localeCompare(b.fullname);
-      case 'email':
-        return a.email.localeCompare(b.email);
       default:
         return 0;
     }
@@ -356,7 +344,7 @@ function AdminPanel() {
                   <p>🚫 <strong>Бан пользователя:</strong> нажмите на красный крест 🚫 → введите причину и срок</p>
                   <p>✅ <strong>Разбан:</strong> нажмите на зеленую галочку ✅ чтобы разблокировать</p>
                   <p>🛡️ <strong>Администраторы:</strong> не могут быть забанены (защита щитом)</p>
-                  <p>🔍 <strong>Поиск:</strong> используйте поиск по имени, email или номеру студбилета</p>
+                  <p>🔍 <strong>Поиск:</strong> используйте поиск по имени или номеру студбилета</p>
                 </div>
               </div>
             </div>
@@ -413,7 +401,7 @@ function AdminPanel() {
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Поиск по имени, email или номеру студбилета..."
+                placeholder="Поиск по имени или номеру студбилета..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -439,7 +427,6 @@ function AdminPanel() {
                 <option value="newest">Новые первые</option>
                 <option value="oldest">Старые первые</option>
                 <option value="name">По имени</option>
-                <option value="email">По email</option>
               </select>
             </div>
           </div>
@@ -453,9 +440,6 @@ function AdminPanel() {
                 <tr className="border-b border-gray-200 dark:border-slate-700">
                   <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     Пользователь
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                    Email
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     Факультет
@@ -519,11 +503,6 @@ function AdminPanel() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-slate-900 dark:text-white">
-                          {user.email}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-slate-900 dark:text-white">
                           {user.faculty}
                         </div>
                       </td>
@@ -555,7 +534,7 @@ function AdminPanel() {
                           
                           {user.status === 'active' ? (
                             <>
-                              {(user.email?.includes('admin') || user.id === 1 || user.fullname?.includes('Admin')) ? (
+                              {(user.id === 1 || user.fullname?.includes('Admin')) ? (
                                 <div className="p-2 text-gray-400 cursor-not-allowed rounded-lg" title="🛡️ Администратор не может быть забанен">
                                   <Shield className="w-4 h-4" />
                                 </div>
@@ -643,8 +622,8 @@ function AdminPanel() {
                     <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Контактная информация</h4>
                     <div className="space-y-3">
                       <div className="flex items-center gap-3">
-                        <Mail className="w-4 h-4 text-slate-400" />
-                        <span className="text-slate-900 dark:text-white">{selectedUser.email}</span>
+                        <Calendar className="w-4 h-4 text-slate-400" />
+                        <span className="text-slate-900 dark:text-white">{selectedUser.registration_date}</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <Shield className="w-4 h-4 text-slate-400" />

@@ -5,6 +5,7 @@ class User(models.Model):
     faculty = models.CharField(max_length=10)
     student_code = models.CharField(max_length=10, unique=True)
     bilet_code = models.CharField(max_length=7)
+    is_banned = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
