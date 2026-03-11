@@ -1,13 +1,47 @@
-import React, { useState } from 'react';
-import { X, Save, Upload, Camera, User } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Save, Upload, Camera, User, AlertTriangle } from 'lucide-react';
 
-const ProfileEditModal = ({ isOpen, onClose, user, onSave, darkMode }) => {
+const ProfileEditModal = ({ isOpen, onClose, user, onSave, onForceRefresh, darkMode }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [bannerPreview, setBannerPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
   const [bannerFile, setBannerFile] = useState(null);
+
+  // Получаем информацию о бане пользователя
+  const [banInfo, setBanInfo] = useState(null);
+  const [loadingBanInfo, setLoadingBanInfo] = useState(true);
+
+  useEffect(() => {
+    const fetchBanInfo = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/api/ban/info', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setBanInfo(data.ban_info);
+          } else {
+            // Пользователь не забанен, сбрасываем состояние
+            setBanInfo(null);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching ban info:', err);
+        setBanInfo(null);
+      } finally {
+        setLoadingBanInfo(false);
+      }
+    };
+
+    if (isOpen && user) {
+      fetchBanInfo();
+    }
+  }, [isOpen, user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -61,8 +95,39 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, darkMode }) => {
       const result = await response.json();
 
       if (result.success) {
-        onSave?.(result.user);
-        onClose();
+        // После успешного сохранения запрашиваем актуальные данные с сервера
+        try {
+          const profileResponse = await fetch('http://localhost:8000/api/profile/update', {
+            method: 'GET',
+            credentials: 'include',
+          });
+          
+          if (profileResponse.ok) {
+            const profileData = await profileResponse.json();
+            if (profileData.success && profileData.user) {
+              onSave?.(profileData.user);
+              // Принудительно обновляем медиа в основном модальном окне
+              onForceRefresh?.();
+              onClose();
+            } else {
+              // Если не удалось получить обновленные данные, используем старые
+              onSave?.(result.user);
+              onForceRefresh?.();
+              onClose();
+            }
+          } else {
+            // Если не удалось получить обновленные данные, используем старые
+            onSave?.(result.user);
+            onForceRefresh?.();
+            onClose();
+          }
+        } catch (error) {
+          console.error('Error fetching updated profile:', error);
+          // Если не удалось получить обновленные данные, используем старые
+          onSave?.(result.user);
+          onForceRefresh?.();
+          onClose();
+        }
       } else {
         setErrors({ general: result.detail || 'Ошибка сохранения профиля' });
       }
@@ -152,29 +217,33 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, darkMode }) => {
                 )}
               </div>
               
-              {/* Avatar upload button */}
-              <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl cursor-pointer">
-                <Camera className="w-8 h-8 text-white" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  className="hidden"
-                />
-              </label>
+              {/* Avatar upload button - только для незабаненных */}
+              {!banInfo && (
+                <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl cursor-pointer">
+                  <Camera className="w-8 h-8 text-white" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="hidden"
+                  />
+                </label>
+              )}
             </div>
           </div>
 
-          {/* Banner upload button */}
-          <label className="absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all cursor-pointer">
-            <Upload className="w-5 h-5" />
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleBannerChange}
-              className="hidden"
-            />
-          </label>
+          {/* Banner upload button - только для незабаненных */}
+          {!banInfo && (
+            <label className="absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all cursor-pointer">
+              <Upload className="w-5 h-5" />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleBannerChange}
+                className="hidden"
+              />
+            </label>
+          )}
 
           {/* Close button */}
           <button
@@ -187,17 +256,68 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, darkMode }) => {
 
         {/* Form */}
         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar pt-14">
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6 text-center">
-            Настройка внешнего вида
-          </h2>
+          {banInfo ? (
+            <>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6 text-center">
+                Информация о профиле
+              </h2>
+              
+              {/* Информация о бане */}
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-left">
+                    <h3 className="font-semibold text-red-800 dark:text-red-300 mb-2">
+                      Аккаунт заблокирован
+                    </h3>
+                    <p className="text-red-700 dark:text-red-400 text-sm">
+                      {banInfo.reason}
+                    </p>
+                    <div className="mt-2 text-red-600 dark:text-red-400 text-xs">
+                      Срок: {banInfo.duration_text}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Информация о пользователе */}
+              <div className="bg-gray-50 dark:bg-slate-700/20 border border-gray-200 dark:border-slate-700 rounded-xl p-4">
+                <h3 className="font-semibold text-gray-800 dark:text-gray-300 mb-4">
+                  Данные профиля
+                </h3>
+                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex justify-between">
+                    <span className="font-medium">ФИмя:</span>
+                    <span>{user?.fullname || 'Не указано'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Код студента:</span>
+                    <span>{user?.student_code || 'Не указан'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Факультет:</span>
+                    <span>{user?.faculty || 'Не указан'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Статус:</span>
+                    <span className="text-red-600 dark:text-red-400 font-medium">Заблокирован</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6 text-center">
+                Настройка внешнего вида
+              </h2>
 
-          {errors.general && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-              <p className="text-red-600 dark:text-red-400 text-sm">{errors.general}</p>
-            </div>
-          )}
+              {errors.general && (
+                <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                  <p className="text-red-600 dark:text-red-400 text-sm">{errors.general}</p>
+                </div>
+              )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
             
             {/* Upload Instructions */}
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
@@ -241,6 +361,8 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, darkMode }) => {
               </button>
             </div>
           </form>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -27,9 +27,11 @@ def update_profile(request):
             }, status=404)
         
         if request.method == "GET":
-            # Получаем активные медиа файлы
+            # Получаем активные медиа файлы или плейсхолдеры
             avatar_url = None
             banner_url = None
+            avatar_placeholder = None
+            banner_placeholder = None
             
             from .models import UserProfileMedia
             from .media_service import MediaStorage
@@ -42,6 +44,9 @@ def update_profile(request):
             ).first()
             if active_avatar:
                 avatar_url = MediaStorage.get_media_url(active_avatar, 'medium')
+            else:
+                # Используем CSS плейсхолдер
+                avatar_placeholder = MediaStorage.get_placeholder_data(user, 'avatar')
             
             # Активный баннер
             active_banner = UserProfileMedia.objects.filter(
@@ -51,6 +56,9 @@ def update_profile(request):
             ).first()
             if active_banner:
                 banner_url = MediaStorage.get_media_url(active_banner, 'medium')
+            else:
+                # Используем CSS плейсхолдер
+                banner_placeholder = MediaStorage.get_placeholder_data(user, 'banner')
             
             # Возвращаем текущие данные пользователя с медиа
             return JsonResponse({
@@ -62,7 +70,9 @@ def update_profile(request):
                     "bilet_code": user.bilet_code,
                     "created_at": user.created_at.isoformat(),
                     "avatar_url": avatar_url,
-                    "banner_url": banner_url
+                    "banner_url": banner_url,
+                    "avatar_placeholder": avatar_placeholder,
+                    "banner_placeholder": banner_placeholder
                 }
             })
         
@@ -76,13 +86,11 @@ def update_profile(request):
                     "detail": "Некорректный JSON"
                 }, status=400)
             
-            # Получаем только медиа URL
-            avatar_url = data.get('avatar_url')
-            banner_url = data.get('banner_url')
-            
-            # Получаем активные медиа файлы
+            # Получаем активные медиа файлы или плейсхолдеры
             avatar_url = None
             banner_url = None
+            avatar_placeholder = None
+            banner_placeholder = None
             
             from .models import UserProfileMedia
             from .media_service import MediaStorage
@@ -95,6 +103,9 @@ def update_profile(request):
             ).first()
             if active_avatar:
                 avatar_url = MediaStorage.get_media_url(active_avatar, 'medium')
+            else:
+                # Используем CSS плейсхолдер
+                avatar_placeholder = MediaStorage.get_placeholder_data(user, 'avatar')
             
             # Активный баннер
             active_banner = UserProfileMedia.objects.filter(
@@ -104,6 +115,9 @@ def update_profile(request):
             ).first()
             if active_banner:
                 banner_url = MediaStorage.get_media_url(active_banner, 'medium')
+            else:
+                # Используем CSS плейсхолдер
+                banner_placeholder = MediaStorage.get_placeholder_data(user, 'banner')
             
             updated_user = {
                 "fullname": user.fullname,
@@ -112,7 +126,9 @@ def update_profile(request):
                 "bilet_code": user.bilet_code,
                 "created_at": user.created_at.isoformat(),
                 "avatar_url": avatar_url,
-                "banner_url": banner_url
+                "banner_url": banner_url,
+                "avatar_placeholder": avatar_placeholder,
+                "banner_placeholder": banner_placeholder
             }
             
             return JsonResponse({
@@ -149,11 +165,15 @@ def update_avatar(request):
             }, status=404)
         
         # Здесь будет логика сохранения аватара
-        # Пока возвращаем заглушку
+        # Пока возвращаем CSS плейсхолдер
+        from .media_service import MediaStorage
+        avatar_placeholder = MediaStorage.get_placeholder_data(user, 'avatar')
+        
         return JsonResponse({
             "success": True,
             "message": "Аватар успешно обновлен",
-            "url": "https://i.pinimg.com/736x/fc/55/e6/fc55e68d174bf0d2cb038d699c01f172.jpg"
+            "avatar_url": None,
+            "avatar_placeholder": avatar_placeholder
         })
         
     except Exception as e:
@@ -184,11 +204,15 @@ def update_banner(request):
             }, status=404)
         
         # Здесь будет логика сохранения баннера
-        # Пока возвращаем заглушку
+        # Пока возвращаем CSS плейсхолдер
+        from .media_service import MediaStorage
+        banner_placeholder = MediaStorage.get_placeholder_data(user, 'banner')
+        
         return JsonResponse({
             "success": True,
             "message": "Баннер успешно обновлен",
-            "url": "https://i.pinimg.com/1200x/b3/40/bd/b340bd28445da4ab7609576bc3fc125f.jpg"
+            "banner_url": None,
+            "banner_placeholder": banner_placeholder
         })
         
     except Exception as e:

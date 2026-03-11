@@ -11,19 +11,29 @@ import {
   Eye,
   Filter,
   RefreshCw,
+  X,
+  MoreVertical,
   Settings,
   BarChart3,
   UserX,
-  UserPlus
+  UserPlus,
+  Globe
 } from 'lucide-react';
+import BanModal from './BanModal.jsx';
+import BanSuccessModal from './BanSuccessModal.jsx';
+import UnbanModal from './UnbanModal.jsx';
 
-function AdminPanel() {
+function AdminPanel({ darkMode }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [highlightedUserId, setHighlightedUserId] = useState(null);
+  const [isBanModalOpen, setIsBanModalOpen] = useState(false);
+  const [isBanSuccessModalOpen, setIsBanSuccessModalOpen] = useState(false);
+  const [isUnbanModalOpen, setIsUnbanModalOpen] = useState(false);
+  const [banData, setBanData] = useState({ user: null, reason: '', duration: '7' });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -164,24 +174,19 @@ function AdminPanel() {
     }
   };
 
-  const handleBanUser = async (userId, reason, duration) => {
+  const handleBanUser = (userId) => {
     const userToBan = users.find(u => u.id === userId);
     if (userToBan && (userToBan.id === 1 || userToBan.fullname?.includes('Admin'))) {
       alert('❌ Нельзя забанить администратора!');
       return;
     }
     
-    const confirmBan = confirm(
-      `🚫 ЗАБЛОКИРОВАТЬ ПОЛЬЗОВАЛЯ?\n\n` +
-      `👤 Имя: ${userToBan.fullname}\n` +
-      `🎓 Группа: ${userToBan.student_code}\n` +
-      `⚠️ Причина: ${reason}\n` +
-      `📅 Срок: ${duration} дней\n\n` +
-      `Подтвердить блокировку?`
-    );
-    
-    if (!confirmBan) return;
-    
+    // Открываем модальное окно бана
+    setBanData({ user: userToBan, reason: '', duration: '7' });
+    setIsBanModalOpen(true);
+  };
+
+  const executeBan = async (userId, reason, duration) => {
     try {
       // Отправляем запрос на бан пользователя
       const response = await fetch('/api/admin/users/ban', {
@@ -199,9 +204,16 @@ function AdminPanel() {
       const data = await response.json();
       
       if (data.success) {
-        alert(`✅ УСПЕШНО ЗАБЛОКИРОВАНО!\n\n👤 ${userToBan.fullname}\n⚠️ Причина: ${reason}\n📅 До: ${userToBan.ban_end_date || 'недetermined'}`);
+        // Закрываем модальное окно бана
+        setIsBanModalOpen(false);
+        
+        // Показываем модальное окно успеха
+        setBanData({ user: banData.user, reason, duration });
+        setIsBanSuccessModalOpen(true);
+        
         setHighlightedUserId(userId);
         setTimeout(() => setHighlightedUserId(null), 3000);
+        
         // Обновляем список пользователей
         loadUsers();
         loadStats();
@@ -214,20 +226,13 @@ function AdminPanel() {
     }
   };
 
-  const handleUnbanUser = async (userId) => {
+  const handleUnbanUser = (userId) => {
     const userToUnban = users.find(u => u.id === userId);
-    
-    const confirmUnban = confirm(
-      `✅ РАЗБЛОКИРОВАТЬ ПОЛЬЗОВАЛЯ?\n\n` +
-      `👤 Имя: ${userToUnban.fullname}\n` +
-      `🎓 Группа: ${userToUnban.student_code}\n` +
-      `⚠️ Причина бана: ${userToUnban.ban_reason || 'Не указана'}\n` +
-      `📅 Был забанен до: ${userToUnban.ban_end_date || 'Не указано'}\n\n` +
-      `Подтвердить разблокировку?`
-    );
-    
-    if (!confirmUnban) return;
-    
+    setSelectedUser(userToUnban);
+    setIsUnbanModalOpen(true);
+  };
+
+  const executeUnban = async (userId) => {
     try {
       // Отправляем запрос на разбан пользователя
       const response = await fetch('/api/admin/users/unban', {
@@ -243,18 +248,18 @@ function AdminPanel() {
       const data = await response.json();
       
       if (data.success) {
-        alert(`✅ УСПЕШНО РАЗБЛОКИРОВАНО!\n\n👤 ${userToUnban.fullname}`);
+        setIsUnbanModalOpen(false);
+        setSelectedUser(null);
         setHighlightedUserId(userId);
         setTimeout(() => setHighlightedUserId(null), 3000);
         // Обновляем список пользователей
         loadUsers();
         loadStats();
       } else {
-        alert(`❌ Ошибка при разблокировке пользователя: ${data.detail}`);
+        console.error('Unban error:', data.detail);
       }
     } catch (error) {
       console.error('Error unbanning user:', error);
-      alert('❌ Произошла ошибка при разблокировке пользователя');
     }
   };
 
@@ -296,55 +301,57 @@ function AdminPanel() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900/20 dark:to-indigo-900/20 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900/20 dark:to-indigo-900/20 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Заголовок */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 dark:text-white mb-2">
                 Админ-панель
               </h1>
-              <p className="text-slate-600 dark:text-slate-400">
+              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
                 Управление пользователями и статистика
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
               <button
                 onClick={loadUsers}
-                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
               >
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? 'Обновление...' : 'Обновить'}
+                <span className="text-sm sm:text-base">
+                  {isRefreshing ? 'Обновление...' : 'Обновить'}
+                </span>
               </button>
               <button
                 onClick={handleAddUser}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-colors"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-colors"
               >
                 <UserPlus className="w-4 h-4" />
-                Добавить пользователя
+                <span className="text-sm sm:text-base">Добавить</span>
               </button>
-              <div className="flex items-center gap-2 px-4 py-2 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-xl">
+              <div className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-xl">
                 <Shield className="w-4 h-4" />
-                Администратор
+                <span className="text-sm sm:text-base">Админ</span>
               </div>
             </div>
           </div>
 
           {/* Инструкция */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-2xl p-4 mb-6">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-2xl p-3 sm:p-4 mb-6">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center flex-shrink-0">
                 <span className="text-blue-600 dark:text-blue-400 text-sm">💡</span>
               </div>
-              <div className="text-left">
-                <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">Как пользоваться админкой:</h3>
-                <div className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
-                  <p>👁️ <strong>Просмотр профиля:</strong> нажмите на глазок 👁️ чтобы увидеть детали пользователя</p>
-                  <p>🚫 <strong>Бан пользователя:</strong> нажмите на красный крест 🚫 → введите причину и срок</p>
-                  <p>✅ <strong>Разбан:</strong> нажмите на зеленую галочку ✅ чтобы разблокировать</p>
-                  <p>🛡️ <strong>Администраторы:</strong> не могут быть забанены (защита щитом)</p>
-                  <p>🔍 <strong>Поиск:</strong> используйте поиск по имени или номеру студбилета</p>
+              <div className="text-left flex-1">
+                <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-2 text-sm sm:text-base">Как пользоваться админкой:</h3>
+                <div className="text-xs sm:text-sm text-blue-700 dark:text-blue-400 space-y-1">
+                  <p>👁️ <strong className="hidden sm:inline">Просмотр профиля:</strong> <span className="sm:hidden">Профиль:</span> нажмите на глазок 👁️ чтобы увидеть детали</p>
+                  <p>🚫 <strong className="hidden sm:inline">Бан пользователя:</strong> <span className="sm:hidden">Бан:</span> нажмите на красный крест 🚫 → введите причину и срок</p>
+                  <p>✅ <strong className="hidden sm:inline">Разбан:</strong> <span className="sm:hidden">Разбан:</span> нажмите на зеленую галочку ✅ чтобы разблокировать</p>
+                  <p>🛡️ <strong className="hidden sm:inline">Администраторы:</strong> <span className="sm:hidden">Админы:</span> не могут быть забанены (защита щитом)</p>
+                  <p>🔍 <strong className="hidden sm:inline">Поиск:</strong> <span className="sm:hidden">Поиск:</span> используйте поиск по имени или номеру студбилета</p>
                 </div>
               </div>
             </div>
@@ -352,67 +359,67 @@ function AdminPanel() {
         </div>
 
         {/* Статистика */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-xl flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 dark:bg-blue-900/20 rounded-xl flex items-center justify-center">
+                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
               </div>
-              <span className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalUsers}</span>
+              <span className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{stats.totalUsers}</span>
             </div>
-            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">Всего пользователей</h3>
+            <h3 className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">Всего пользователей</h3>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/20 rounded-xl flex items-center justify-center">
-                <UserCheck className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-100 dark:bg-emerald-900/20 rounded-xl flex items-center justify-center">
+                <UserCheck className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <span className="text-2xl font-bold text-slate-900 dark:text-white">{stats.activeUsers}</span>
+              <span className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{stats.activeUsers}</span>
             </div>
-            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">Активные</h3>
+            <h3 className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">Активные</h3>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-xl flex items-center justify-center">
-                <Ban className="w-6 h-6 text-red-600 dark:text-red-400" />
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 dark:bg-red-900/20 rounded-xl flex items-center justify-center">
+                <Ban className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 dark:text-red-400" />
               </div>
-              <span className="text-2xl font-bold text-slate-900 dark:text-white">{stats.bannedUsers}</span>
+              <span className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{stats.bannedUsers}</span>
             </div>
-            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">Заблокированы</h3>
+            <h3 className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">Заблокированы</h3>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-xl flex items-center justify-center">
-                <UserPlus className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 dark:bg-purple-900/20 rounded-xl flex items-center justify-center">
+                <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
               </div>
-              <span className="text-2xl font-bold text-slate-900 dark:text-white">{stats.newUsersToday}</span>
+              <span className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{stats.newUsersToday}</span>
             </div>
-            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">Новые сегодня</h3>
+            <h3 className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">Новые сегодня</h3>
           </div>
         </div>
 
         {/* Фильтры и поиск */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 mb-6">
-          <div className="flex flex-col lg:flex-row gap-4">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 sm:p-6 mb-6">
+          <div className="flex flex-col gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
               <input
                 type="text"
                 placeholder="Поиск по имени или номеру студбилета..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-9 sm:pl-12 pr-4 py-2 sm:py-3 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
               />
             </div>
             
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
               >
                 <option value="all">Все статусы</option>
                 <option value="active">Активные</option>
@@ -422,7 +429,7 @@ function AdminPanel() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
               >
                 <option value="newest">Новые первые</option>
                 <option value="oldest">Старые первые</option>
@@ -434,7 +441,8 @@ function AdminPanel() {
 
         {/* Таблица пользователей */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Десктопная версия - таблица */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-slate-700">
@@ -548,17 +556,7 @@ function AdminPanel() {
                                 </div>
                               ) : (
                                 <button
-                                  onClick={() => {
-                                    const reason = prompt('🚫 Укажите причину блокировки:');
-                                    if (reason) {
-                                      const duration = prompt('📅 Укажите срок блокировки (дней):', '7');
-                                      if (duration && !isNaN(duration)) {
-                                        handleBanUser(user.id, reason, parseInt(duration));
-                                      } else {
-                                        alert('❌ Неверный срок блокировки!');
-                                      }
-                                    }
-                                  }}
+                                  onClick={() => handleBanUser(user.id)}
                                   className="p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                                   title="🚫 Заблокировать пользователя"
                                 >
@@ -584,6 +582,115 @@ function AdminPanel() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Мобильная версия - карточки */}
+          <div className="lg:hidden p-4 space-y-4">
+            {loading ? (
+              <div className="flex flex-col items-center py-12">
+                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <span className="text-slate-500 dark:text-slate-400">Загрузка пользователей...</span>
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="flex flex-col items-center py-12">
+                <Users className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-4" />
+                <span className="text-slate-500 dark:text-slate-400">Пользователи не найдены</span>
+              </div>
+            ) : (
+              filteredUsers.map((user) => (
+                <div 
+                  key={user.id} 
+                  className={`bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-200 dark:border-slate-600 transition-all duration-300 ${
+                    highlightedUserId === user.id 
+                      ? 'bg-yellow-100 dark:bg-yellow-900/20 animate-pulse border-yellow-300 dark:border-yellow-700' 
+                      : ''
+                  }`}
+                >
+                  {/* Заголовок карточки */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gray-200 dark:bg-slate-600 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                          {user.fullname.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-slate-900 dark:text-white">
+                          {user.fullname}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                          {user.student_code}
+                        </div>
+                      </div>
+                    </div>
+                    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>
+                      {getStatusIcon(user.status)}
+                      {user.status === 'active' ? 'Активен' : 'Заблокирован'}
+                    </div>
+                  </div>
+
+                  {/* Информация о пользователе */}
+                  <div className="space-y-2 mb-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Факультет:</span>
+                      <span className="text-sm text-slate-900 dark:text-white">{user.faculty}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Последний вход:</span>
+                      <span className="text-sm text-slate-900 dark:text-white">
+                        {user.last_login ? 
+                          new Date(user.last_login).toLocaleDateString('ru-RU') : '—'
+                        }
+                      </span>
+                    </div>
+                    {user.status === 'banned' && user.ban_end_date && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">Бан до:</span>
+                        <span className="text-sm text-red-600 dark:text-red-400">
+                          {new Date(user.ban_end_date).toLocaleDateString('ru-RU')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Кнопки действий */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-gray-200 dark:border-slate-600">
+                    <button
+                      onClick={() => handleViewProfile(user)}
+                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/30 transition-colors text-sm"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>Профиль</span>
+                    </button>
+                    
+                    {user.status === 'active' ? (
+                      (user.id === 1 || user.fullname?.includes('Admin')) ? (
+                        <div className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-gray-100 dark:bg-slate-600 text-gray-500 dark:text-gray-400 rounded-lg cursor-not-allowed text-sm">
+                          <Shield className="w-4 h-4" />
+                          <span>Защита</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleBanUser(user.id)}
+                          className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/30 transition-colors text-sm"
+                        >
+                          <Ban className="w-4 h-4" />
+                          <span>Забан</span>
+                        </button>
+                      )
+                    ) : (
+                      <button
+                        onClick={() => handleUnbanUser(user.id)}
+                        className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900/30 transition-colors text-sm"
+                      >
+                        <UserCheck className="w-4 h-4" />
+                        <span>Разбан</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -627,11 +734,20 @@ function AdminPanel() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Контактная информация</h4>
+                    <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Информация</h4>
                     <div className="space-y-3">
                       <div className="flex items-center gap-3">
                         <Calendar className="w-4 h-4 text-slate-400" />
-                        <span className="text-slate-900 dark:text-white">{selectedUser.registration_date}</span>
+                        <span className="text-slate-900 dark:text-white">
+                          {new Date(selectedUser.registration_date).toLocaleString('ru-RU', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                          })}
+                        </span>
                       </div>
                       <div className="flex items-center gap-3">
                         <Shield className="w-4 h-4 text-slate-400" />
@@ -641,12 +757,6 @@ function AdminPanel() {
                         <BarChart3 className="w-4 h-4 text-slate-400" />
                         <span className="text-slate-900 dark:text-white">{selectedUser.faculty}</span>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Calendar className="w-4 h-4 text-slate-400" />
-                        <span className="text-slate-900 dark:text-white font-mono text-sm">
-                          {selectedUser.last_login_ip || 'Неизвестно'}
-                        </span>
-                      </div>
                     </div>
                   </div>
                   
@@ -654,15 +764,9 @@ function AdminPanel() {
                     <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Активность</h4>
                     <div className="space-y-3">
                       <div className="flex items-center gap-3">
-                        <Calendar className="w-4 h-4 text-slate-400" />
-                        <span className="text-slate-900 dark:text-white">
-                          Регистрация: {new Date(selectedUser.registration_date).toLocaleDateString('ru-RU')}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3">
                         <Clock className="w-4 h-4 text-slate-400" />
                         <span className="text-slate-900 dark:text-white">
-                          Последний вход: {selectedUser.last_login ? 
+                          {selectedUser.last_login ? 
                             new Date(selectedUser.last_login).toLocaleString('ru-RU', {
                               day: '2-digit',
                               month: '2-digit',
@@ -671,6 +775,12 @@ function AdminPanel() {
                               minute: '2-digit'
                             }) : 'Не входил'
                           }
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Globe className="w-4 h-4 text-slate-400" />
+                        <span className="text-slate-900 dark:text-white font-mono text-sm">
+                          {selectedUser.last_login_ip || 'Неизвестно'}
                         </span>
                       </div>
                     </div>
@@ -700,6 +810,43 @@ function AdminPanel() {
           </div>
         )}
       </div>
+      
+      {/* Модальное окно бана */}
+      {isBanModalOpen && (
+        <BanModal
+          isOpen={isBanModalOpen}
+          onClose={() => setIsBanModalOpen(false)}
+          user={banData.user}
+          onBan={executeBan}
+          darkMode={darkMode}
+        />
+      )}
+      
+      {/* Модальное окно успешного бана */}
+      {isBanSuccessModalOpen && (
+        <BanSuccessModal
+          isOpen={isBanSuccessModalOpen}
+          onClose={() => setIsBanSuccessModalOpen(false)}
+          user={banData.user}
+          reason={banData.reason}
+          duration={banData.duration}
+          darkMode={darkMode}
+        />
+      )}
+
+      {/* Модальное окно разбана */}
+      {isUnbanModalOpen && (
+        <UnbanModal
+          isOpen={isUnbanModalOpen}
+          onClose={() => {
+            setIsUnbanModalOpen(false);
+            setSelectedUser(null);
+          }}
+          user={selectedUser}
+          onUnban={executeUnban}
+          darkMode={darkMode}
+        />
+      )}
     </div>
   );
 }

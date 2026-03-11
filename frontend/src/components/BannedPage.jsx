@@ -1,7 +1,40 @@
-import React from 'react';
-import { AlertTriangle, Clock, Mail, Shield, X, RefreshCw, Home } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { AlertTriangle, Clock, Mail, Shield, X, RefreshCw, Home, User } from 'lucide-react';
 
 function BannedPage() {
+  const [banInfo, setBanInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchBanInfo = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/api/ban/info', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setBanInfo(data.ban_info);
+          } else {
+            setError(data.detail || 'Ошибка загрузки данных о бане');
+          }
+        } else {
+          setError('Ошибка соединения с сервером');
+        }
+      } catch (err) {
+        setError('Ошибка загрузки данных');
+        console.error('Error fetching ban info:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBanInfo();
+  }, []);
+
   const handleGoHome = () => {
     // Очищаем статус бана и переходим на главную
     localStorage.removeItem('user');
@@ -19,8 +52,8 @@ function BannedPage() {
   };
 
   const handleLogout = () => {
-    // Просто открываем модальное окно профиля поверх страницы бана
-    // Пользователь сам решит выходить из аккаунта или нет
+    // Открываем модальное окно профиля поверх страницы бана
+    // Пользователь может посмотреть свою информацию, но не может редактировать
     localStorage.setItem('openProfileModal', 'true');
     window.location.reload();
   };
@@ -53,62 +86,74 @@ function BannedPage() {
 
           {/* Карточка с деталями блокировки */}
           <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-3xl shadow-2xl border border-red-200 dark:border-red-800/50 p-8">
-            <div className="space-y-6">
-              {/* Причина блокировки */}
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-2xl flex items-center justify-center flex-shrink-0">
-                  <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Причина блокировки</h3>
-                  <p className="text-slate-600 dark:text-slate-300">
-                    Многократное нарушение правил сообщества и спам-активность
-                  </p>
-                </div>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-8 h-8 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                <span className="ml-3 text-slate-600 dark:text-slate-300">Загрузка информации о блокировке...</span>
               </div>
-
-              {/* Срок блокировки */}
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/20 rounded-2xl flex items-center justify-center flex-shrink-0">
-                  <Clock className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Срок блокировки</h3>
-                  <p className="text-slate-600 dark:text-slate-300">
-                    7 дней (до 16 марта 2026 года)
-                  </p>
-                  <div className="mt-3 bg-orange-100 dark:bg-orange-900/20 rounded-xl px-4 py-2">
-                    <p className="text-sm text-orange-700 dark:text-orange-400 font-medium">
-                      Осталось: 5 дней 14 часов
+            ) : error ? (
+              <div className="text-center py-8">
+                <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                <p className="text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            ) : banInfo ? (
+              <div className="space-y-6">
+                {/* Причина блокировки */}
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Причина блокировки</h3>
+                    <p className="text-slate-600 dark:text-slate-300">
+                      {banInfo.reason}
                     </p>
                   </div>
                 </div>
-              </div>
 
-              {/* Что делать */}
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center flex-shrink-0">
-                  <Mail className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                {/* Срок блокировки */}
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+                    <Clock className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Срок блокировки</h3>
+                    <p className="text-slate-600 dark:text-slate-300">
+                      {banInfo.duration_text} (до {banInfo.end_date_formatted})
+                    </p>
+                    <div className="mt-3 bg-orange-100 dark:bg-orange-900/20 rounded-xl px-4 py-2">
+                      <p className="text-sm text-orange-700 dark:text-orange-400 font-medium">
+                        Осталось: {banInfo.remaining_time_text}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Что можно сделать</h3>
-                  <ul className="space-y-2 text-slate-600 dark:text-slate-300">
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                      Обратиться в службу поддержки для апелляции
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                      Изучить правила сообщества
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                      Ожидать окончания срока блокировки
-                    </li>
-                  </ul>
+
+                {/* Что делать */}
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+                    <Mail className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Что можно сделать</h3>
+                    <ul className="space-y-2 text-slate-600 dark:text-slate-300">
+                      <li className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                        Обратиться в службу поддержки для апелляции
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                        Изучить правила сообщества
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                        Ожидать окончания срока блокировки
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : null}
           </div>
 
           {/* Кнопки действий */}
@@ -125,21 +170,21 @@ function BannedPage() {
               onClick={handleLogout}
               className="group px-8 py-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-2 border-red-200 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-700 dark:text-red-400 font-semibold rounded-2xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 flex items-center gap-3"
             >
-              <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-              <span>Открыть профиль</span>
+              <User className="w-5 h-5 group-hover:animate-pulse" />
+              <span>Профиль</span>
             </button>
           </div>
 
           {/* Предупреждение */}
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-200 dark:border-yellow-800/50 rounded-2xl p-6">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-2xl p-4">
             <div className="flex items-start gap-3">
-              <Shield className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+              <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
               <div className="text-left">
                 <h4 className="font-semibold text-yellow-800 dark:text-yellow-300 mb-2">
                   Важное предупреждение
                 </h4>
                 <p className="text-yellow-700 dark:text-yellow-400 text-sm">
-                  Попытки обхода блокировки могут привести к ее продлению или permanent бану.
+                  Попытки обхода блокировки могут привести к ее продлению или перманент бану.
                   Пожалуйста, соблюдайте правила платформы.
                 </p>
               </div>

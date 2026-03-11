@@ -221,7 +221,12 @@ function AppContent() {
   const [selectedGameCategory, setSelectedGameCategory] = useState('all');
   const [weekType, setWeekType] = useState('upper');
   const [gameScores, setGameScores] = useState({});
-  const [userMedia, setUserMedia] = useState({ avatar_url: null, banner_url: null });
+  const [userMedia, setUserMedia] = useState({ 
+  avatar_url: null, 
+  banner_url: null,
+  avatar_placeholder: null,
+  banner_placeholder: null
+});
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -239,14 +244,37 @@ function AppContent() {
     if (updatedUser) {
       setUserMedia({
         avatar_url: updatedUser.avatar_url,
-        banner_url: updatedUser.banner_url
+        banner_url: updatedUser.banner_url,
+        avatar_placeholder: updatedUser.avatar_placeholder,
+        banner_placeholder: updatedUser.banner_placeholder
       });
     }
-    setIsProfileEditModalOpen(false);
-    setIsProfileModalOpen(false);
   };
 
-  // Загружаем медиа пользователя при авторизации
+  const forceRefreshMedia = async () => {
+    // Принудительно обновляем медиа с сервера
+    try {
+      const response = await fetch('http://localhost:8000/api/profile/update', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.user) {
+          setUserMedia({
+            avatar_url: data.user.avatar_url,
+            banner_url: data.user.banner_url,
+            avatar_placeholder: data.user.avatar_placeholder,
+            banner_placeholder: data.user.banner_placeholder
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error force refreshing media:', error);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated && user) {
       // Получаем медиа с сервера
@@ -262,7 +290,9 @@ function AppContent() {
             if (data.success && data.user) {
               setUserMedia({
                 avatar_url: data.user.avatar_url,
-                banner_url: data.user.banner_url
+                banner_url: data.user.banner_url,
+                avatar_placeholder: data.user.avatar_placeholder,
+                banner_placeholder: data.user.banner_placeholder
               });
             }
           }
@@ -567,7 +597,9 @@ function AppContent() {
             if (data.success && data.user) {
               setUserMedia({
                 avatar_url: data.user.avatar_url,
-                banner_url: data.user.banner_url
+                banner_url: data.user.banner_url,
+                avatar_placeholder: data.user.avatar_placeholder,
+                banner_placeholder: data.user.banner_placeholder
               });
             }
           }
@@ -667,6 +699,7 @@ function AppContent() {
                 setIsMobileMenuOpen={setIsMobileMenuOpen}
                 isProfileModalOpen={isProfileModalOpen}
                 setIsProfileModalOpen={setIsProfileModalOpen}
+                userMedia={userMedia}
               />
             )}
             <main className="container mx-auto px-4 pt-8 pb-12 relative z-10 flex-1">
@@ -749,7 +782,7 @@ function AppContent() {
             <AboutPage darkMode={darkMode} />
           )}
           {activeTab === 'admin' && isAdmin && (
-            <AdminPanel />
+            <AdminPanel darkMode={darkMode} />
           )}
           {activeTab === '404' && (
             <NotFoundPage />
@@ -1954,33 +1987,56 @@ function AppContent() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
           <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-hidden flex flex-col">
             <div className="relative h-32">
-              <img 
-                src={userMedia.banner_url ? `http://localhost:8000${userMedia.banner_url}` : "https://i.pinimg.com/1200x/b3/40/bd/b340bd28445da4ab7609576bc3fc125f.jpg"}
-                alt="Profile Banner"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  console.error('Banner image failed to load:', e.target.src);
-                  e.target.src = "https://i.pinimg.com/1200x/b3/40/bd/b340bd28445da4ab7609576bc3fc125f.jpg";
-                }}
-              />
+              {userMedia.banner_url ? (
+                <img 
+                  src={`http://localhost:8000${userMedia.banner_url}`}
+                  alt="Profile Banner"
+                  className="w-full h-full object-cover"
+                />
+              ) : userMedia.banner_placeholder ? (
+                <div 
+                  className="w-full h-full"
+                  style={{ background: userMedia.banner_placeholder.background }}
+                />
+              ) : (
+                <div className="w-full h-full bg-gray-200" />
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
               <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2">
-                <img 
-                  src={userMedia.avatar_url ? `http://localhost:8000${userMedia.avatar_url}` : "https://i.pinimg.com/736x/fc/55/e6/fc55e68d174bf0d2cb038d699c01f172.jpg"}
-                  alt="Profile Avatar"
-                  className="w-32 h-32 rounded-2xl object-cover border-4 border-white dark:border-slate-800"
-                  onError={(e) => {
-                    e.target.src = "https://i.pinimg.com/736x/fc/55/e6/fc55e68d174bf0d2cb038d699c01f172.jpg";
-                  }}
-                />
+                {userMedia.avatar_url ? (
+                  <img 
+                    src={`http://localhost:8000${userMedia.avatar_url}`}
+                    alt="Profile Avatar"
+                    className="w-32 h-32 rounded-2xl object-cover border-4 border-white dark:border-slate-800"
+                  />
+                ) : userMedia.avatar_placeholder ? (
+                  <div 
+                    className="w-32 h-32 rounded-2xl border-4 border-white dark:border-slate-800 flex items-center justify-center text-white font-semibold"
+                    style={{ 
+                      background: userMedia.avatar_placeholder.background,
+                      color: userMedia.avatar_placeholder.color,
+                      fontSize: userMedia.avatar_placeholder.font_size,
+                      fontWeight: userMedia.avatar_placeholder.font_weight
+                    }}
+                  >
+                    {userMedia.avatar_placeholder.initials}
+                  </div>
+                ) : (
+                  <div className="w-32 h-32 rounded-2xl border-4 border-white dark:border-slate-800 bg-gray-300 flex items-center justify-center text-gray-600 font-semibold" style={{ fontSize: '300%' }}>
+                    U
+                  </div>
+                )}
               </div>
-              <button
-                onClick={() => setIsProfileEditModalOpen(true)}
-                className="absolute top-4 right-16 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 border border-white/30"
-                title="Редактировать профиль"
-              >
-                <Edit className="w-5 h-5" />
-              </button>
+              {/* Кнопка редактирования профиля - только для незабаненных пользователей */}
+              {!isBanned && (
+                <button
+                  onClick={() => setIsProfileEditModalOpen(true)}
+                  className="absolute top-4 right-16 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 border border-white/30"
+                  title="Редактировать профиль"
+                >
+                  <Edit className="w-5 h-5" />
+                </button>
+              )}
               <button
                 onClick={() => setIsProfileModalOpen(false)}
                 className="absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 border border-white/30"
@@ -2086,6 +2142,7 @@ function AppContent() {
           darkMode={darkMode}
           user={user}
           onProfileUpdate={handleProfileUpdate}
+          onForceRefresh={forceRefreshMedia}
         />
       )}
       {isSupportSuccessModalOpen && (

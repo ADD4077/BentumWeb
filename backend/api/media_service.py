@@ -216,6 +216,23 @@ class MediaStorage:
         except Exception as e:
             logger.error(f"Error getting media URL: {e}")
             return None
+    
+    @staticmethod
+    def get_placeholder_data(user, media_type):
+        """Возвращает данные для CSS плейсхолдера"""
+        try:
+            from .placeholder_service import PlaceholderGenerator
+            
+            if media_type == 'avatar':
+                return PlaceholderGenerator.get_avatar_placeholder_data(user.fullname)
+            elif media_type == 'banner':
+                return PlaceholderGenerator.get_banner_placeholder_data()
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting placeholder data: {e}")
+            return None
 
     @staticmethod
     def delete_media_files(media):
@@ -249,41 +266,13 @@ class MediaStorage:
                 is_active=False
             )
             
-            # Получаем пути файлов активных медиа, чтобы их не удалять
-            active_media = UserProfileMedia.objects.filter(
-                user=user,
-                media_type=media_type,
-                is_active=True
-            )
-            active_file_paths = set()
-            for active in active_media:
-                active_file_paths.add(active.file_path)
-                # Добавляем пути оптимизированных версий
-                for opt in active.optimized_versions.all():
-                    active_file_paths.add(opt.file_path)
-            
             deleted_count = 0
             for media in old_media:
                 try:
-                    # Проверяем что файл не используется активными медиа
-                    if media.file_path not in active_file_paths:
-                        MediaStorage.delete_media_files(media)
-                        deleted_count += 1
-                    else:
-                        # Файл используется активным медиа, удаляем только запись из БД
-                        logger.warning(f"File {media.file_path} is used by active media, only deleting DB record")
-                        # Удаляем только оптимизации
-                        for opt in media.optimized_versions.all():
-                            if opt.file_path not in active_file_paths:
-                                if default_storage.exists(opt.file_path):
-                                    default_storage.delete(opt.file_path)
-                            opt.delete()
-                        # Удаляем запись медиа
-                        media.delete()
-                        deleted_count += 1
-                        
+                    MediaStorage.delete_media_files(media)
+                    deleted_count += 1
                 except Exception as e:
-                    logger.error(f"Error deleting media {media.id}: {e}")
+                    logger.error(f"Error deleting old media {media.id}: {e}")
                     continue
                 
             logger.info(f"Cleaned up {deleted_count} old {media_type}s for user {user.student_code}")
@@ -293,7 +282,7 @@ class MediaStorage:
             # Не прерываем процесс загрузки если очистка не удалась
 
     @staticmethod
-    def cleanup_old_media():
+    def cleanup_all_old_media():
         """Очистка старых неиспользуемых медиа"""
         cutoff_date = datetime.now() - timedelta(days=30)
         

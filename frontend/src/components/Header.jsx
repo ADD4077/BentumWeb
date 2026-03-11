@@ -1,6 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { LogOut, GraduationCap, Sun, Moon, User, MessageCircle, Settings } from 'lucide-react';
+import { LogOut, GraduationCap, Sun, Moon, User, MessageCircle, Settings, Shield } from 'lucide-react';
+
+// Стили для скрытия скроллбара
+const scrollbarHideStyles = `
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+`;
 function BurgerIcon({ isOpen }) {
   const baseLineStyle = {
     position: 'absolute',
@@ -40,7 +51,7 @@ function BurgerIcon({ isOpen }) {
     </span>
   );
 }
-function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModalOpen, setIsSupportModalOpen, isMobileMenuOpen, setIsMobileMenuOpen, isProfileModalOpen, setIsProfileModalOpen }) {
+function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModalOpen, setIsSupportModalOpen, isMobileMenuOpen, setIsMobileMenuOpen, isProfileModalOpen, setIsProfileModalOpen, userMedia }) {
   const { isAuthenticated, user, logout } = useAuth();
   const [isHeaderPill, setIsHeaderPill] = useState(!isMobileMenuOpen);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -89,6 +100,18 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
       document.removeEventListener('pointerdown', onPointerDown);
     };
   }, [isMobileMenuOpen, setIsMobileMenuOpen]);
+
+  // Внедряем стили для скрытия скроллбара
+  useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = scrollbarHideStyles;
+    document.head.appendChild(styleElement);
+    
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
+
   return (
     <>
       <header ref={headerRef} className="sticky top-0 z-50 w-full bg-transparent">
@@ -101,52 +124,58 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
             <>
               <nav className="hidden md:flex items-center justify-between w-full">
                 <div 
-                  className="flex items-center justify-center w-10 h-10 cursor-pointer rounded-full bg-emerald-500 hover:bg-emerald-600 transition-all"
+                  className="flex items-center justify-center w-10 h-10 cursor-pointer rounded-full bg-emerald-500 hover:bg-emerald-600 transition-all flex-shrink-0"
                   onClick={() => setActiveTab('home')}
                 >
                   <GraduationCap className="w-6 h-6 text-white" />
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
                   <button 
                     onClick={() => setActiveTab('home')}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'home' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 whitespace-nowrap flex-shrink-0 ${activeTab === 'home' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                   >
                     Главная
                   </button>
                   <button 
                     onClick={() => setActiveTab('schedule')}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'schedule' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 whitespace-nowrap flex-shrink-0 ${activeTab === 'schedule' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                   >
                     Расписание
                   </button>
                   <button 
                     onClick={() => setActiveTab('literature')}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'literature' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 whitespace-nowrap flex-shrink-0 ${activeTab === 'literature' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                   >
                     Литература
                   </button>
                   <button 
                     onClick={() => setActiveTab('news')}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'news' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 whitespace-nowrap flex-shrink-0 ${activeTab === 'news' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                   >
                     Новости
                   </button>
                   <button 
                     onClick={() => setActiveTab('games')}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'games' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 whitespace-nowrap flex-shrink-0 ${activeTab === 'games' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                   >
                     Игровая
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('about')}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 whitespace-nowrap flex-shrink-0 ${activeTab === 'about' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+                  >
+                    О проекте
                   </button>
                   {isAdmin && (
                     <button 
                       onClick={() => setActiveTab('admin')}
-                      className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'admin' ? 'bg-purple-500 text-white shadow-sm' : 'text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300'}`}
+                      className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 whitespace-nowrap flex-shrink-0 ${activeTab === 'admin' ? 'bg-purple-500 text-white shadow-sm' : 'text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300'}`}
                     >
                       Админка
                     </button>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <button 
                     onClick={toggleTheme}
                     className="p-2.5 rounded-full bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all border border-transparent hover:border-gray-200 dark:hover:border-slate-700"
@@ -252,12 +281,29 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                     }}
                     className="flex items-center gap-3 px-4 py-3 rounded-2xl flex-1 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all cursor-pointer"
                   >
-                    <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center text-white font-bold">
-                      {user?.fullname?.charAt(0) ? (
-                        <span>{user?.fullname?.charAt(0)}</span>
-                      ) : (
-                        <User className="w-5 h-5" />
-                      )}
+                    <div className="w-10 h-10 bg-emerald-500 rounded-full overflow-hidden flex items-center justify-center">
+                    {userMedia?.avatar_url ? (
+                      <img 
+                        src={`http://localhost:8000${userMedia.avatar_url}`}
+                        alt="Profile Avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : userMedia?.avatar_placeholder ? (
+                      <div 
+                        className="w-full h-full flex items-center justify-center text-white font-bold"
+                        style={{ 
+                          background: userMedia.avatar_placeholder.background,
+                          color: userMedia.avatar_placeholder.color,
+                          fontSize: '50%'
+                        }}
+                      >
+                        {userMedia.avatar_placeholder.initials}
+                      </div>
+                    ) : user?.fullname?.charAt(0) ? (
+                      <span className="text-white font-bold">{user?.fullname?.charAt(0)}</span>
+                    ) : (
+                      <User className="w-5 h-5 text-white" />
+                    )}
                     </div>
                     <div className="flex flex-col flex-1 min-w-0 text-left">
                       <span className="text-sm font-medium text-slate-900 dark:text-white truncate">
@@ -347,6 +393,18 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                 >
                   О проекте
                 </button>
+                {isAdmin && (
+                  <button 
+                    onClick={() => {
+                      setActiveTab('admin');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 flex items-center gap-3 ${activeTab === 'admin' ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 shadow-sm' : ''}`}
+                  >
+                    <Shield className="w-4 h-4" />
+                    Админ-панель
+                  </button>
+                )}
               </nav>
             )}
             <div className="border-t border-gray-200 dark:border-slate-700 pt-3 mt-3">

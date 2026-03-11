@@ -16,6 +16,7 @@ from django.core.cache import cache
 from .models import User, UserSession
 from .func import authorize
 from .user_notification_service import UserNotificationService
+from .ban_service import BanService
 
 
 SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
@@ -142,6 +143,8 @@ def save_data(request):
 
             _enforce_session_limits(existing_user.student_code, request.session.session_key)
             
+            # Проверяем статус бана через BanService
+            ban_status = BanService.check_ban_status(existing_user.student_code)
             
             return JsonResponse({
                 "success": True,
@@ -151,7 +154,7 @@ def save_data(request):
                     "fullname": existing_user.fullname,
                     "student_code": existing_user.student_code,
                     "faculty": existing_user.faculty,
-                    "is_banned": existing_user.is_banned
+                    "is_banned": ban_status['is_banned']
                 }
             }, status=200)
 
@@ -282,6 +285,9 @@ def dashboard(request):
                 status=403
             )
         
+        # Проверяем статус бана через BanService
+        ban_status = BanService.check_ban_status(student_code)
+        
         return JsonResponse({
             "success": True,
             "theme": request.session.get('theme', 'dark'),
@@ -291,7 +297,7 @@ def dashboard(request):
                 "faculty": user.faculty,
                 "student_code": user.student_code,
                 "created_at": user.created_at.isoformat(),
-                "is_banned": user.is_banned,
+                "is_banned": ban_status['is_banned'],
                 "last_login": user.last_login.isoformat() if user.last_login else None,
                 "last_login_ip": user.last_login_ip
             }

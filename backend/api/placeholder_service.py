@@ -1,11 +1,7 @@
-import io
-from PIL import Image, ImageDraw, ImageFont
-from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
 import hashlib
 
 class PlaceholderGenerator:
-    """Генератор плейсхолдеров для аватаров и баннеров"""
+    """Генератор плейсхолдеров для аватаров и баннеров через CSS"""
     
     @staticmethod
     def get_initials(fullname):
@@ -22,142 +18,83 @@ class PlaceholderGenerator:
             return "U"
     
     @staticmethod
-    def generate_diagonal_gradient(img, width, height, start_color, end_color):
-        """Генерирует диагональный градиент"""
-        draw = ImageDraw.Draw(img)
-        
-        for y in range(height):
-            for x in range(width):
-                # Диагональный градиент от верхнего левого к нижнему правому
-                progress = (x + y) / (width + height)
-                
-                r = int(start_color[0] + (end_color[0] - start_color[0]) * progress)
-                g = int(start_color[1] + (end_color[1] - start_color[1]) * progress)
-                b = int(start_color[2] + (end_color[2] - start_color[2]) * progress)
-                
-                draw.point((x, y), fill=(r, g, b))
-        
-        return img
-
-    @staticmethod
-    def generate_avatar(fullname, size=200):
-        """Генерирует аватар с инициалами на диагональном градиенте"""
-        # Создаем изображение
-        img = Image.new('RGB', (size, size))
-        
-        # Диагональный градиент в цветах сайта (emerald-600 to teal-600)
-        start_color = (16, 185, 129)  # emerald-600
-        end_color = (20, 184, 166)    # teal-600
-        PlaceholderGenerator.generate_diagonal_gradient(img, size, size, start_color, end_color)
-        
-        # Получаем инициалы
+    def get_avatar_placeholder_data(fullname):
+        """Возвращает данные для CSS аватара"""
         initials = PlaceholderGenerator.get_initials(fullname)
         
-        # Рисуем инициалы
-        try:
-            # Пытаемся использовать системный шрифт
-            font_size = int(size * 0.4)
-            font = ImageFont.truetype("arial.ttf", font_size)
-        except:
-            # Если шрифт не найден, используем базовый
-            font = ImageFont.load_default()
-        
-        # Получаем размеры текста
-        draw = ImageDraw.Draw(img)
-        bbox = draw.textbbox((0, 0), initials, font=font)
-        
-        # Центрируем текст по середине bbox
-        center_x = size // 2
-        center_y = size // 2
-        
-        # Находим середину текста
-        text_center_x = (bbox[0] + bbox[2]) // 2
-        text_center_y = (bbox[1] + bbox[3]) // 2
-        
-        # Смещаем чтобы центр текста совпал с центром изображения
-        x = center_x - text_center_x
-        y = center_y - text_center_y
-        
-        # Рисуем белый текст
-        draw.text((x, y), initials, fill=(255, 255, 255), font=font)
-        
-        return img
+        return {
+            "type": "avatar",
+            "initials": initials,
+            "background": "linear-gradient(135deg, rgb(16, 185, 129) 0%, rgb(20, 184, 166) 100%)",
+            "color": "#ffffff",
+            "font_size": "300%",
+            "font_weight": "600"
+        }
     
     @staticmethod
-    def generate_banner(width=800, height=200):
-        """Генерирует баннер с таким же диагональным градиентом как аватар"""
-        # Создаем изображение
-        img = Image.new('RGB', (width, height))
-        
-        # Такой же диагональный градиент как у аватара
-        start_color = (16, 185, 129)  # emerald-600
-        end_color = (20, 184, 166)    # teal-600
-        PlaceholderGenerator.generate_diagonal_gradient(img, width, height, start_color, end_color)
-        
-        return img
+    def get_banner_placeholder_data():
+        """Возвращает данные для CSS баннера"""
+        return {
+            "type": "banner", 
+            "background": "linear-gradient(135deg, rgb(16, 185, 129) 0%, rgb(20, 184, 166) 100%)",
+            "pattern": None
+        }
     
     @staticmethod
-    def save_placeholder(user, media_type, fullname=None):
-        """Сохраняет плейсхолдер для пользователя"""
-        try:
-            if media_type == 'avatar':
-                img = PlaceholderGenerator.generate_avatar(fullname or user.fullname, size=400)
-                filename = f"placeholder_avatar_{user.student_code}.webp"
-                path = f"users/{user.student_code}/avatars/{filename}"
-            elif media_type == 'banner':
-                img = PlaceholderGenerator.generate_banner(width=1200, height=400)
-                filename = f"placeholder_banner_{user.student_code}.webp"
-                path = f"users/{user.student_code}/banners/{filename}"
-            else:
-                return None
-            
-            # Конвертируем в WebP и сохраняем
-            output = io.BytesIO()
-            img.save(output, format='WEBP', quality=85, optimize=True)
-            content = output.getvalue()
-            
-            # Сохраняем файл
-            default_storage.save(path, ContentFile(content))
-            
-            return path
-            
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Error generating placeholder for {user.student_code}: {e}")
-            return None
+    def get_placeholder_css_class(media_type, fullname=None):
+        """Генерирует CSS класс для плейсхолдера"""
+        if media_type == 'avatar':
+            data = PlaceholderGenerator.get_avatar_placeholder_data(fullname or '')
+            return f"avatar-placeholder-{hash(fullname or '') % 1000}"
+        elif media_type == 'banner':
+            return "banner-placeholder"
+        return None
     
     @staticmethod
-    def get_or_create_placeholder(user, media_type):
-        """Получает или создает плейсхолдер"""
-        from .models import UserProfileMedia
+    def generate_placeholder_css(user, media_type):
+        """Генерирует CSS правила для плейсхолдера пользователя"""
+        if media_type == 'avatar':
+            data = PlaceholderGenerator.get_avatar_placeholder_data(user.fullname)
+            class_name = f"avatar-placeholder-{hash(user.student_code) % 1000}"
+            
+            css_rules = f"""
+            .{class_name} {{
+                background: {data['background']};
+                color: {data['color']};
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: {data['font_size']};
+                font-weight: {data['font_weight']};
+                text-transform: uppercase;
+                user-select: none;
+            }}
+            .{class_name}::before {{
+                content: '{data['initials']}';
+            }}
+            """
+            
+            return {
+                "class_name": class_name,
+                "css_rules": css_rules,
+                "data": data
+            }
+            
+        elif media_type == 'banner':
+            data = PlaceholderGenerator.get_banner_placeholder_data()
+            
+            css_rules = f"""
+            .banner-placeholder {{
+                background: {data['background']};
+                position: relative;
+                overflow: hidden;
+            }}
+            """
+            
+            return {
+                "class_name": "banner-placeholder",
+                "css_rules": css_rules,
+                "data": data
+            }
         
-        # Проверяем есть ли уже плейсхолдер
-        placeholder = UserProfileMedia.objects.filter(
-            user=user,
-            media_type=media_type,
-            file_path__contains="placeholder_"
-        ).first()
-        
-        if placeholder:
-            return placeholder
-        
-        # Создаем новый плейсхолдер
-        file_path = PlaceholderGenerator.save_placeholder(user, media_type)
-        if not file_path:
-            return None
-        
-        # Создаем запись в БД
-        placeholder = UserProfileMedia.objects.create(
-            user=user,
-            media_type=media_type,
-            original_filename=f"placeholder_{media_type}.webp",
-            file_path=file_path,
-            file_size=0,  # Будет обновлено позже
-            mime_type='image/webp',
-            width=400 if media_type == 'avatar' else 1200,
-            height=400 if media_type == 'avatar' else 400,
-            is_active=True
-        )
-        
-        return placeholder
+        return None
