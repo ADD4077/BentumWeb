@@ -7,6 +7,8 @@ class User(models.Model):
     bilet_code = models.CharField(max_length=7)
     is_banned = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    last_login = models.DateTimeField(null=True, blank=True)
+    last_login_ip = models.GenericIPAddressField(null=True, blank=True)
 
     class Meta:
         db_table = 'users'

@@ -126,6 +126,11 @@ def save_data(request):
             # Сбрасываем счетчики попыток после успешного входа
             _clear_login_attempts(student_code, ip_address)
             
+            # Обновляем время входа и IP
+            existing_user.last_login = datetime.now(pytz.UTC)
+            existing_user.last_login_ip = ip_address
+            existing_user.save()
+            
             request.session['student_code'] = existing_user.student_code
             request.session['fullname'] = existing_user.fullname
             request.session['faculty'] = existing_user.faculty
@@ -286,7 +291,9 @@ def dashboard(request):
                 "faculty": user.faculty,
                 "student_code": user.student_code,
                 "created_at": user.created_at.isoformat(),
-                "is_banned": user.is_banned
+                "is_banned": user.is_banned,
+                "last_login": user.last_login.isoformat() if user.last_login else None,
+                "last_login_ip": user.last_login_ip
             }
         }, status=200)
     

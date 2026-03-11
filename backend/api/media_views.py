@@ -9,6 +9,7 @@ from django.conf import settings
 
 from .models import User, UserProfileMedia, MediaOptimization
 from .media_service import MediaStorage, MediaValidator
+from .placeholder_service import PlaceholderGenerator
 from .func import authorize
 
 @csrf_exempt
@@ -81,6 +82,13 @@ def upload_media(request):
         
         media.is_active = True
         media.save()
+        
+        # Автоматически удаляем старые медиа этого типа
+        try:
+            MediaStorage.cleanup_old_media(user, media_type)
+        except Exception as e:
+            logger.error(f"Error during cleanup_old_media: {e}")
+            # Не прерываем процесс загрузки
         
         # Получаем URL всех размеров
         sizes = {}
@@ -161,6 +169,13 @@ def set_active_media(request):
         media.is_active = True
         media.save()
         
+        # Автоматически удаляем старые медиа этого типа
+        try:
+            MediaStorage.cleanup_old_media(user, media.media_type)
+        except Exception as e:
+            logger.error(f"Error during cleanup_old_media in set_active: {e}")
+            # Не прерываем процесс
+        
         return JsonResponse({
             "success": True,
             "message": "Активное медиа обновлено",
@@ -211,7 +226,15 @@ def get_user_media(request):
             media_query = media_query.filter(media_type=media_type)
         
         media_list = []
+        found_avatar = False
+        found_banner = False
+        
         for media in media_query.order_by('-created_at'):
+            if media.media_type == 'avatar':
+                found_avatar = True
+            elif media.media_type == 'banner':
+                found_banner = True
+                
             sizes = {}
             for opt in media.optimized_versions.all():
                 sizes[opt.size_type] = MediaStorage.get_media_url(media, opt.size_type)
@@ -232,6 +255,51 @@ def get_user_media(request):
                     "thumbnail": MediaStorage.get_media_url(media, 'thumbnail'),
                 }
             })
+        
+        # Добавляем плейсхолдеры если нет медиа нужного типа
+        if not media_type or media_type == 'avatar':
+            if not found_avatar:
+                placeholder = PlaceholderGenerator.get_or_create_placeholder(user, 'avatar')
+                if placeholder:
+                    media_list.append({
+                        "id": placeholder.id,
+                        "media_type": "avatar",
+                        "original_filename": "placeholder_avatar.webp",
+                        "file_size": 0,
+                        "width": 400,
+                        "height": 400,
+                        "is_active": True,
+                        "created_at": placeholder.created_at.isoformat(),
+                        "is_placeholder": True,
+                        "urls": {
+                            "original": MediaStorage.get_media_url(placeholder, 'large'),
+                            "medium": MediaStorage.get_media_url(placeholder, 'medium'),
+                            "small": MediaStorage.get_media_url(placeholder, 'small'),
+                            "thumbnail": MediaStorage.get_media_url(placeholder, 'thumbnail'),
+                        }
+                    })
+        
+        if not media_type or media_type == 'banner':
+            if not found_banner:
+                placeholder = PlaceholderGenerator.get_or_create_placeholder(user, 'banner')
+                if placeholder:
+                    media_list.append({
+                        "id": placeholder.id,
+                        "media_type": "banner",
+                        "original_filename": "placeholder_banner.webp",
+                        "file_size": 0,
+                        "width": 1200,
+                        "height": 400,
+                        "is_active": True,
+                        "created_at": placeholder.created_at.isoformat(),
+                        "is_placeholder": True,
+                        "urls": {
+                            "original": MediaStorage.get_media_url(placeholder, 'large'),
+                            "medium": MediaStorage.get_media_url(placeholder, 'medium'),
+                            "small": MediaStorage.get_media_url(placeholder, 'small'),
+                            "thumbnail": MediaStorage.get_media_url(placeholder, 'thumbnail'),
+                        }
+                    })
         
         return JsonResponse({
             "success": True,
@@ -285,20 +353,8 @@ def delete_media(request, media_id):
                 "detail": "Нельзя удалить активный медиа файл"
             }, status=400)
         
-        # Удаляем файлы
-        from django.core.files.storage import default_storage
-        
-        if default_storage.exists(media.file_path):
-            default_storage.delete(media.file_path)
-        
-        # Удаляем оптимизированные версии
-        for opt in media.optimized_versions.all():
-            if default_storage.exists(opt.file_path):
-                default_storage.delete(opt.file_path)
-            opt.delete()
-        
-        # Удаляем запись
-        media.delete()
+        # Удаляем файлы и запись
+        MediaStorage.delete_media_files(media)
         
         return JsonResponse({
             "success": True,

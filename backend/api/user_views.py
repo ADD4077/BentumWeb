@@ -38,7 +38,8 @@ def get_all_users(request):
                 'student_code': user.student_code,
                 'faculty': user.faculty,
                 'registration_date': user.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-                'last_login': None,  # Пока не храним last_login
+                'last_login': user.last_login.strftime('%Y-%m-%d %H:%M:%S') if user.last_login else None,
+                'last_login_ip': user.last_login_ip,
                 'status': 'banned' if user.is_banned else 'active',
                 'avatar_url': None,  # Будет добавлено позже
                 'ban_reason': None,

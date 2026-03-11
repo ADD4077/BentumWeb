@@ -107,13 +107,32 @@ class MediaStorage:
             # Получаем хеш файла
             file_hash = MediaOptimizer.get_file_hash(file_content)
             
-            # Проверяем на дедупликацию
+            # Проверяем на дедупликацию (только для этого пользователя)
             existing_media = UserProfileMedia.objects.filter(
+                user=user,
                 file_path__contains=file_hash
             ).first()
             
             if existing_media:
-                return existing_media
+                # Если найден дубликат, активируем его вместо создания нового
+                if existing_media.media_type == media_type:
+                    # Деактивируем другие медиа этого типа
+                    UserProfileMedia.objects.filter(
+                        user=user,
+                        media_type=media_type,
+                        is_active=True
+                    ).update(is_active=False)
+                    
+                    existing_media.is_active = True
+                    existing_media.save()
+                    
+                    # Очищаем старые медиа
+                    MediaStorage.cleanup_old_media(user, media_type)
+                    
+                    return existing_media
+                else:
+                    # Если другой тип медиа, создаем новый файл с другим хешом
+                    pass
             
             # Создаем оптимизированные версии
             sizes = MediaOptimizer.create_all_sizes(file_content, original_filename)
@@ -161,7 +180,9 @@ class MediaStorage:
             
         except Exception as e:
             import traceback
-            traceback.print_exc()
+            logger.error(f"Error in save_media: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            logger.error(f"User: {user.student_code}, Media type: {media_type}, Filename: {original_filename}")
             raise
 
     @staticmethod
@@ -177,15 +198,99 @@ class MediaStorage:
                 size_type=size
             ).first()
             
-            if optimization:
+            if optimization and default_storage.exists(optimization.file_path):
                 return default_storage.url(optimization.file_path)
             
             # Возвращаем оригинал если нет оптимизации
-            return default_storage.url(media.file_path)
+            if default_storage.exists(media.file_path):
+                return default_storage.url(media.file_path)
+            
+            # Если файла нет, возвращаем плейсхолдер
+            from .placeholder_service import PlaceholderGenerator
+            placeholder = PlaceholderGenerator.get_or_create_placeholder(media.user, media.media_type)
+            if placeholder and default_storage.exists(placeholder.file_path):
+                return default_storage.url(placeholder.file_path)
+            
+            return None
             
         except Exception as e:
             logger.error(f"Error getting media URL: {e}")
             return None
+
+    @staticmethod
+    def delete_media_files(media):
+        """Полностью удаляет файлы медиа и запись из БД"""
+        try:
+            # Удаляем основной файл
+            if default_storage.exists(media.file_path):
+                default_storage.delete(media.file_path)
+            
+            # Удаляем оптимизированные версии
+            for opt in media.optimized_versions.all():
+                if default_storage.exists(opt.file_path):
+                    default_storage.delete(opt.file_path)
+                opt.delete()
+            
+            # Удаляем запись из БД
+            media.delete()
+            logger.info(f"Deleted media files: {media.id}")
+            
+        except Exception as e:
+            logger.error(f"Error deleting media {media.id}: {e}")
+
+    @staticmethod
+    def cleanup_old_media(user, media_type):
+        """Удаляет старые медиа указанного типа для пользователя"""
+        try:
+            # Находим все старые медиа этого типа (кроме активных)
+            old_media = UserProfileMedia.objects.filter(
+                user=user,
+                media_type=media_type,
+                is_active=False
+            )
+            
+            # Получаем пути файлов активных медиа, чтобы их не удалять
+            active_media = UserProfileMedia.objects.filter(
+                user=user,
+                media_type=media_type,
+                is_active=True
+            )
+            active_file_paths = set()
+            for active in active_media:
+                active_file_paths.add(active.file_path)
+                # Добавляем пути оптимизированных версий
+                for opt in active.optimized_versions.all():
+                    active_file_paths.add(opt.file_path)
+            
+            deleted_count = 0
+            for media in old_media:
+                try:
+                    # Проверяем что файл не используется активными медиа
+                    if media.file_path not in active_file_paths:
+                        MediaStorage.delete_media_files(media)
+                        deleted_count += 1
+                    else:
+                        # Файл используется активным медиа, удаляем только запись из БД
+                        logger.warning(f"File {media.file_path} is used by active media, only deleting DB record")
+                        # Удаляем только оптимизации
+                        for opt in media.optimized_versions.all():
+                            if opt.file_path not in active_file_paths:
+                                if default_storage.exists(opt.file_path):
+                                    default_storage.delete(opt.file_path)
+                            opt.delete()
+                        # Удаляем запись медиа
+                        media.delete()
+                        deleted_count += 1
+                        
+                except Exception as e:
+                    logger.error(f"Error deleting media {media.id}: {e}")
+                    continue
+                
+            logger.info(f"Cleaned up {deleted_count} old {media_type}s for user {user.student_code}")
+            
+        except Exception as e:
+            logger.error(f"Error in cleanup_old_media: {e}")
+            # Не прерываем процесс загрузки если очистка не удалась
 
     @staticmethod
     def cleanup_old_media():

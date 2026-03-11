@@ -519,7 +519,15 @@ function AdminPanel() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-slate-900 dark:text-white">
-                          {new Date(user.last_login).toLocaleDateString('ru-RU')}
+                          {user.last_login ? 
+                            new Date(user.last_login).toLocaleString('ru-RU', {
+                              day: '2-digit',
+                              month: '2-digit', 
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : '—'
+                          }
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -633,6 +641,12 @@ function AdminPanel() {
                         <BarChart3 className="w-4 h-4 text-slate-400" />
                         <span className="text-slate-900 dark:text-white">{selectedUser.faculty}</span>
                       </div>
+                      <div className="flex items-center gap-3">
+                        <Calendar className="w-4 h-4 text-slate-400" />
+                        <span className="text-slate-900 dark:text-white font-mono text-sm">
+                          {selectedUser.last_login_ip || 'Неизвестно'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                   
@@ -648,7 +662,15 @@ function AdminPanel() {
                       <div className="flex items-center gap-3">
                         <Clock className="w-4 h-4 text-slate-400" />
                         <span className="text-slate-900 dark:text-white">
-                          Последний вход: {new Date(selectedUser.last_login).toLocaleDateString('ru-RU')}
+                          Последний вход: {selectedUser.last_login ? 
+                            new Date(selectedUser.last_login).toLocaleString('ru-RU', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : 'Не входил'
+                          }
                         </span>
                       </div>
                     </div>
