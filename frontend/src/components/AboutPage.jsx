@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, GraduationCap, Users } from 'lucide-react';
+import { Star, GraduationCap, Users, MessageCircle } from 'lucide-react';
 
 function AboutPage({ darkMode }) {
   return (
@@ -98,11 +98,24 @@ function AboutPage({ darkMode }) {
         </p>
         
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <button className="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-3xl font-bold transition-all hover:-translate-y-1 flex items-center gap-2">
-            <GraduationCap className="w-5 h-5" />
-            <span>Начать сейчас</span>
+          <button 
+            onClick={() => window.open('https://t.me/BNTUnity', '_blank')}
+            className="px-8 py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-3xl font-bold transition-all hover:-translate-y-1 flex items-center gap-2"
+          >
+            <MessageCircle className="w-5 h-5" />
+            <span>Telegram</span>
           </button>
         </div>
+      </div>
+
+      {/* Privacy Policy Section */}
+      <div className="text-center mt-12">
+        <button 
+          onClick={() => window.location.href = '/privacy'}
+          className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 underline transition-colors"
+        >
+          Политика конфиденциальности
+        </button>
       </div>
         
     </div>

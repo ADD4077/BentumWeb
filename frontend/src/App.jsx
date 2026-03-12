@@ -12,6 +12,7 @@ import BannedPage from './components/BannedPage.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
 import ProfileEditModal from './components/ProfileEditModal.jsx';
 import SupportSuccessModal from './components/SupportSuccessModal.jsx';
+import PrivacyPolicy from './components/PrivacyPolicy.jsx';
 import { ArrowRight, Backpack, Book, BookOpen, Calendar, ChevronRight, Clock, Download, Edit, ExternalLink, Filter, Gamepad2, GraduationCap, LogIn, LogOut, Moon, Search, Star, Sun, User } from 'lucide-react';
 import { daysOfWeek, quickDayButtons, groupInfo, features, teamMembers } from './utils/constants.js';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
@@ -786,6 +787,9 @@ function AppContent() {
           )}
           {activeTab === '404' && (
             <NotFoundPage />
+          )}
+          {activeTab === 'privacy' && (
+            <PrivacyPolicy />
           )}
           {activeTab === 'schedule' && (
             <div className="max-w-4xl mx-auto">
