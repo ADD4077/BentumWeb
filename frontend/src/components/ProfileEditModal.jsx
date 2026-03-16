@@ -16,7 +16,7 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, onForceRefresh, darkM
   useEffect(() => {
     const fetchBanInfo = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/ban/info', {
+        const response = await fetch('https://bentum.ru/api/ban/info', {
           method: 'GET',
           credentials: 'include',
         });
@@ -83,7 +83,7 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, onForceRefresh, darkM
       }
 
       // Сохранение медиа данных
-      const response = await fetch('http://localhost:8000/api/profile/update', {
+      const response = await fetch('https://bentum.ru/api/profile/update', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,7 +97,7 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, onForceRefresh, darkM
       if (result.success) {
         // После успешного сохранения запрашиваем актуальные данные с сервера
         try {
-          const profileResponse = await fetch('http://localhost:8000/api/profile/update', {
+          const profileResponse = await fetch('https://bentum.ru/api/profile/update', {
             method: 'GET',
             credentials: 'include',
           });
@@ -145,7 +145,7 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, onForceRefresh, darkM
     formData.append('media_type', mediaType);
 
     try {
-      const response = await fetch('http://localhost:8000/api/media/upload', {
+      const response = await fetch('https://bentum.ru/api/media/upload', {
         method: 'POST',
         body: formData,
         credentials: 'include',
