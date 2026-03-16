@@ -284,7 +284,7 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                     <div className="w-10 h-10 bg-emerald-500 rounded-full overflow-hidden flex items-center justify-center">
                     {userMedia?.avatar_url ? (
                       <img 
-                        src={`http://localhost:8000${userMedia.avatar_url}`}
+                        src={`https://bentum.ru${userMedia.avatar_url}`}
                         alt="Profile Avatar"
                         className="w-full h-full object-cover"
                       />

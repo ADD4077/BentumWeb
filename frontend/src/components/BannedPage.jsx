@@ -9,7 +9,7 @@ function BannedPage() {
   useEffect(() => {
     const fetchBanInfo = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/ban/info', {
+        const response = await fetch('https://bentum.ru/api/ban/info', {
           method: 'GET',
           credentials: 'include',
         });

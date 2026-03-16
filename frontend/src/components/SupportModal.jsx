@@ -26,7 +26,7 @@ function SupportModal({ isOpen, onClose, darkMode, onSuccess }) {
     setSubmitStatus(null);
     
     try {
-      const response = await fetch('http://localhost:8000/api/support/submit', {
+      const response = await fetch('https://bentum.ru/api/support/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

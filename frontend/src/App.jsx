@@ -255,7 +255,7 @@ function AppContent() {
   const forceRefreshMedia = async () => {
     // Принудительно обновляем медиа с сервера
     try {
-      const response = await fetch('http://localhost:8000/api/profile/update', {
+      const response = await fetch('https://bentum.ru/api/profile/update', {
         method: 'GET',
         credentials: 'include'
       });
@@ -281,7 +281,7 @@ function AppContent() {
       // Получаем медиа с сервера
       const fetchUserMedia = async () => {
         try {
-          const response = await fetch('http://localhost:8000/api/profile/update', {
+          const response = await fetch('https://bentum.ru/api/profile/update', {
             method: 'GET',
             credentials: 'include'
           });
@@ -390,7 +390,7 @@ function AppContent() {
     if (!user?.student_code) return;
     setScheduleLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/schedule', {
+      const response = await fetch('https://bentum.ru/api/schedule', {
         method: 'GET',
         credentials: 'include'
       });
@@ -588,7 +588,7 @@ function AppContent() {
     if (isProfileModalOpen && isAuthenticated) {
       const fetchUserMedia = async () => {
         try {
-          const response = await fetch('http://localhost:8000/api/profile/update', {
+          const response = await fetch('https://bentum.ru/api/profile/update', {
             method: 'GET',
             credentials: 'include'
           });
@@ -1993,7 +1993,7 @@ function AppContent() {
             <div className="relative h-32">
               {userMedia.banner_url ? (
                 <img 
-                  src={`http://localhost:8000${userMedia.banner_url}`}
+                  src={`http://bentum.ru:1337${userMedia.banner_url}`}
                   alt="Profile Banner"
                   className="w-full h-full object-cover"
                 />
@@ -2009,7 +2009,7 @@ function AppContent() {
               <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2">
                 {userMedia.avatar_url ? (
                   <img 
-                    src={`http://localhost:8000${userMedia.avatar_url}`}
+                    src={`http://bentum.ru:1337${userMedia.avatar_url}`}
                     alt="Profile Avatar"
                     className="w-32 h-32 rounded-2xl object-cover border-4 border-white dark:border-slate-800"
                   />

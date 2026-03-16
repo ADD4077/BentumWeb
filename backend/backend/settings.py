@@ -20,7 +20,7 @@ SECRET_KEY = 'django-insecure-%cc5-crcil(rkw6ftz-+fclo8_3g__c5o4sr=#6if-wmrzv1pv
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['*']
 
 SESSION_COOKIE_SECURE = False  # Для разработки (HTTP)
 SESSION_COOKIE_HTTPONLY = True  # Только для HTTP
