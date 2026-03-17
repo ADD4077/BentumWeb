@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+
 function TeamCarousel({ teamMembers }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
   const intervalRef = useRef(null);
   const timeoutRef = useRef(null);
+  const carouselRef = useRef(null);
   const startAutoPlay = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -31,7 +35,7 @@ function TeamCarousel({ teamMembers }) {
       startAutoPlay();
     }, 8000);
   }, [stopAutoPlay, startAutoPlay]);
-  
+
   const nextSlide = useCallback(() => {
     setCurrentIndex((prevIndex) => 
       prevIndex === teamMembers.length - 1 ? 0 : prevIndex + 1
@@ -50,6 +54,30 @@ function TeamCarousel({ teamMembers }) {
     setCurrentIndex(index);
     resumeAutoPlay();
   }, [resumeAutoPlay]);
+
+  // Touch handlers for swipe
+  const handleTouchStart = useCallback((e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  }, []);
+
+  const handleTouchMove = useCallback((e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe) {
+      nextSlide();
+    } else if (isRightSwipe) {
+      prevSlide();
+    }
+  }, [touchStart, touchEnd, nextSlide, prevSlide]);
   useEffect(() => {
     if (isAutoPlaying && teamMembers.length > 1) {
       startAutoPlay();
@@ -64,7 +92,17 @@ function TeamCarousel({ teamMembers }) {
         Наша команда
       </h2>
       <div className="relative">
-        <div className="overflow-hidden rounded-2xl max-w-4xl mx-auto" style={{ padding: '20px' }}>
+        <div 
+          ref={carouselRef}
+          className="overflow-hidden rounded-2xl max-w-4xl mx-auto" 
+          style={{ 
+            padding: '20px',
+            touchAction: 'pan-y pinch-zoom'
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           <div 
             className="flex transition-transform duration-500 ease-in-out"
             style={{ transform: `translateX(-${currentIndex * 100}%)` }}

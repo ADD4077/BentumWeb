@@ -91,7 +91,7 @@ const TagsContainer = React.memo(({ tags }) => {
   const remainingCount = useMemo(() => tags.length - visibleCount, [tags.length, visibleCount]);
   
   return (
-    <div ref={containerRef} className="flex items-center gap-1 overflow-hidden">
+    <div ref={containerRef} className="flex items-center gap-1 overflow-hidden sm:overflow-x-auto">
       {visibleTags.map((tag, index) => (
         <span 
           key={`${tag}-${index}-${visibleCount}`}
@@ -319,7 +319,7 @@ function AppContent() {
       originalPrice: null,
       discount: 0,
       rating: 4.9,
-      image: "https://i.ibb.co/cSdYNv9R/IMG-20260301-114010-042.png",
+      image: "/src/assets/games/Minecraft/banner.png",
       description: "Официальный Minecraft сервер студентов БНТУ. Выживание, мини-игры и дружное сообщество!",
       tags: ["Выживание", "Мультиплеер", "Бесплатно", "Сообщество"],
       featured: true,
@@ -710,23 +710,23 @@ function AppContent() {
               {activeTab === 'home' && (
                 <div className="flex flex-col items-center">
                   <div className="text-center max-w-4xl mx-auto mb-20 mt-10">
-                    <span className="inline-flex text-lg md:text-xl text-emerald-600 font-medium mb-4 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-500 rounded-full items-center gap-2" style={{ animation: 'float 3s ease-in-out infinite' }}>
+                    <span className="inline-flex text-sm md:text-base text-emerald-600 font-medium mb-4 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-500 rounded-full items-center gap-2" style={{ animation: 'float 3s ease-in-out infinite' }}>
                       <Star className="w-5 h-5 text-emerald-600 flex-shrink-0" />
                       <span>Новая версия 2.0 уже доступна</span>
                       <Star className="w-5 h-5 text-emerald-600 flex-shrink-0" />
                     </span>
-                <h1 className="text-5xl md:text-7xl font-bold mb-8 tracking-tight text-slate-900 dark:text-white leading-[1.1]">
-                  Умное расписание <br />
+                <h1 className="text-4xl md:text-6xl font-bold mb-8 tracking-tight text-slate-900 dark:text-white leading-[1.1]">
+                  Учебная система <br />
                   <span className="relative inline-block">
                   <span 
-                    className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-6xl md:text-7xl font-bold tracking-tight bg-clip-text text-transparent transition-all duration-1000"
+                    className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-5xl md:text-6xl font-bold tracking-tight bg-clip-text text-transparent transition-all duration-1000"
                     style={{
                       backgroundSize: '200% 100%',
                       backgroundPosition: '0% 50%',
                       animation: 'colorShift 4s ease-in-out infinite'
                     }}
                   >
-                    Для студентов БНТУ
+                    Бентум
                   </span>
                 </span>
                 </h1>
@@ -753,7 +753,7 @@ function AppContent() {
                   </button>
                 </div>
               </div>
-              <div className="w-full max-w-6xl mx-auto mt-20">
+              <div className="w-full max-w-6xl mx-auto mt-1">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                   <div className="lg:col-span-2">
                     <FeatureCard 
@@ -856,13 +856,13 @@ function AppContent() {
                   <button
                     key={day}
                     onClick={() => setSelectedDay(day)}
-                    className={`min-w-[4rem] h-16 rounded-2xl flex flex-col items-center justify-center border-2 transition-all duration-300 ${
+                    className={`min-w-[3rem] h-12 sm:min-w-[4rem] sm:h-16 rounded-2xl flex flex-col items-center justify-center border-2 transition-all duration-300 ${
                       selectedDay === day
                         ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-105'
                         : 'bg-white dark:bg-slate-800 border-transparent hover:border-emerald-200 dark:hover:border-slate-600 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
-                    <span className={`text-sm font-medium ${selectedDay === day ? 'opacity-80' : 'opacity-60'}`}>{day}</span>
+                    <span className={`text-xs sm:text-sm font-medium ${selectedDay === day ? 'opacity-80' : 'opacity-60'}`}>{day}</span>
                   </button>
                 ))}
               </div>

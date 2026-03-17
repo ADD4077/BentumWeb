@@ -86,10 +86,6 @@ function AboutPage({ darkMode, setActiveTab }) {
       
       {/* Hero Section */}
       <div className="text-center mb-20">
-        <div className="inline-flex text-lg md:text-xl text-emerald-600 font-medium mb-6 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-500 rounded-full items-center gap-2" style={{ animation: 'float 3s ease-in-out infinite' }}>
-          <Star className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-          <span>О проекте BentumWeb</span>
-        </div>
         
         <h1 className="text-5xl md:text-7xl font-bold mb-8 tracking-tight text-slate-900 dark:text-white leading-[1.1]">
           <span 
@@ -100,12 +96,12 @@ function AboutPage({ darkMode, setActiveTab }) {
               animation: 'colorShift 4s ease-in-out infinite'
             }}
           >
-            Революция в учебном процессе
+            О нашем проекте
           </span>
         </h1>
         
         <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
-          BentumWeb — это не просто расписание. Это целая экосистема для студентов БНТУ, 
+          Bentum — это не просто расписание. Это целая экосистема для студентов БНТУ, 
           созданная чтобы сделать учебу комфортной, продуктивной и увлекательной.
         </p>
       </div>
