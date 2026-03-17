@@ -1,5 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Upload, X, Image as ImageIcon, Loader2, Check, Trash2 } from 'lucide-react';
+import { API_ENDPOINTS } from '../config/api.js';
+import { X, Upload, Image as ImageIcon, CheckCircle, AlertCircle } from 'lucide-react';
+import { showWarning, showError, showSuccess } from '../utils/notifications.js';
+import { refreshMediaList } from '../utils/navigation.js';
 
 const MediaUpload = ({ 
   mediaType = 'avatar', 
@@ -19,13 +22,13 @@ const MediaUpload = ({
 
     // Проверяем тип файла
     if (!file.type.startsWith('image/')) {
-      alert('Пожалуйста, выберите изображение');
+      showWarning('Пожалуйста, выберите изображение');
       return;
     }
 
     // Проверяем размер (10MB)
     if (file.size > 10 * 1024 * 1024) {
-      alert('Файл слишком большой. Максимальный размер: 10MB');
+      showWarning('Файл слишком большой. Максимальный размер: 10MB');
       return;
     }
 
@@ -54,7 +57,7 @@ const MediaUpload = ({
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 100);
 
-      const response = await fetch('/api/media/upload', {
+      const response = await fetch(API_ENDPOINTS.MEDIA_UPLOAD, {
         method: 'POST',
         body: formData,
         credentials: 'include'
@@ -69,12 +72,12 @@ const MediaUpload = ({
         onUploadSuccess?.(result.media);
         setPreview(null);
         setUploadProgress(0);
+        showSuccess('Медиа успешно загружено!');
       } else {
-        alert(`Ошибка загрузки: ${result.detail}`);
+        showError(`Ошибка загрузки: ${result.detail}`);
       }
     } catch (error) {
-      console.error('Upload error:', error);
-      alert('Ошибка при загрузке файла');
+      showError('Ошибка при загрузке файла');
     } finally {
       setUploading(false);
       setTimeout(() => setUploadProgress(0), 1000);
@@ -83,7 +86,7 @@ const MediaUpload = ({
 
   const handleSetActive = async (mediaId) => {
     try {
-      const response = await fetch('/api/media/set-active', {
+      const response = await fetch(API_ENDPOINTS.MEDIA_SET_ACTIVE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -95,12 +98,12 @@ const MediaUpload = ({
       const result = await response.json();
       if (result.success) {
         onSetActive?.(result.media);
+        showSuccess('Медиа установлено как активное!');
       } else {
-        alert(`Ошибка: ${result.detail}`);
+        showError(`Ошибка: ${result.detail}`);
       }
     } catch (error) {
-      console.error('Set active error:', error);
-      alert('Ошибка при установке активного медиа');
+      showError('Ошибка при установке активного медиа');
     }
   };
 
@@ -108,7 +111,7 @@ const MediaUpload = ({
     if (!confirm('Вы уверены, что хотите удалить это медиа?')) return;
 
     try {
-      const response = await fetch(`/api/media/delete/${mediaId}`, {
+      const response = await fetch(`${API_ENDPOINTS.MEDIA_DELETE}/${mediaId}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -116,13 +119,13 @@ const MediaUpload = ({
       const result = await response.json();
       if (result.success) {
         // Обновляем список медиа
-        window.location.reload();
+        refreshMediaList(onUploadSuccess);
+        showSuccess('Медиа успешно удалено!');
       } else {
-        alert(`Ошибка: ${result.detail}`);
+        showError(`Ошибка: ${result.detail}`);
       }
     } catch (error) {
-      console.error('Delete error:', error);
-      alert('Ошибка при удалении медиа');
+      showError('Ошибка при удалении медиа');
     }
   };
 

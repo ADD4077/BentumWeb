@@ -1,7 +1,86 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { API_ENDPOINTS } from '../config/api.js';
 import { Star, GraduationCap, Users, MessageCircle } from 'lucide-react';
 
-function AboutPage({ darkMode }) {
+function AboutPage({ darkMode, setActiveTab }) {
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    facultiesCount: 0,
+    uptime: '99.9%'
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      // Загружаем статистику из API
+      const response = await fetch(API_ENDPOINTS.USERS_STATS, {
+        credentials: 'include'
+      });
+      
+      if (response.status === 401) {
+        // Пользователь не админ - используем моковые данные
+        setStats({
+          totalUsers: 1000,
+          facultiesCount: 10,
+          uptime: '99.9%'
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Считаем количество уникальных факультетов
+        const usersResponse = await fetch(API_ENDPOINTS.USERS, {
+          credentials: 'include'
+        });
+        
+        if (usersResponse.status === 401) {
+          // Пользователь не админ - используем базовую статистику
+          setStats({
+            totalUsers: data.stats.totalUsers || 0,
+            facultiesCount: 10,
+            uptime: '99.9%'
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        const usersData = await usersResponse.json();
+        
+        if (usersData.success) {
+          const uniqueFaculties = [...new Set(usersData.users.map(user => user.faculty).filter(Boolean))];
+          
+          setStats({
+            totalUsers: data.stats.totalUsers || 0,
+            facultiesCount: uniqueFaculties.length || 0,
+            uptime: '99.9%'
+          });
+        }
+      } else {
+        // Используем моковые данные при ошибке API
+        setStats({
+          totalUsers: 1000,
+          facultiesCount: 10,
+          uptime: '99.9%'
+        });
+      }
+    } catch (error) {
+      // Используем моковые данные при ошибке
+      setStats({
+        totalUsers: 1000,
+        facultiesCount: 10,
+        uptime: '99.9%'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 py-16">
       
@@ -48,15 +127,33 @@ function AboutPage({ darkMode }) {
         
         <div className="grid md:grid-cols-3 gap-6">
           <div className="text-center p-6 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl">
-            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-2">10,000+</div>
+            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-2">
+              {isLoading ? (
+                <div className="animate-pulse">Загрузка...</div>
+              ) : (
+                `${stats.totalUsers.toLocaleString('ru-RU')}+`
+              )}
+            </div>
             <div className="text-slate-600 dark:text-slate-400">Студентов используют</div>
           </div>
           <div className="text-center p-6 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl">
-            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-2">50+</div>
+            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-2">
+              {isLoading ? (
+                <div className="animate-pulse">Загрузка...</div>
+              ) : (
+                stats.facultiesCount
+              )}
+            </div>
             <div className="text-slate-600 dark:text-slate-400">Факультетов охвачено</div>
           </div>
           <div className="text-center p-6 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl">
-            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-2">99.9%</div>
+            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-2">
+              {isLoading ? (
+                <div className="animate-pulse">Загрузка...</div>
+              ) : (
+                stats.uptime
+              )}
+            </div>
             <div className="text-slate-600 dark:text-slate-400">Время доступности</div>
           </div>
         </div>
@@ -111,7 +208,7 @@ function AboutPage({ darkMode }) {
       {/* Privacy Policy Section */}
       <div className="text-center mt-12">
         <button 
-          onClick={() => window.location.href = '/privacy'}
+          onClick={() => setActiveTab('privacy')}
           className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 underline transition-colors"
         >
           Политика конфиденциальности

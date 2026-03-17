@@ -16,53 +16,59 @@ import PrivacyPolicy from './components/PrivacyPolicy.jsx';
 import { ArrowRight, Backpack, Book, BookOpen, Calendar, ChevronRight, Clock, Download, Edit, ExternalLink, Filter, Gamepad2, GraduationCap, LogIn, LogOut, Moon, Search, Star, Sun, User } from 'lucide-react';
 import { daysOfWeek, quickDayButtons, groupInfo, features, teamMembers } from './utils/constants.js';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
-const TagsContainer = ({ tags }) => {
+import { API_ENDPOINTS } from './config/api.js';
+import { safeLogout } from './utils/navigation.js';
+import { buildMediaUrl } from './utils/media.js';
+import { safeGetItem, safeSetItem, safeRemoveItem, setCachedItem, getCachedItem } from './utils/storage.js';
+const TagsContainer = React.memo(({ tags }) => {
   const [visibleCount, setVisibleCount] = useState(1);
   const containerRef = useRef(null);
-  useEffect(() => {
-    const updateVisibleCount = () => {
-      if (!containerRef.current || !tags.length) return;
-      const container = containerRef.current;
-      const containerWidth = container.offsetWidth;
-      if (containerWidth < 80) {
-        setVisibleCount(1);
-        return;
-      }
-      const measureElement = document.createElement('span');
-      measureElement.style.visibility = 'hidden';
-      measureElement.style.position = 'absolute';
-      measureElement.style.fontSize = '12px';
-      measureElement.style.fontWeight = '500';
-      measureElement.style.padding = '8px';
-      measureElement.style.whiteSpace = 'nowrap';
-      measureElement.style.borderRadius = '8px';
-      document.body.appendChild(measureElement);
-      measureElement.textContent = '+99';
-      const plusWidth = measureElement.offsetWidth;
-      const gap = 4;
-      let totalWidth = 0;
-      let maxTags = 1;
-      for (let i = 0; i < tags.length; i++) {
-        measureElement.textContent = tags[i];
-        const tagWidth = measureElement.offsetWidth;
-        const remainingTags = tags.length - i - 1;
-        const needsPlus = remainingTags > 0;
-        if (i === 0) {
-          totalWidth = tagWidth;
-          maxTags = 1;
+  
+  const updateVisibleCount = useCallback(() => {
+    if (!containerRef.current || !tags.length) return;
+    const container = containerRef.current;
+    const containerWidth = container.offsetWidth;
+    if (containerWidth < 80) {
+      setVisibleCount(1);
+      return;
+    }
+    const measureElement = document.createElement('span');
+    measureElement.style.visibility = 'hidden';
+    measureElement.style.position = 'absolute';
+    measureElement.style.fontSize = '12px';
+    measureElement.style.fontWeight = '500';
+    measureElement.style.padding = '8px';
+    measureElement.style.whiteSpace = 'nowrap';
+    measureElement.style.borderRadius = '8px';
+    document.body.appendChild(measureElement);
+    measureElement.textContent = '+99';
+    const plusWidth = measureElement.offsetWidth;
+    const gap = 4;
+    let totalWidth = 0;
+    let maxTags = 1;
+    for (let i = 0; i < tags.length; i++) {
+      measureElement.textContent = tags[i];
+      const tagWidth = measureElement.offsetWidth;
+      const remainingTags = tags.length - i - 1;
+      const needsPlus = remainingTags > 0;
+      if (i === 0) {
+        totalWidth = tagWidth;
+        maxTags = 1;
+      } else {
+        const nextWidth = totalWidth + gap + tagWidth + (needsPlus ? plusWidth + gap : 0);
+        if (nextWidth <= containerWidth) {
+          totalWidth += gap + tagWidth;
+          maxTags++;
         } else {
-          const nextWidth = totalWidth + gap + tagWidth + (needsPlus ? plusWidth + gap : 0);
-          if (nextWidth <= containerWidth) {
-            totalWidth += gap + tagWidth;
-            maxTags++;
-          } else {
-            break;
-          }
+          break;
         }
       }
-      document.body.removeChild(measureElement);
-      setVisibleCount(Math.max(1, maxTags));
-    };
+    }
+    document.body.removeChild(measureElement);
+    setVisibleCount(Math.max(1, maxTags));
+  }, [tags.length]);
+  
+  useEffect(() => {
     const timers = [
       setTimeout(updateVisibleCount, 0),
       setTimeout(updateVisibleCount, 50),
@@ -79,9 +85,11 @@ const TagsContainer = ({ tags }) => {
       clearTimeout(handleResize.timer);
       window.removeEventListener('resize', handleResize);
     };
-  }, [tags]);
-  const visibleTags = tags.slice(0, visibleCount);
-  const remainingCount = tags.length - visibleCount;
+  }, [updateVisibleCount]);
+  
+  const visibleTags = useMemo(() => tags.slice(0, visibleCount), [tags, visibleCount]);
+  const remainingCount = useMemo(() => tags.length - visibleCount, [tags.length, visibleCount]);
+  
   return (
     <div ref={containerRef} className="flex items-center gap-1 overflow-hidden">
       {visibleTags.map((tag, index) => (
@@ -101,17 +109,16 @@ const TagsContainer = ({ tags }) => {
       )}
     </div>
   );
-};
+});
 function AppContent() {
   const { loading, isAuthenticated, user, logout } = useAuth();
   
   const [darkMode, setDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('darkMode');
-    return savedTheme !== null ? JSON.parse(savedTheme) : true;
+    return getCachedItem('darkMode', true, 300000); // Кэш на 5 минут
   });
   const [activeTab, setActiveTab] = useState(() => {
     // Читаем сохраненный таб из localStorage или используем 'home'
-    return localStorage.getItem('activeTab') || 'home';
+    return safeGetItem('activeTab', 'home');
   });
   const [isBanned, setIsBanned] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -146,40 +153,32 @@ function AppContent() {
     }
   }, [isAuthenticated, user, loading]);
 
-  // Сохраняем activeTab в localStorage
+  // Объединенный useEffect для всех операций с activeTab
   useEffect(() => {
+    // Сохраняем activeTab в localStorage
     if (activeTab !== 'home') {
-      localStorage.setItem('activeTab', activeTab);
+      safeSetItem('activeTab', activeTab);
     } else {
-      localStorage.removeItem('activeTab');
+      safeRemoveItem('activeTab');
     }
-  }, [activeTab]);
-
-  // Автоматически открываем модальное окно поддержки если activeTab === 'support'
-  useEffect(() => {
+    
+    // Автоматически открываем модальные окна в зависимости от activeTab
     if (activeTab === 'support') {
       setIsSupportModalOpen(true);
-      // Сбрасываем таб чтобы не открывать снова
-      setActiveTab('home');
-    }
-  }, [activeTab]);
-
-  // Автоматически открываем модальное окно входа если activeTab === 'login'
-  useEffect(() => {
-    if (activeTab === 'login') {
+      setActiveTab('home'); // Сбрасываем чтобы не открывать снова
+    } else if (activeTab === 'login') {
       setIsLoginModalOpen(true);
-      // Сбрасываем таб чтобы не открывать снова
-      setActiveTab('home');
+      setActiveTab('home'); // Сбрасываем чтобы не открывать снова
     }
   }, [activeTab]);
 
   // Автоматически открываем модальное окно профиля если установлен флаг
   useEffect(() => {
-    const shouldOpenProfileModal = localStorage.getItem('openProfileModal');
-    if (shouldOpenProfileModal === 'true') {
+    const shouldOpenProfileModal = safeGetItem('openProfileModal', false);
+    if (shouldOpenProfileModal) {
       setIsProfileModalOpen(true);
       // Очищаем флаг после использования
-      localStorage.removeItem('openProfileModal');
+      safeRemoveItem('openProfileModal');
     }
   }, []);
 
@@ -188,7 +187,7 @@ function AppContent() {
     if (!isAuthenticated || !user) return; // Выходим если пользователь не авторизован или еще не загружен
     
     // Простая проверка - пользователь с ID 1 является админом
-    if (user.id === 1) {
+    if (user?.id === 1) {
       setIsAdmin(true);
     } else {
       setIsAdmin(false);
@@ -205,15 +204,19 @@ function AppContent() {
     if (userParam && tokenParam) {
       try {
         const user = JSON.parse(userParam);
-        localStorage.setItem('user', userParam);
-        localStorage.setItem('token', tokenParam);
+        safeSetItem('user', user);
+        safeSetItem('token', tokenParam);
         if (banEndDateParam) {
-          localStorage.setItem('banEndDate', banEndDateParam);
+          safeSetItem('banEndDate', banEndDateParam);
         }
         
         // Очищаем URL чтобы параметры не оставались в адресной строке
         window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Перезагружаем страницу для применения новых данных
+        window.location.reload();
       } catch (error) {
+        console.warn('Ошибка при обработке URL параметров:', error);
       }
     }
   }, []); 
@@ -255,7 +258,7 @@ function AppContent() {
   const forceRefreshMedia = async () => {
     // Принудительно обновляем медиа с сервера
     try {
-      const response = await fetch('http://localhost:8000/api/profile/update', {
+      const response = await fetch(API_ENDPOINTS.PROFILE_UPDATE, {
         method: 'GET',
         credentials: 'include'
       });
@@ -272,7 +275,7 @@ function AppContent() {
         }
       }
     } catch (error) {
-      console.error('Error force refreshing media:', error);
+      // Ошибка принудительного обновления медиа
     }
   };
 
@@ -281,7 +284,7 @@ function AppContent() {
       // Получаем медиа с сервера
       const fetchUserMedia = async () => {
         try {
-          const response = await fetch('http://localhost:8000/api/profile/update', {
+          const response = await fetch(API_ENDPOINTS.PROFILE_UPDATE, {
             method: 'GET',
             credentials: 'include'
           });
@@ -298,7 +301,7 @@ function AppContent() {
             }
           }
         } catch (error) {
-          console.error('Error fetching user media:', error);
+          // Ошибка загрузки медиа пользователя
         }
       };
       
@@ -350,7 +353,7 @@ function AppContent() {
     }
   }, [darkMode]);
   useEffect(() => {
-    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    setCachedItem('darkMode', darkMode);
   }, [darkMode]);
   useEffect(() => {
     const style = document.createElement('style');
@@ -390,7 +393,7 @@ function AppContent() {
     if (!user?.student_code) return;
     setScheduleLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/schedule', {
+      const response = await fetch(API_ENDPOINTS.SCHEDULE, {
         method: 'GET',
         credentials: 'include'
       });
@@ -400,10 +403,10 @@ function AppContent() {
           setUserSchedule(data.schedule);
         }
       } else {
-        console.error('Failed to load schedule');
+        // Ошибка загрузки расписания
       }
     } catch (error) {
-      console.error('Error loading schedule:', error);
+      // Ошибка загрузки расписания
     } finally {
       setScheduleLoading(false);
     }
@@ -548,14 +551,14 @@ function AppContent() {
       if (sortBy !== 'default') {
         params.set('sort', sortBy);
       }
-      const res = await fetch(`/api/literature?${params.toString()}`);
+      const res = await fetch(`${API_ENDPOINTS.LITERATURE}?${params.toString()}`);
       if (!res.ok) throw new Error('Ошибка запроса литературы');
       const data = await res.json();
       setLiteratureItems(data.items || []);
       setLiteratureTotal(data.total || 0);
       setLiteraturePage(data.page || page);
     } catch (e) {
-      console.error('fetchLiterature error', e);
+      // Ошибка загрузки литературы
       setLiteratureItems([]);
       setLiteratureTotal(0);
     } finally {
@@ -588,7 +591,7 @@ function AppContent() {
     if (isProfileModalOpen && isAuthenticated) {
       const fetchUserMedia = async () => {
         try {
-          const response = await fetch('http://localhost:8000/api/profile/update', {
+          const response = await fetch(API_ENDPOINTS.PROFILE_UPDATE, {
             method: 'GET',
             credentials: 'include'
           });
@@ -605,7 +608,7 @@ function AppContent() {
             }
           }
         } catch (error) {
-          console.error('Error fetching user media on profile open:', error);
+          // Ошибка загрузки медиа при открытии профиля
         }
       };
       
@@ -621,7 +624,7 @@ function AppContent() {
       if (search) params.set('search', search);
       if (sortBy !== 'date_desc') params.set('sort_by', sortBy);
       if (category !== 'all') params.set('category', category);
-      const response = await fetch(`/api/news?${params.toString()}`);
+      const response = await fetch(`${API_ENDPOINTS.NEWS}?${params.toString()}`);
       const data = await response.json();
       
       if (data.success) {
@@ -630,7 +633,7 @@ function AppContent() {
         setNewsPage(data.page || page);
       }
     } catch (error) {
-      console.error('Error loading news:', error);
+      // Ошибка загрузки новостей
     } finally {
       setNewsLoading(false);
     }
@@ -780,13 +783,13 @@ function AppContent() {
             </div>
           )}
           {activeTab === 'about' && (
-            <AboutPage darkMode={darkMode} />
+            <AboutPage darkMode={darkMode} setActiveTab={setActiveTab} />
           )}
           {activeTab === 'admin' && isAdmin && (
             <AdminPanel darkMode={darkMode} />
           )}
           {activeTab === '404' && (
-            <NotFoundPage />
+            <NotFoundPage setActiveTab={setActiveTab} />
           )}
           {activeTab === 'privacy' && (
             <PrivacyPolicy />
@@ -1980,7 +1983,7 @@ function AppContent() {
         <footer className="bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div className="text-center text-sm text-slate-500 dark:text-slate-400">
-              <p>© 2026 BentumWeb. Все права защищены.</p>
+              <p> 2026 BentumWeb. </p>
             </div>
           </div>
         </footer>
@@ -1993,7 +1996,7 @@ function AppContent() {
             <div className="relative h-32">
               {userMedia.banner_url ? (
                 <img 
-                  src={`http://localhost:8000${userMedia.banner_url}`}
+                  src={buildMediaUrl(userMedia.banner_url)}
                   alt="Profile Banner"
                   className="w-full h-full object-cover"
                 />
@@ -2009,7 +2012,7 @@ function AppContent() {
               <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2">
                 {userMedia.avatar_url ? (
                   <img 
-                    src={`http://localhost:8000${userMedia.avatar_url}`}
+                    src={buildMediaUrl(userMedia.avatar_url)}
                     alt="Profile Avatar"
                     className="w-32 h-32 rounded-2xl object-cover border-4 border-white dark:border-slate-800"
                   />
@@ -2103,11 +2106,7 @@ function AppContent() {
                 </div>
                 <button
                   onClick={() => {
-                    logout();
-                    setIsProfileModalOpen(false);
-                    setActiveTab('home');
-                    // Перезагружаем страницу чтобы применить изменения
-                    window.location.reload();
+                    safeLogout(logout, setActiveTab, setIsProfileModalOpen);
                   }}
                   className="w-full px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center justify-center gap-2 mt-8"
                 >

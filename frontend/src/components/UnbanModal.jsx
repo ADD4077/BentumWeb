@@ -12,7 +12,7 @@ const UnbanModal = ({ isOpen, onClose, user, onUnban, darkMode }) => {
       await onUnban(user.id);
       onClose();
     } catch (error) {
-      console.error('Unban error:', error);
+      // Ошибка разбана
     } finally {
       setLoading(false);
     }

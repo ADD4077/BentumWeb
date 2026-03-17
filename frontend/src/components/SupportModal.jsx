@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_ENDPOINTS } from '../config/api.js';
 import { X, Send, MessageCircle, AlertTriangle, Lightbulb, HelpCircle, Bug } from 'lucide-react';
 
 function SupportModal({ isOpen, onClose, darkMode, onSuccess }) {
@@ -26,7 +27,7 @@ function SupportModal({ isOpen, onClose, darkMode, onSuccess }) {
     setSubmitStatus(null);
     
     try {
-      const response = await fetch('http://localhost:8000/api/support/submit', {
+      const response = await fetch(API_ENDPOINTS.SUPPORT_SUBMIT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

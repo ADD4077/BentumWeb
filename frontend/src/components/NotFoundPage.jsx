@@ -1,9 +1,10 @@
 import React from 'react';
 import { Home, Search, RefreshCw } from 'lucide-react';
+import { navigateToHome } from '../utils/navigation.js';
 
-function NotFoundPage() {
+function NotFoundPage({ setActiveTab }) {
   const handleGoHome = () => {
-    window.location.href = '/';
+    navigateToHome(setActiveTab);
   };
 
   const handleRefresh = () => {
@@ -93,7 +94,14 @@ function NotFoundPage() {
               ].map((item) => (
                 <button
                   key={item.path}
-                  onClick={() => window.location.href = item.path}
+                  onClick={() => {
+                    if (setActiveTab) {
+                      if (item.path === '/schedule') setActiveTab('schedule');
+                      else if (item.path === '/literature') setActiveTab('literature');
+                      else if (item.path === '/games') setActiveTab('games');
+                      else if (item.path === '/profile') setActiveTab('profile');
+                    }
+                  }}
                   className="group p-4 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border-2 border-transparent hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-2xl transition-all duration-300 hover:scale-105"
                 >
                   <div className="text-2xl mb-2">{item.icon}</div>
@@ -109,7 +117,11 @@ function NotFoundPage() {
           <div className="text-center text-sm text-slate-500 dark:text-slate-400">
             <p>Если проблема повторяется, свяжитесь с нашей 
               <button 
-                onClick={() => window.location.href = '/support'}
+                onClick={() => {
+                    if (setActiveTab) {
+                      setActiveTab('support');
+                    }
+                  }}
                 className="text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
               >
                 службой поддержки

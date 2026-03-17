@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 function TeamCarousel({ teamMembers }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const intervalRef = useRef(null);
   const timeoutRef = useRef(null);
-  const startAutoPlay = () => {
+  const startAutoPlay = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
@@ -13,38 +13,43 @@ function TeamCarousel({ teamMembers }) {
         prevIndex === teamMembers.length - 1 ? 0 : prevIndex + 1
       );
     }, 4000);
-  };
-  const stopAutoPlay = () => {
+  }, [teamMembers.length]);
+  
+  const stopAutoPlay = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-  };
-  const resumeAutoPlay = () => {
+  }, []);
+  
+  const resumeAutoPlay = useCallback(() => {
     stopAutoPlay();
     timeoutRef.current = setTimeout(() => {
       setIsAutoPlaying(true);
       startAutoPlay();
     }, 8000);
-  };
-  const nextSlide = () => {
+  }, [stopAutoPlay, startAutoPlay]);
+  
+  const nextSlide = useCallback(() => {
     setCurrentIndex((prevIndex) => 
       prevIndex === teamMembers.length - 1 ? 0 : prevIndex + 1
     );
     resumeAutoPlay();
-  };
-  const prevSlide = () => {
+  }, [teamMembers.length, resumeAutoPlay]);
+  
+  const prevSlide = useCallback(() => {
     setCurrentIndex((prevIndex) => 
       prevIndex === 0 ? teamMembers.length - 1 : prevIndex - 1
     );
     resumeAutoPlay();
-  };
-  const goToSlide = (index) => {
+  }, [teamMembers.length, resumeAutoPlay]);
+  
+  const goToSlide = useCallback((index) => {
     setCurrentIndex(index);
     resumeAutoPlay();
-  };
+  }, [resumeAutoPlay]);
   useEffect(() => {
     if (isAutoPlaying && teamMembers.length > 1) {
       startAutoPlay();

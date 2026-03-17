@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { API_ENDPOINTS } from '../config/api.js';
 import { 
   Users, 
   Ban, 
@@ -19,9 +20,11 @@ import {
   UserPlus,
   Globe
 } from 'lucide-react';
+import { showWarning, showError, showSuccess } from '../utils/notifications.js';
 import BanModal from './BanModal.jsx';
 import BanSuccessModal from './BanSuccessModal.jsx';
 import UnbanModal from './UnbanModal.jsx';
+import AddUserModal from './AddUserModal.jsx';
 
 function AdminPanel({ darkMode }) {
   const [users, setUsers] = useState([]);
@@ -33,6 +36,7 @@ function AdminPanel({ darkMode }) {
   const [isBanModalOpen, setIsBanModalOpen] = useState(false);
   const [isBanSuccessModalOpen, setIsBanSuccessModalOpen] = useState(false);
   const [isUnbanModalOpen, setIsUnbanModalOpen] = useState(false);
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [banData, setBanData] = useState({ user: null, reason: '', duration: '7' });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [stats, setStats] = useState({
@@ -54,7 +58,16 @@ function AdminPanel({ darkMode }) {
     setIsRefreshing(true);
     try {
       // Загружаем пользователей из реальной базы данных
-      const response = await fetch('/api/admin/users');
+      const response = await fetch(API_ENDPOINTS.USERS, {
+        credentials: 'include'
+      });
+      
+      if (response.status === 401) {
+        // Пользователь не авторизован или не админ
+        setUsers([]);
+        return;
+      }
+      
       const data = await response.json();
       
       if (data.success) {
@@ -70,7 +83,6 @@ function AdminPanel({ darkMode }) {
         }
       }
     } catch (error) {
-      console.error('Error loading users:', error);
       // При ошибке используем localStorage
       const storedUsers = localStorage.getItem('admin_users');
       if (storedUsers) {
@@ -87,7 +99,23 @@ function AdminPanel({ darkMode }) {
   const loadStats = async () => {
     try {
       // Загружаем статистику из реальной базы данных
-      const response = await fetch('/api/admin/users/stats');
+      const response = await fetch(API_ENDPOINTS.USERS_STATS, {
+        credentials: 'include'
+      });
+      
+      if (response.status === 401) {
+        // Пользователь не авторизован или не админ
+        setStats({
+          totalUsers: 0,
+          bannedUsers: 0,
+          activeUsers: 0,
+          newUsersToday: 0,
+          newUsersThisWeek: 0,
+          newUsersThisMonth: 0
+        });
+        return;
+      }
+      
       const data = await response.json();
       
       if (data.success) {
@@ -105,8 +133,7 @@ function AdminPanel({ darkMode }) {
         setStats(mockStats);
       }
     } catch (error) {
-      console.error('Error loading stats:', error);
-      // При ошибке считаем из текущих пользователей
+      // При ошибке используем моковые данные
       const mockStats = {
         totalUsers: users.length,
         bannedUsers: users.filter(u => u.status === 'banned').length,
@@ -119,65 +146,41 @@ function AdminPanel({ darkMode }) {
     }
   };
 
-  const handleAddUser = async () => {
-    const faculties = ['ФИТР', 'МСФ', 'АТФ', 'ФТК', 'ЭФ', 'ТЭФ', 'ИИС'];
-    
-    const fullname = prompt('Введите ФИО нового пользователя:');
-    const student_code = prompt('Введите код студента (8 цифр):');
-    const faculty = prompt('Выберите факультет:\n' + faculties.join(', '));
-    
-    // Проверяем, что все поля заполнены
-    if (!fullname || !student_code || !faculty) {
-      alert('❌ Все поля обязательны для заполнения!');
-      return;
-    }
-    
-    // Проверяем формат кода студента
-    if (!/^\d{8}$/.test(student_code)) {
-      alert('❌ Код студента должен состоять из 8 цифр!');
-      return;
-    }
-    
-    // Проверяем факультет
-    if (!faculties.includes(faculty)) {
-      alert('❌ Некорректный факультет! Выберите из списка.');
-      return;
-    }
-    
+  const handleAddUser = async (userData) => {
     try {
       // Отправляем запрос на создание пользователя
-      const response = await fetch('/api/admin/users/create', {
+      const response = await fetch(API_ENDPOINTS.USERS_CREATE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          fullname,
-          student_code,
-          faculty
-        })
+        credentials: 'include',
+        body: JSON.stringify(userData)
       });
+      
+      if (response.status === 401) {
+        throw new Error('❌ У вас нет прав для добавления пользователей!');
+      }
       
       const data = await response.json();
       
       if (data.success) {
-        alert(`✅ Пользователь успешно добавлен!\n\n👤 ${fullname}\n🎓 ${student_code}\n🏫 ${faculty}`);
         // Обновляем список пользователей
         loadUsers();
         loadStats();
+        return data;
       } else {
-        alert(`❌ Ошибка при добавлении пользователя: ${data.detail}`);
+        throw new Error(data.detail || 'Ошибка при добавлении пользователя');
       }
     } catch (error) {
-      console.error('Error adding user:', error);
-      alert('❌ Произошла ошибка при добавлении пользователя');
+      throw error;
     }
   };
 
   const handleBanUser = (userId) => {
     const userToBan = users.find(u => u.id === userId);
     if (userToBan && (userToBan.id === 1 || userToBan.fullname?.includes('Admin'))) {
-      alert('❌ Нельзя забанить администратора!');
+      showWarning('❌ Нельзя забанить администратора!');
       return;
     }
     
@@ -189,17 +192,23 @@ function AdminPanel({ darkMode }) {
   const executeBan = async (userId, reason, duration) => {
     try {
       // Отправляем запрос на бан пользователя
-      const response = await fetch('/api/admin/users/ban', {
+      const response = await fetch(API_ENDPOINTS.USERS_BAN, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           user_id: userId,
           reason: reason,
           duration: duration
         })
       });
+      
+      if (response.status === 401) {
+        showError('❌ У вас нет прав для блокировки пользователей!');
+        return;
+      }
       
       const data = await response.json();
       
@@ -218,11 +227,10 @@ function AdminPanel({ darkMode }) {
         loadUsers();
         loadStats();
       } else {
-        alert(`❌ Ошибка при блокировке пользователя: ${data.detail}`);
+        showError(`❌ Ошибка при блокировке пользователя: ${data.detail}`);
       }
     } catch (error) {
-      console.error('Error banning user:', error);
-      alert('❌ Произошла ошибка при блокировке пользователя');
+      showError('❌ Произошла ошибка при блокировке пользователя');
     }
   };
 
@@ -235,15 +243,21 @@ function AdminPanel({ darkMode }) {
   const executeUnban = async (userId) => {
     try {
       // Отправляем запрос на разбан пользователя
-      const response = await fetch('/api/admin/users/unban', {
+      const response = await fetch(API_ENDPOINTS.USERS_UNBAN, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           user_id: userId
         })
       });
+      
+      if (response.status === 401) {
+        showError('❌ У вас нет прав для разблокировки пользователей!');
+        return;
+      }
       
       const data = await response.json();
       
@@ -252,14 +266,15 @@ function AdminPanel({ darkMode }) {
         setSelectedUser(null);
         setHighlightedUserId(userId);
         setTimeout(() => setHighlightedUserId(null), 3000);
+        showSuccess('✅ Пользователь успешно разблокирован!');
         // Обновляем список пользователей
         loadUsers();
         loadStats();
       } else {
-        console.error('Unban error:', data.detail);
+        showError(`❌ Ошибка при разблокировке пользователя: ${data.detail}`);
       }
     } catch (error) {
-      console.error('Error unbanning user:', error);
+      showError('❌ Произошла ошибка при разблокировке пользователя');
     }
   };
 
@@ -268,27 +283,29 @@ function AdminPanel({ darkMode }) {
     setIsProfileModalOpen(true);
   };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.fullname.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.student_code.includes(searchQuery);
-    
-    const matchesFilter = filterStatus === 'all' || 
-                          (filterStatus === 'active' && user.status === 'active') ||
-                          (filterStatus === 'banned' && user.status === 'banned');
-    
-    return matchesSearch && matchesFilter;
-  }).sort((a, b) => {
-    switch (sortBy) {
-      case 'newest':
-        return new Date(b.registration_date) - new Date(a.registration_date);
-      case 'oldest':
-        return new Date(a.registration_date) - new Date(b.registration_date);
-      case 'name':
-        return a.fullname.localeCompare(b.fullname);
-      default:
-        return 0;
-    }
-  });
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      const matchesSearch = user.fullname.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           user.student_code.includes(searchQuery);
+      
+      const matchesFilter = filterStatus === 'all' || 
+                            (filterStatus === 'active' && user.status === 'active') ||
+                            (filterStatus === 'banned' && user.status === 'banned');
+      
+      return matchesSearch && matchesFilter;
+    }).sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.registration_date) - new Date(a.registration_date);
+        case 'oldest':
+          return new Date(a.registration_date) - new Date(b.registration_date);
+        case 'name':
+          return a.fullname.localeCompare(b.fullname);
+        default:
+          return 0;
+      }
+    });
+  }, [users, searchQuery, filterStatus, sortBy]);
 
   const getStatusColor = (status) => {
     return status === 'active' 
@@ -325,7 +342,7 @@ function AdminPanel({ darkMode }) {
                 </span>
               </button>
               <button
-                onClick={handleAddUser}
+                onClick={() => setIsAddUserModalOpen(true)}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-colors"
               >
                 <UserPlus className="w-4 h-4" />
@@ -844,6 +861,16 @@ function AdminPanel({ darkMode }) {
           }}
           user={selectedUser}
           onUnban={executeUnban}
+          darkMode={darkMode}
+        />
+      )}
+
+      {/* Модальное окно добавления пользователя */}
+      {isAddUserModalOpen && (
+        <AddUserModal
+          isOpen={isAddUserModalOpen}
+          onClose={() => setIsAddUserModalOpen(false)}
+          onAddUser={handleAddUser}
           darkMode={darkMode}
         />
       )}

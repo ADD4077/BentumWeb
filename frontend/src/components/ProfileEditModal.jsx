@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_ENDPOINTS } from '../config/api.js';
 import { X, Save, Upload, Camera, User, AlertTriangle } from 'lucide-react';
 
 const ProfileEditModal = ({ isOpen, onClose, user, onSave, onForceRefresh, darkMode }) => {
@@ -16,7 +17,7 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, onForceRefresh, darkM
   useEffect(() => {
     const fetchBanInfo = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/ban/info', {
+        const response = await fetch(API_ENDPOINTS.BAN_INFO, {
           method: 'GET',
           credentials: 'include',
         });
@@ -31,7 +32,6 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, onForceRefresh, darkM
           }
         }
       } catch (err) {
-        console.error('Error fetching ban info:', err);
         setBanInfo(null);
       } finally {
         setLoadingBanInfo(false);
@@ -83,7 +83,7 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, onForceRefresh, darkM
       }
 
       // Сохранение медиа данных
-      const response = await fetch('http://localhost:8000/api/profile/update', {
+      const response = await fetch(API_ENDPOINTS.PROFILE_UPDATE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,7 +97,7 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, onForceRefresh, darkM
       if (result.success) {
         // После успешного сохранения запрашиваем актуальные данные с сервера
         try {
-          const profileResponse = await fetch('http://localhost:8000/api/profile/update', {
+          const profileResponse = await fetch(API_ENDPOINTS.PROFILE_UPDATE, {
             method: 'GET',
             credentials: 'include',
           });
@@ -122,7 +122,6 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, onForceRefresh, darkM
             onClose();
           }
         } catch (error) {
-          console.error('Error fetching updated profile:', error);
           // Если не удалось получить обновленные данные, используем старые
           onSave?.(result.user);
           onForceRefresh?.();
@@ -132,7 +131,6 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, onForceRefresh, darkM
         setErrors({ general: result.detail || 'Ошибка сохранения профиля' });
       }
     } catch (error) {
-      console.error('Profile update error:', error);
       setErrors({ general: 'Ошибка при сохранении профиля' });
     } finally {
       setLoading(false);
@@ -145,7 +143,7 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, onForceRefresh, darkM
     formData.append('media_type', mediaType);
 
     try {
-      const response = await fetch('http://localhost:8000/api/media/upload', {
+      const response = await fetch(API_ENDPOINTS.MEDIA_UPLOAD, {
         method: 'POST',
         body: formData,
         credentials: 'include',
@@ -154,7 +152,6 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, onForceRefresh, darkM
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error('Media upload error:', error);
       return { success: false, detail: 'Ошибка сети при загрузке файла' };
     }
   };

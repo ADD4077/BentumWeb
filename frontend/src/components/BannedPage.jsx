@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { API_ENDPOINTS } from '../config/api.js';
+import { navigateToHome, navigateToSupport } from '../utils/navigation.js';
 import { AlertTriangle, Clock, Mail, Shield, X, RefreshCw, Home, User } from 'lucide-react';
 
 function BannedPage() {
@@ -9,7 +11,7 @@ function BannedPage() {
   useEffect(() => {
     const fetchBanInfo = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/ban/info', {
+        const response = await fetch(API_ENDPOINTS.BAN_INFO, {
           method: 'GET',
           credentials: 'include',
         });
@@ -26,7 +28,6 @@ function BannedPage() {
         }
       } catch (err) {
         setError('Ошибка загрузки данных');
-        console.error('Error fetching ban info:', err);
       } finally {
         setLoading(false);
       }
@@ -37,25 +38,21 @@ function BannedPage() {
 
   const handleGoHome = () => {
     // Очищаем статус бана и переходим на главную
-    localStorage.removeItem('user');
     localStorage.removeItem('token');
     localStorage.removeItem('banEndDate');
-    window.location.hash = '#home';
-    window.location.reload();
+    navigateToHome();
   };
 
   const handleContactSupport = () => {
-    // Устанавливаем таб для поддержки и перезагружаем
-    localStorage.setItem('activeTab', 'support');
-    window.location.hash = '#support';
-    window.location.reload();
+    navigateToSupport();
   };
 
   const handleLogout = () => {
     // Открываем модальное окно профиля поверх страницы бана
     // Пользователь может посмотреть свою информацию, но не может редактировать
     localStorage.setItem('openProfileModal', 'true');
-    window.location.reload();
+    // Просто обновляем состояние для открытия модального окна
+    window.dispatchEvent(new Event('storage'));
   };
 
   return (

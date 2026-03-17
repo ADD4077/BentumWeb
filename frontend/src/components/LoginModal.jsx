@@ -19,10 +19,8 @@ function LoginModal({ isOpen, onClose, onInstructionOpen }) {
     }
     if (!password) {
       newErrors.password = 'Это поле обязательно';
-    } else if (!/^\d+$/.test(password)) {
-      newErrors.password = 'Некорректные данные';
-    } else if (password.length !== 7) {
-      newErrors.password = 'Не менее 7 цифр';
+    } else if (password.length < 7) {
+      newErrors.password = 'Минимум 7 символов';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -39,8 +37,7 @@ function LoginModal({ isOpen, onClose, onInstructionOpen }) {
           setErrors({ general: result.error });
         }
       } catch (error) {
-        console.error('Login error:', error);
-        setErrors({ general: 'Ошибка соединения с сервером' });
+      setErrors({ general: 'Ошибка соединения с сервером' });
       } finally {
         setIsLoading(false);
       }
@@ -110,8 +107,7 @@ function LoginModal({ isOpen, onClose, onInstructionOpen }) {
                   ? 'border-red-500 focus:ring-red-500' 
                   : 'border-gray-200 dark:border-slate-700'
               }`}
-              placeholder="••••••••"
-              maxLength={7}
+              placeholder="Минимум 7 символов"
             />
             {errors.password && (
               <p className="text-red-500 text-sm mt-2 ml-1">{errors.password}</p>

@@ -1,15 +1,21 @@
-const API_BASE_URL = 'http://localhost:8000';
+import { API_ENDPOINTS } from '../config/api.js';
+
 export const api = {
   async saveData(userData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/save_data`, {
+      const response = await fetch(API_ENDPOINTS.SAVE_DATA, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify(userData),
+        credentials: 'include',
       });
+      if (!response.ok) {
+        const error = new Error(`HTTP error! status: ${response.status}`);
+        error.response = { status: response.status };
+        throw error;
+      }
       let data;
       try {
         data = await response.json();
@@ -22,13 +28,12 @@ export const api = {
         ...(data || {}),
       };
     } catch (error) {
-      console.error('Error saving data:', error);
       throw error;
     }
   },
   async getDashboard() {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/dashboard`, {
+      const response = await fetch(API_ENDPOINTS.DASHBOARD, {
         method: 'GET',
         credentials: 'include',
       });
@@ -39,13 +44,12 @@ export const api = {
       }
       return await response.json();
     } catch (error) {
-      console.error('Error getting dashboard:', error);
       throw error;
     }
   },
   async logout() {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/logout`, {
+      const response = await fetch(API_ENDPOINTS.LOGOUT, {
         method: 'POST',
         credentials: 'include',
       });
@@ -56,19 +60,18 @@ export const api = {
       }
       return await response.json();
     } catch (error) {
-      console.error('Error logging out:', error);
       throw error;
     }
   },
   async saveTheme(theme) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/theme`, {
+      const response = await fetch(API_ENDPOINTS.THEME, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify({ theme }),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = new Error(`HTTP error! status: ${response.status}`);
@@ -77,7 +80,6 @@ export const api = {
       }
       return await response.json();
     } catch (error) {
-      console.error('Error saving theme:', error);
       throw error;
     }
   },

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../services/api.js';
+import { safeGetUserData, safeSetUserData, safeRemoveItem } from '../utils/storage.js';
 const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -19,8 +20,8 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
         // Добавляем ID из localStorage если его нет в ответе API
         const userData = data.user || {};
-        const localStorageUser = JSON.parse(localStorage.getItem('user') || '{}');
-        if (!userData.id && localStorageUser.id) {
+        const localStorageUser = safeGetUserData();
+        if (!userData.id && localStorageUser?.id) {
           userData.id = localStorageUser.id;
         }
         setUser(userData);
@@ -30,7 +31,6 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(false);
         setUser(null);
       } else {
-        console.error('Auth check error:', error);
         setIsAuthenticated(false);
         setUser(null);
       }
@@ -47,6 +47,8 @@ export const AuthProvider = ({ children }) => {
       if (data.success) {
         setIsAuthenticated(true);
         setUser(data.user);
+        // Безопасно сохраняем данные пользователя
+        safeSetUserData(data.user);
         return { success: true };
       } else {
         return { success: false, error: data.detail || 'Ошибка входа' };
@@ -59,22 +61,22 @@ export const AuthProvider = ({ children }) => {
     try {
       await api.logout();
     } catch (error) {
-      console.error('Logout error:', error);
+      // Всегда очищаем данные локально при ошибке
     } finally {
       // Всегда очищаем данные локально
       setIsAuthenticated(false);
       setUser(null);
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('banEndDate');
-      localStorage.removeItem('activeTab');
+      safeRemoveItem('token');
+      safeRemoveItem('user');
+      safeRemoveItem('banEndDate');
+      safeRemoveItem('activeTab');
     }
   };
   const saveTheme = async (theme) => {
     try {
       await api.saveTheme(theme);
     } catch (error) {
-      console.error('Save theme error:', error);
+      // Ошибка сохранения темы не критична
     }
   };
   return (

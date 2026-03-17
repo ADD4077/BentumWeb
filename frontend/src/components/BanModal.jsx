@@ -29,7 +29,6 @@ const BanModal = ({ isOpen, onClose, user, onBan, darkMode }) => {
       await onBan(user.id, reason.trim(), parseInt(duration));
       onClose();
     } catch (error) {
-      console.error('Error banning user:', error);
       setErrors({ general: 'Ошибка при блокировке пользователя' });
     } finally {
       setLoading(false);
