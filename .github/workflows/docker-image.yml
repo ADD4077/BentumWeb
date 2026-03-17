@@ -12,7 +12,7 @@ jobs:
       contents: read
       packages: write
       id-token: write # Нужно для аттестации 
-      strategy: 
+    strategy: 
       matrix:
         include:
           - image: ghcr.io/${{ github.repository }}-frontend
