@@ -1,10 +1,21 @@
-import React from 'react';
-import { Home, Search, RefreshCw } from 'lucide-react';
+import React, { useState } from 'react';
+import { Home, Search, RefreshCw, ArrowRight } from 'lucide-react';
 import { navigateToHome } from '../utils/navigation.js';
 
 function NotFoundPage({ setActiveTab }) {
+  const [isNavigating, setIsNavigating] = useState(false);
+
   const handleGoHome = () => {
-    navigateToHome(setActiveTab);
+    setIsNavigating(true);
+    setTimeout(() => {
+      // Пробуем сначала использовать setActiveTab
+      if (setActiveTab) {
+        navigateToHome(setActiveTab);
+      } else {
+        // Fallback - прямая навигация
+        window.location.href = '/';
+      }
+    }, 200);
   };
 
   const handleRefresh = () => {
@@ -48,10 +59,21 @@ function NotFoundPage({ setActiveTab }) {
           <div className="flex flex-col gap-4 justify-center items-center">
             <button
               onClick={handleGoHome}
-              className="px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center gap-3"
+              disabled={isNavigating}
+              className="px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
             >
-              <Home className="w-5 h-5" />
-              <span>На главную</span>
+              {isNavigating ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Переход...</span>
+                </>
+              ) : (
+                <>
+                  <Home className="w-5 h-5" />
+                  <span>На главную</span>
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
             </button>
 
             <button
@@ -115,7 +137,7 @@ function NotFoundPage({ setActiveTab }) {
 
           {/* Поддержка */}
           <div className="text-center text-sm text-slate-500 dark:text-slate-400">
-            <p>Если проблема повторяется, свяжитесь с нашей 
+            <p>Если проблема повторяется, свяжитесь с нашей  
               <button 
                 onClick={() => {
                     if (setActiveTab) {
@@ -124,7 +146,7 @@ function NotFoundPage({ setActiveTab }) {
                   }}
                 className="text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
               >
-                службой поддержки
+                &nbsp;службой поддержки
               </button>
             </p>
           </div>

@@ -20,7 +20,7 @@ import { API_ENDPOINTS } from './config/api.js';
 import { safeLogout } from './utils/navigation.js';
 import { buildMediaUrl } from './utils/media.js';
 import { safeGetItem, safeSetItem, safeRemoveItem, setCachedItem, getCachedItem } from './utils/storage.js';
-const TagsContainer = React.memo(({ tags }) => {
+const TagsContainer = React.memo(({ tags, onTagClick }) => {
   const [visibleCount, setVisibleCount] = useState(1);
   const containerRef = useRef(null);
   
@@ -80,25 +80,28 @@ const TagsContainer = React.memo(({ tags }) => {
       handleResize.timer = setTimeout(updateVisibleCount, 100);
     };
     window.addEventListener('resize', handleResize);
+    
     return () => {
       timers.forEach(timer => clearTimeout(timer));
-      clearTimeout(handleResize.timer);
       window.removeEventListener('resize', handleResize);
+      clearTimeout(handleResize.timer);
     };
   }, [updateVisibleCount]);
   
   const visibleTags = useMemo(() => tags.slice(0, visibleCount), [tags, visibleCount]);
   const remainingCount = useMemo(() => tags.length - visibleCount, [tags.length, visibleCount]);
-  
+
   return (
     <div ref={containerRef} className="flex items-center gap-1 overflow-hidden sm:overflow-x-auto">
       {visibleTags.map((tag, index) => (
-        <span 
+        <button
           key={`${tag}-${index}-${visibleCount}`}
-          className="inline-block px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-lg whitespace-nowrap flex-shrink-0"
+          onClick={() => onTagClick && onTagClick(tag)}
+          className="inline-block px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-lg whitespace-nowrap flex-shrink-0 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors cursor-pointer"
+          title={`Фильтровать по тегу: ${tag}`}
         >
-          {tag}
-        </span>
+          #{tag}
+        </button>
       ))}
       {remainingCount > 0 && (
         <span 
@@ -110,6 +113,7 @@ const TagsContainer = React.memo(({ tags }) => {
     </div>
   );
 });
+
 function AppContent() {
   const { loading, isAuthenticated, user, logout } = useAuth();
   
@@ -673,7 +677,17 @@ function AppContent() {
     let formatted = date.toLocaleDateString('ru-RU', options);
     return formatted.replace(' г. в', '');
   };
-  const renderTags = (tags = []) => {
+  // Обработчик клика по тегам в новостях
+  const handleNewsTagClick = (tag) => {
+    // Устанавливаем поисковый запрос в тег
+    setSearchQuery(tag);
+    // Переключаемся на вкладку новостей если не там
+    if (activeTab !== 'news') {
+      setActiveTab('news');
+    }
+  };
+
+  const renderTags = (tags = [], onTagClick) => {
     if (!tags || tags.length === 0) return null;
     const cleanTags = tags.map(tag => {
       if (typeof tag === 'string') {
@@ -681,7 +695,7 @@ function AppContent() {
       }
       return tag;
     });
-    return <TagsContainer tags={cleanTags} />;
+    return <TagsContainer tags={cleanTags} onTagClick={onTagClick} />;
   };
   return (
     <div className={`${darkMode ? 'dark' : ''} min-h-screen flex flex-col font-sans selection:bg-emerald-500 selection:text-white`}>
@@ -792,7 +806,7 @@ function AppContent() {
             <NotFoundPage setActiveTab={setActiveTab} />
           )}
           {activeTab === 'privacy' && (
-            <PrivacyPolicy />
+            <PrivacyPolicy setActiveTab={setActiveTab} />
           )}
           {activeTab === 'schedule' && (
             <div className="max-w-4xl mx-auto">
@@ -1465,7 +1479,7 @@ function AppContent() {
                   </button>
                 ))}
               </div>
-              {newsPage === 1 && filteredNews.length > 0 && !newsSearchQuery && (
+              {newsPage === 1 && filteredNews.length > 0 && !newsSearchQuery && selectedNewsCategory === 'all' && (
                 <div className="mb-12">
                   <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">Последние новости</h3>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1564,7 +1578,7 @@ function AppContent() {
                           </p>
                           <div className="flex items-center justify-between text-sm mt-auto">
                             <div className="flex-1 mr-3 min-w-0">
-                              {renderTags(item.tags)}
+                              {renderTags(item.tags, handleNewsTagClick)}
                             </div>
                             <button className="flex items-center gap-2 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg flex-shrink-0">
                               Читать

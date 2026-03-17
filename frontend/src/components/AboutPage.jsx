@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_ENDPOINTS } from '../config/api.js';
-import { Star, GraduationCap, Users, MessageCircle } from 'lucide-react';
+import { Star, GraduationCap, Users, MessageCircle, Shield, ArrowRight } from 'lucide-react';
 
 function AboutPage({ darkMode, setActiveTab }) {
   const [stats, setStats] = useState({
@@ -205,10 +205,15 @@ function AboutPage({ darkMode, setActiveTab }) {
       <div className="text-center mt-12">
         <button 
           onClick={() => setActiveTab('privacy')}
-          className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 underline transition-colors"
+          className="group inline-flex items-center gap-2 px-6 py-3 bg-emerald-100 dark:bg-emerald-900/20 hover:bg-emerald-200 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 rounded-2xl font-medium transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border border-emerald-200 dark:border-emerald-700"
         >
-          Политика конфиденциальности
+          <Shield className="w-5 h-5" />
+          <span>Политика конфиденциальности</span>
+          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
         </button>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+          Узнайте, как мы защищаем ваши данные
+        </p>
       </div>
         
     </div>

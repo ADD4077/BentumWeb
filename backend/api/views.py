@@ -563,6 +563,10 @@ def get_literature(request):
 
     search = (request.GET.get('search') or '').strip().lower()
     category = (request.GET.get('category') or '').strip()
+    categories = request.GET.getlist('category')
+    
+    # Логирование для отладки
+    print(f"Literature search: '{search}', categories: {categories}")
 
     try:
         db_path = os.path.join(settings.BASE_DIR, 'books', 'literature.db')
@@ -576,31 +580,25 @@ def get_literature(request):
         where_conditions = []
         params = []
 
-        categories = request.GET.getlist('category')
         if categories and 'all' not in categories:
-            # Получаем все категории из базы данных
-            cursor.execute("SELECT DISTINCT category FROM literature WHERE category IS NOT NULL AND category != ''")
-            all_db_categories = [row[0] for row in cursor.fetchall()]
-            
-            # Находим категории, которые есть в базе но нет в запросе
-            missing_categories = [cat for cat in all_db_categories if cat not in categories]
-            
-            if missing_categories:
-                # Если есть недостающие категории, показываем все записи
-                # ИЛИ можно показывать только записи с выбранными категориями + записи с отсутствующими категориями
-                placeholders = ','.join(['?' for _ in categories + missing_categories])
-                where_conditions.append(f"category IN ({placeholders})")
-                params.extend(categories + missing_categories)
-            else:
-                # Если все категории покрыты, используем стандартный фильтр
-                placeholders = ','.join(['?' for _ in categories])
-                where_conditions.append(f"category IN ({placeholders})")
-                params.extend(categories)
+            # Фильтрация по нескольким категориям
+            placeholders = ','.join(['?' for _ in categories])
+            where_conditions.append(f"category IN ({placeholders})")
+            params.extend(categories)
 
         if search:
-            where_conditions.append("(LOWER(title) LIKE ? OR LOWER(authors) LIKE ? OR LOWER(description) LIKE ?)")
-            search_param = f"%{search}%"
-            params.extend([search_param, search_param, search_param])
+            # Мощный поиск по названию, авторам и описанию (без учета регистра)
+            search_terms = search.strip().split()
+            search_conditions = []
+            
+            for term in search_terms:
+                if term:  # Пропускаем пустые термины
+                    term_pattern = f"%{term}%"
+                    search_conditions.append("(LOWER(title) LIKE ? OR LOWER(authors) LIKE ? OR LOWER(description) LIKE ?)")
+                    params.extend([term_pattern, term_pattern, term_pattern])
+            
+            if search_conditions:
+                where_conditions.append("(" + " OR ".join(search_conditions) + ")")
 
         where_clause = ""
         if where_conditions:
@@ -740,9 +738,12 @@ def get_news(request):
     except ValueError:
         return JsonResponse({"detail": "Некорректные параметры пагинации"}, status=400)
 
-    search = (request.GET.get('search') or '').strip().lower()
+    search = (request.GET.get('search') or '').strip()
     category = (request.GET.get('category') or '').strip()
     sort_by = (request.GET.get('sort_by') or 'date_desc').strip()
+    
+    # Логирование для отладки
+    print(f"News search: '{search}', category: '{category}', sort_by: '{sort_by}'")
 
     try:
         db_path = os.path.join(settings.BASE_DIR, 'news', 'times_news.db')
@@ -775,9 +776,18 @@ def get_news(request):
                 params.append('%Спорт%')
 
         if search:
-            where_conditions.append("(LOWER(title) LIKE ? OR LOWER(summary) LIKE ?)")
-            search_param = f"%{search}%"
-            params.extend([search_param, search_param])
+            # Мощный поиск по названию, краткому описанию и тегам (без учета регистра)
+            search_terms = search.strip().split()
+            search_conditions = []
+            
+            for term in search_terms:
+                if term:  # Пропускаем пустые термины
+                    term_pattern = f"%{term}%"
+                    search_conditions.append("(LOWER(title) LIKE ? OR LOWER(summary) LIKE ? OR LOWER(tags) LIKE ?)")
+                    params.extend([term_pattern, term_pattern, term_pattern])
+            
+            if search_conditions:
+                where_conditions.append("(" + " OR ".join(search_conditions) + ")")
 
         where_clause = ""
         if where_conditions:

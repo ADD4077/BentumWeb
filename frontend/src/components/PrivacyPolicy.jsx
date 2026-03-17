@@ -1,10 +1,30 @@
-import React from 'react';
-import { Shield, Eye, Lock, Database, Mail, Globe, User, Calendar, AlertTriangle } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Shield, Eye, Lock, Database, Mail, Globe, User, Calendar, AlertTriangle, ArrowLeft } from 'lucide-react';
 
-function PrivacyPolicy() {
+function PrivacyPolicy({ setActiveTab }) {
+  const handleGoBack = () => {
+    // Возвращаем на страницу "О проекте"
+    if (setActiveTab) {
+      setActiveTab('about');
+    }
+  };
+
+  // Автоматическая прокрутка к началу страницы при монтировании
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-teal-50 dark:from-slate-900 dark:via-emerald-900/20 dark:to-teal-900/20">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Кнопка назад */}
+        <button
+          onClick={handleGoBack}
+          className="mb-6 inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-lg font-medium transition-all duration-200 hover:shadow-md border border-gray-200 dark:border-slate-700"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Назад</span>
+        </button>
+        
         {/* Заголовок */}
         <div className="text-center mb-12">
           <div className="flex justify-center mb-4">
@@ -415,8 +435,7 @@ function PrivacyPolicy() {
         {/* Футер */}
         <div className="mt-12 text-center text-slate-600 dark:text-slate-400">
           <p className="text-sm">
-            Эта политика конфиденциальности действует с {new Date().toLocaleDateString('ru-RU')} 
-            и применяется ко всем пользователям платформы BentumWeb.
+            Эта политика конфиденциальности действует с {new Date().toLocaleDateString('ru-RU')} и применяется ко всем пользователям платформы BentumWeb.
           </p>
         </div>
       </div>

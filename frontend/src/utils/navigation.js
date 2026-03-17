@@ -22,7 +22,18 @@ export const navigateTo = (path, setActiveTab) => {
  * @param {Function} setActiveTab - функция для установки активной вкладки
  */
 export const navigateToHome = (setActiveTab) => {
-  navigateTo('home', setActiveTab);
+  // Обновляем активную вкладку
+  if (setActiveTab) {
+    setActiveTab('home');
+  }
+  
+  // Обновляем URL без перезагрузки
+  window.history.pushState({}, '', '/');
+  
+  // Дополнительно очищаем hash если есть
+  if (window.location.hash) {
+    window.history.replaceState({}, '', window.location.pathname);
+  }
 };
 
 /**
