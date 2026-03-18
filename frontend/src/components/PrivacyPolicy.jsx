@@ -14,7 +14,7 @@ function PrivacyPolicy({ setActiveTab }) {
     window.scrollTo(0, 0);
   }, []);
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-teal-50 dark:from-slate-900 dark:via-emerald-900/20 dark:to-teal-900/20">
+    <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Кнопка назад */}
         <button
@@ -54,7 +54,7 @@ function PrivacyPolicy({ setActiveTab }) {
             </h2>
             <div className="space-y-4 text-slate-700 dark:text-slate-300 leading-relaxed">
               <p>
-                Добро пожаловать в образовательную платформу BentumWeb! Мы ценим вашу конфиденциальность 
+                Добро пожаловать в образовательную платформу Bentum! Мы ценим вашу конфиденциальность 
                 и стремимся защитить ваши личные данные. Эта политика конфиденциальности объясняет, 
                 какие данные мы собираем, как мы их используем и защищаем.
               </p>
@@ -85,7 +85,7 @@ function PrivacyPolicy({ setActiveTab }) {
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-emerald-600 dark:text-emerald-400 mt-1">•</span>
-                      <span>Студенческий код/ID</span>
+                      <span>Студенческий код</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-emerald-600 dark:text-emerald-400 mt-1">•</span>
@@ -93,7 +93,7 @@ function PrivacyPolicy({ setActiveTab }) {
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-emerald-600 dark:text-emerald-400 mt-1">•</span>
-                      <span>Email адрес (для уведомлений)</span>
+                      <span>Telegram ID (для уведомлений)</span>
                     </li>
                   </ul>
                 </div>
@@ -253,7 +253,7 @@ function PrivacyPolicy({ setActiveTab }) {
                 </div>
                 <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                   <h4 className="font-semibold text-slate-900 dark:text-white mb-2">Функциональные cookies:</h4>
-                  <p className="text-sm">Запоминают ваши предпочтения и настройки (тема, язык, раскладка).</p>
+                  <p className="text-sm">Запоминают ваши предпочтения и настройки (тема, язык).</p>
                 </div>
                 <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
                   <h4 className="font-semibold text-slate-900 dark:text-white mb-2">Аналитические cookies:</h4>
@@ -275,20 +275,12 @@ function PrivacyPolicy({ setActiveTab }) {
               </p>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
-                  <h4 className="font-semibold text-slate-900 dark:text-white mb-2">Право доступа:</h4>
-                  <p className="text-sm">Запрашивать копию ваших данных, которые мы храним.</p>
-                </div>
-                <div className="p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
                   <h4 className="font-semibold text-slate-900 dark:text-white mb-2">Право исправления:</h4>
                   <p className="text-sm">Запрашивать исправление неточных или неполных данных.</p>
                 </div>
                 <div className="p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
                   <h4 className="font-semibold text-slate-900 dark:text-white mb-2">Право удаления:</h4>
                   <p className="text-sm">Запрашивать удаление ваших персональных данных.</p>
-                </div>
-                <div className="p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
-                  <h4 className="font-semibold text-slate-900 dark:text-white mb-2">Право на перенос:</h4>
-                  <p className="text-sm">Запрашивать передачу данных другому сервису.</p>
                 </div>
               </div>
             </div>
@@ -316,10 +308,6 @@ function PrivacyPolicy({ setActiveTab }) {
                 <li className="flex items-start gap-2">
                   <span className="text-emerald-600 dark:text-emerald-400 mt-1">•</span>
                   <span>Техническим партнерам для обеспечения работы сервиса</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-600 dark:text-emerald-400 mt-1">•</span>
-                  <span>При передаче бизнеса или его части</span>
                 </li>
               </ul>
             </div>
@@ -374,21 +362,6 @@ function PrivacyPolicy({ setActiveTab }) {
             </div>
           </section>
 
-          {/* Международные передачи */}
-          <section className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-slate-700">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-3">
-              <Globe className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-              Международные передачи данных
-            </h2>
-            <div className="space-y-4 text-slate-700 dark:text-slate-300">
-              <p>
-                Ваши данные хранятся на серверах, расположенных на территории Российской Федерации. 
-                Мы не передаем ваши данные за пределы РФ, если это не требуется для технического 
-                обеспечения сервиса или по вашему запросу.
-              </p>
-            </div>
-          </section>
-
           {/* Контакты */}
           <section className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-slate-700">
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-3">
@@ -402,12 +375,8 @@ function PrivacyPolicy({ setActiveTab }) {
               </p>
               <div className="space-y-2">
                 <p className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <span>Email: privacy@bentumweb.ru</span>
-                </p>
-                <p className="flex items-center gap-2">
                   <Globe className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <span>Сайт: www.bentumweb.ru</span>
+                  <span>Telegram: @Amfisak</span>
                 </p>
               </div>
             </div>
@@ -435,7 +404,7 @@ function PrivacyPolicy({ setActiveTab }) {
         {/* Футер */}
         <div className="mt-12 text-center text-slate-600 dark:text-slate-400">
           <p className="text-sm">
-            Эта политика конфиденциальности действует с {new Date().toLocaleDateString('ru-RU')} и применяется ко всем пользователям платформы BentumWeb.
+            Эта политика конфиденциальности действует с {new Date().toLocaleDateString('ru-RU')} и применяется ко всем пользователям платформы Bentum.
           </p>
         </div>
       </div>

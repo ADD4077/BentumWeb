@@ -1479,7 +1479,7 @@ function AppContent() {
                   </button>
                 ))}
               </div>
-              {newsPage === 1 && filteredNews.length > 0 && !newsSearchQuery && selectedNewsCategory === 'all' && (
+              {newsPage === 1 && filteredNews.length > 0 && !newsSearchQuery && selectedNewsCategory === 'all' && newsSortBy === 'date_desc' && (
                 <div className="mb-12">
                   <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">Последние новости</h3>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

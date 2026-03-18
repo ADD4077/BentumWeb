@@ -5,10 +5,14 @@ from PIL import Image, ImageOps
 from django.core.files.base import ContentFile
 from django.conf import settings
 from django.core.files.storage import default_storage
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Вспомогательная функция для получения времени в UNIX формате
+def get_unix_timestamp():
+    return int(datetime.now().timestamp())
 
 from .models import User, UserProfileMedia, MediaOptimization
 
@@ -284,7 +288,7 @@ class MediaStorage:
     @staticmethod
     def cleanup_all_old_media():
         """Очистка старых неиспользуемых медиа"""
-        cutoff_date = datetime.now() - timedelta(days=30)
+        cutoff_date = get_unix_timestamp() - (30 * 24 * 60 * 60)  # 30 дней в секундах
         
         # Находим старые неактивные медиа
         old_media = UserProfileMedia.objects.filter(

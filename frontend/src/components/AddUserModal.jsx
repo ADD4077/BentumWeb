@@ -7,7 +7,6 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
     last_name: '',
     student_code: '',
     faculty: '',
-    group: '',
     registration_date: new Date().toISOString().split('T')[0],
     password: '',
     confirm_password: ''
@@ -17,16 +16,23 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
   const [isLoading, setIsLoading] = useState(false);
 
   const faculties = [
-    'ИТиУ',
-    'ФИТР',
-    'ФТФ',
+    'АТФ',
+    'ФГДИЭ',
+    'МСФ',
+    'МТФ',
     'ФММП',
-    'ФЭСП',
+    'ЭФ',
+    'ФИТР',
+    'ФТУГ',
+    'ИПФ',
+    'ФЭС',
+    'АФ',
+    'СФ',
+    'ПСФ',
     'ФТК',
-    'ФЭИС',
-    'ФГЭД',
-    'ФИС',
-    'ФИИТ'
+    'ВТФ',
+    'СТФ',
+    'ФМС'
   ];
 
   const handleInputChange = (e) => {
@@ -66,10 +72,6 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
       newErrors.faculty = 'Факультет обязателен';
     }
 
-    if (!formData.group.trim()) {
-      newErrors.group = 'Группа обязательна';
-    }
-
     if (!formData.password) {
       newErrors.password = 'Пароль обязателен';
     } else if (formData.password.length < 7) {
@@ -99,7 +101,6 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
         last_name: formData.last_name,
         student_code: formData.student_code,
         faculty: formData.faculty,
-        group: formData.group,
         registration_date: formData.registration_date,
         password: formData.password
       };
@@ -112,7 +113,6 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
         last_name: '',
         student_code: '',
         faculty: '',
-        group: '',
         registration_date: new Date().toISOString().split('T')[0],
         password: '',
         confirm_password: ''
@@ -132,7 +132,6 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
       last_name: '',
       student_code: '',
       faculty: '',
-      group: '',
       registration_date: new Date().toISOString().split('T')[0],
       password: '',
       confirm_password: ''
@@ -302,31 +301,6 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
                 </select>
                 {errors.faculty && (
                   <p className="text-red-500 text-sm mt-1">{errors.faculty}</p>
-                )}
-              </div>
-
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${
-                  darkMode ? 'text-slate-300' : 'text-gray-700'
-                }`}>
-                  Группа *
-                </label>
-                <input
-                  type="text"
-                  name="group"
-                  value={formData.group}
-                  onChange={handleInputChange}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    darkMode 
-                      ? 'bg-slate-700 border-slate-600 text-white' 
-                      : 'bg-white border-gray-300 text-gray-900'
-                  } focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                    errors.group ? 'border-red-500' : ''
-                  }`}
-                  placeholder="ИТиУ-1-21"
-                />
-                {errors.group && (
-                  <p className="text-red-500 text-sm mt-1">{errors.group}</p>
                 )}
               </div>
 

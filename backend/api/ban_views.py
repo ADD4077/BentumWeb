@@ -58,7 +58,7 @@ def get_ban_info(request):
 
                 "detail": "Пользователь не забанен"
 
-            }, status=404)
+            }, status=200)
 
         
 

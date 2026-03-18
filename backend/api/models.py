@@ -5,8 +5,8 @@ class User(models.Model):
     faculty = models.CharField(max_length=10)
     student_code = models.CharField(max_length=10, unique=True)
     bilet_code = models.CharField(max_length=7)
-    created_at = models.DateTimeField(auto_now_add=True)
-    last_login = models.DateTimeField(null=True, blank=True)
+    created_at = models.IntegerField(null=True, blank=True)
+    last_login = models.IntegerField(null=True, blank=True)
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
 
     class Meta:
@@ -43,7 +43,7 @@ class UserProfileMedia(models.Model):
     width = models.IntegerField(null=True, blank=True)
     height = models.IntegerField(null=True, blank=True)
     is_active = models.BooleanField(default=False)  # Текущий активный медиа
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.IntegerField(null=True, blank=True)
     
     class Meta:
         db_table = 'user_profile_media'
@@ -93,7 +93,7 @@ class Administration(models.Model):
         ]
     
     def __str__(self):
-        return f"Admin: {self.administrator.student_code} (назначен {self.appointed_at.strftime('%d.%m.%Y')})"
+        return f"Admin: {self.administrator.student_code} (назначен {self.appointed_at})"
 
 
 class UserBan(models.Model):

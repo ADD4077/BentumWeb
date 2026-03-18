@@ -296,9 +296,9 @@ function AdminPanel({ darkMode }) {
     }).sort((a, b) => {
       switch (sortBy) {
         case 'newest':
-          return new Date(b.registration_date) - new Date(a.registration_date);
+          return new Date(b.registration_date * 1000) - new Date(a.registration_date * 1000);
         case 'oldest':
-          return new Date(a.registration_date) - new Date(b.registration_date);
+          return new Date(a.registration_date * 1000) - new Date(b.registration_date * 1000);
         case 'name':
           return a.fullname.localeCompare(b.fullname);
         default:
@@ -318,7 +318,7 @@ function AdminPanel({ darkMode }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900/20 dark:to-indigo-900/20 p-4 sm:p-6">
+    <div className="min-h-screen p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Заголовок */}
         <div className="mb-6 sm:mb-8">
@@ -545,7 +545,7 @@ function AdminPanel({ darkMode }) {
                       <td className="px-6 py-4">
                         <div className="text-sm text-slate-900 dark:text-white">
                           {user.last_login ? 
-                            new Date(user.last_login).toLocaleString('ru-RU', {
+                            new Date(user.last_login * 1000).toLocaleString('ru-RU', {
                               day: '2-digit',
                               month: '2-digit', 
                               year: 'numeric',
@@ -656,7 +656,7 @@ function AdminPanel({ darkMode }) {
                       <span className="text-xs text-slate-500 dark:text-slate-400">Последний вход:</span>
                       <span className="text-sm text-slate-900 dark:text-white">
                         {user.last_login ? 
-                          new Date(user.last_login).toLocaleDateString('ru-RU') : '—'
+                          new Date(user.last_login * 1000).toLocaleDateString('ru-RU') : '—'
                         }
                       </span>
                     </div>
@@ -751,28 +751,23 @@ function AdminPanel({ darkMode }) {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Информация</h4>
+                    <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Основная информация</h4>
                     <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <BarChart3 className="w-4 h-4 text-slate-400" />
+                        <span className="text-slate-900 dark:text-white">{selectedUser.faculty}</span>
+                      </div>
                       <div className="flex items-center gap-3">
                         <Calendar className="w-4 h-4 text-slate-400" />
                         <span className="text-slate-900 dark:text-white">
-                          {new Date(selectedUser.registration_date).toLocaleString('ru-RU', {
+                          {new Date(selectedUser.registration_date * 1000).toLocaleString('ru-RU', {
                             day: '2-digit',
                             month: '2-digit',
                             year: 'numeric',
                             hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
+                            minute: '2-digit'
                           })}
                         </span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Shield className="w-4 h-4 text-slate-400" />
-                        <span className="text-slate-900 dark:text-white">{selectedUser.student_code}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <BarChart3 className="w-4 h-4 text-slate-400" />
-                        <span className="text-slate-900 dark:text-white">{selectedUser.faculty}</span>
                       </div>
                     </div>
                   </div>
@@ -784,7 +779,7 @@ function AdminPanel({ darkMode }) {
                         <Clock className="w-4 h-4 text-slate-400" />
                         <span className="text-slate-900 dark:text-white">
                           {selectedUser.last_login ? 
-                            new Date(selectedUser.last_login).toLocaleString('ru-RU', {
+                            new Date(selectedUser.last_login * 1000).toLocaleString('ru-RU', {
                               day: '2-digit',
                               month: '2-digit',
                               year: 'numeric',

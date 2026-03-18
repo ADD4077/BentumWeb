@@ -41,8 +41,8 @@ def get_all_users(request):
                 'fullname': user.fullname,
                 'faculty': user.faculty,
                 'student_code': user.student_code,
-                'registration_date': user.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-                'last_login': user.last_login.strftime('%Y-%m-%d %H:%M:%S') if user.last_login else None,
+                'registration_date': user.created_at,
+                'last_login': user.last_login,
                 'last_login_ip': user.last_login_ip,
                 'status': 'banned' if ban_status['is_banned'] else 'active',
                 'avatar_url': None,  # Будет добавлено позже
@@ -88,8 +88,10 @@ def get_users_stats(request):
         active_users = total_users - banned_users
         
         # Новые пользователи сегодня
-        today = timezone.now().date()
-        new_users_today = User.objects.filter(created_at__date=today).count()
+        from .views import get_unix_timestamp
+        today_start = int(datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+        today_end = today_start + 86400  # +24 часа в секундах
+        new_users_today = User.objects.filter(created_at__gte=today_start, created_at__lt=today_end).count()
         
         return JsonResponse({
             "success": True,
@@ -128,7 +130,7 @@ def create_user(request):
         data = json.loads(request.body)
         
         # Валидация
-        required_fields = ['fullname', 'student_code', 'faculty']
+        required_fields = ['first_name', 'last_name', 'student_code', 'faculty', 'password']
         for field in required_fields:
             if not data.get(field):
                 return JsonResponse({
@@ -136,11 +138,18 @@ def create_user(request):
                     'detail': f'Поле {field} обязательно для заполнения'
                 }, status=400)
         
-        # Проверка формата кода студента
-        if not re.match(r'^\d{8}$', data['student_code']):
+        # Проверка формата кода студента (10 цифр)
+        if not re.match(r'^\d{10}$', data['student_code']):
             return JsonResponse({
                 'success': False,
-                'detail': 'Код студента должен состоять из 8 цифр'
+                'detail': 'Код студента должен состоять из 10 цифр'
+            }, status=400)
+        
+        # Проверка длины пароля
+        if len(data['password']) < 7:
+            return JsonResponse({
+                'success': False,
+                'detail': 'Пароль должен содержать минимум 7 символов'
             }, status=400)
         
         # Проверка на дубликаты
@@ -152,15 +161,15 @@ def create_user(request):
         
         # Создаем пользователя
         user = User.objects.create(
-            fullname=data['fullname'],
+            fullname=f"{data['first_name']} {data['last_name']}",
             student_code=data['student_code'],
             faculty=data['faculty'],
-            bilet_code='0000000'  # Пароль по умолчанию
+            bilet_code=data['password']  # Устанавливаем пароль как bilet_code
         )
         
         return JsonResponse({
             'success': True,
-            'message': f'Пользователь {data["fullname"]} успешно создан'
+            'message': f'Пользователь {data["first_name"]} {data["last_name"]} успешно создан'
         })
         
     except Exception as e:

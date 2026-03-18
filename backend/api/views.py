@@ -2,12 +2,11 @@ import json
 import os
 import re
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime
 from django.conf import settings
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from .func import authorize
-import pytz
 from django.contrib.sessions.models import Session
 from django.contrib.sessions.backends.db import SessionStore
 from django.conf import settings
@@ -73,6 +72,21 @@ def _enforce_session_limits(student_code: str, current_session_key: str) -> None
         s.delete()
 
 
+# Вспомогательная функция для получения времени в UNIX формате
+def get_unix_timestamp():
+    return int(datetime.now().timestamp())
+
+
+# Вспомогательная функция для получения реального IP адреса клиента
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0].strip()
+    else:
+        ip = request.META.get('HTTP_X_REAL_IP', request.META.get('REMOTE_ADDR', 'unknown'))
+    return ip
+
+
 @csrf_exempt
 def save_data(request):
     if request.method != "POST":
@@ -98,14 +112,14 @@ def save_data(request):
                 status=400
             )
 
-        if len(student_code) != 10 or len(red_code) != 7:
+        if len(student_code) != 10 or len(red_code) < 7:
             return JsonResponse(
-                {"detail": "Некорректный формат кодов"},
+                {"detail": "Некорректный формат кодов. Пароль должен содержать минимум 7 символов"},
                 status=400
             )
 
-        # Получаем IP адрес для проверки попыток входа
-        ip_address = request.META.get('REMOTE_ADDR', 'unknown')
+        # Получаем реальный IP адрес пользователя
+        ip_address = get_client_ip(request)
         
         # Проверяем количество попыток входа
         can_login, error_message = _check_login_attempts(student_code, ip_address)
@@ -128,7 +142,7 @@ def save_data(request):
             _clear_login_attempts(student_code, ip_address)
             
             # Обновляем время входа и IP
-            existing_user.last_login = datetime.now(pytz.UTC)
+            existing_user.last_login = get_unix_timestamp()
             existing_user.last_login_ip = ip_address
             existing_user.save()
             
@@ -176,7 +190,7 @@ def save_data(request):
             faculty=faculty,
             student_code=student_code,
             bilet_code=red_code,
-            created_at=datetime.now(pytz.UTC)
+            created_at=get_unix_timestamp()
         )
         
         # Сбрасываем счетчики попыток после успешной регистрации
@@ -296,9 +310,9 @@ def dashboard(request):
                 "fullname": user.fullname,
                 "faculty": user.faculty,
                 "student_code": user.student_code,
-                "created_at": user.created_at.isoformat(),
+                "created_at": user.created_at,
                 "is_banned": ban_status['is_banned'],
-                "last_login": user.last_login.isoformat() if user.last_login else None,
+                "last_login": user.last_login,
                 "last_login_ip": user.last_login_ip
             }
         }, status=200)

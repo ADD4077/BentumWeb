@@ -54,11 +54,9 @@ function LoginModal({ isOpen, onClose, onInstructionOpen }) {
   };
   const handlePasswordChange = (e) => {
     const value = e.target.value;
-    if (/^\d*$/.test(value)) {
-      setPassword(value);
-      if (errors.password) {
-        setErrors({ ...errors, password: '' });
-      }
+    setPassword(value);
+    if (errors.password) {
+      setErrors({ ...errors, password: '' });
     }
   };
   return (

@@ -22,8 +22,12 @@ class OptimizedStorage:
         import hashlib
         from datetime import datetime
         
+        # Функция для получения времени в UNIX формате
+        def get_unix_timestamp():
+            return int(datetime.now().timestamp())
+        
         # Хеш для дедупликации
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = get_unix_timestamp()
         unique_id = str(uuid.uuid4())[:8]
         
         name, ext = os.path.splitext(original_filename)

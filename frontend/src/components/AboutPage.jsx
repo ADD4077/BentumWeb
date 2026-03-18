@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_ENDPOINTS } from '../config/api.js';
-import { Star, GraduationCap, Users, MessageCircle, Shield, ArrowRight } from 'lucide-react';
+import { Star, GraduationCap, Users, MessageCircle, Shield, ArrowRight, Book, Newspaper, User, Send } from 'lucide-react';
 
 function AboutPage({ darkMode, setActiveTab }) {
   const [stats, setStats] = useState({
@@ -164,19 +164,59 @@ function AboutPage({ darkMode, setActiveTab }) {
             <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center mb-4">
               <GraduationCap className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <h3 className="text-xl font-bold mb-3">Умное расписание</h3>
+            <h3 className="text-xl font-bold mb-3">Расписание</h3>
             <p className="text-slate-600 dark:text-slate-400">
-              Автоматическое обновление, уведомления о парах, синхронизация с группой.
+              Актуальное расписание занятий с фильтрацией по неделям и группам.
             </p>
           </div>
           
           <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center mb-4">
-              <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Book className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
-            <h3 className="text-xl font-bold mb-3">Сообщество</h3>
+            <h3 className="text-xl font-bold mb-3">Литература</h3>
             <p className="text-slate-600 dark:text-slate-400">
-              Чаты групп, форумы, обмен материалами, совместная подготовка.
+              Учебные материалы, пособия и методические указания с поиском по категориям.
+            </p>
+          </div>
+          
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
+            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center mb-4">
+              <Newspaper className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <h3 className="text-xl font-bold mb-3">Новости</h3>
+            <p className="text-slate-600 dark:text-slate-400">
+              Актуальные события, достижения и важные объявления университета.
+            </p>
+          </div>
+          
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
+            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center mb-4">
+              <User className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            </div>
+            <h3 className="text-xl font-bold mb-3">Профиль</h3>
+            <p className="text-slate-600 dark:text-slate-400">
+              Персональные данные, настройки темы и управление аккаунтом.
+            </p>
+          </div>
+          
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
+            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center mb-4">
+              <ArrowRight className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <h3 className="text-xl font-bold mb-3">Актуальность</h3>
+            <p className="text-slate-600 dark:text-slate-400">
+              Регулярное обновление данных и всегда свежая информация.
+            </p>
+          </div>
+          
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
+            <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900/30 rounded-xl flex items-center justify-center mb-4">
+              <MessageCircle className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+            </div>
+            <h3 className="text-xl font-bold mb-3">Поддержка</h3>
+            <p className="text-slate-600 dark:text-slate-400">
+              Система заявок в поддержку и быстрая помощь от администрации.
             </p>
           </div>
         </div>
@@ -195,7 +235,7 @@ function AboutPage({ darkMode, setActiveTab }) {
             onClick={() => window.open('https://t.me/BNTUnity', '_blank')}
             className="px-8 py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-3xl font-bold transition-all hover:-translate-y-1 flex items-center gap-2"
           >
-            <MessageCircle className="w-5 h-5" />
+            <Send className="w-5 h-5" />
             <span>Telegram</span>
           </button>
         </div>

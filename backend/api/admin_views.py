@@ -180,8 +180,8 @@ def get_administrators(request):
                     "student_code": record.administrator.student_code,
                     "fullname": record.administrator.fullname,
                     "faculty": record.administrator.faculty,
-                    "created_at": record.administrator.created_at.isoformat(),
-                    "last_login": record.administrator.last_login.isoformat() if record.administrator.last_login else None,
+                    "created_at": record.administrator.created_at,
+                    "last_login": record.administrator.last_login,
                     "is_banned": ban_status['is_banned']
                 },
                 "appointed_by": {
