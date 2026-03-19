@@ -101,7 +101,7 @@ function AboutPage({ darkMode, setActiveTab }) {
         </h1>
         
         <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
-          Bentum — это не просто расписание. Это целая экосистема для студентов БНТУ, 
+          Бентум — это не просто расписание. Это целая экосистема для студентов БНТУ, 
           созданная чтобы сделать учебу комфортной, продуктивной и увлекательной.
         </p>
       </div>

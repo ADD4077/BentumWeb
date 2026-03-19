@@ -54,7 +54,7 @@ function PrivacyPolicy({ setActiveTab }) {
             </h2>
             <div className="space-y-4 text-slate-700 dark:text-slate-300 leading-relaxed">
               <p>
-                Добро пожаловать в образовательную платформу Bentum! Мы ценим вашу конфиденциальность 
+                Добро пожаловать в образовательную платформу Бентум! Мы ценим вашу конфиденциальность 
                 и стремимся защитить ваши личные данные. Эта политика конфиденциальности объясняет, 
                 какие данные мы собираем, как мы их используем и защищаем.
               </p>
@@ -404,7 +404,7 @@ function PrivacyPolicy({ setActiveTab }) {
         {/* Футер */}
         <div className="mt-12 text-center text-slate-600 dark:text-slate-400">
           <p className="text-sm">
-            Эта политика конфиденциальности действует с {new Date().toLocaleDateString('ru-RU')} и применяется ко всем пользователям платформы Bentum.
+            Эта политика конфиденциальности действует с {new Date().toLocaleDateString('ru-RU')} и применяется ко всем пользователям платформы Бентум.
           </p>
         </div>
       </div>
