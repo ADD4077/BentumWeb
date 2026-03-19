@@ -678,7 +678,7 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, onForceRefresh, darkM
 
             {/* Upload Instructions */}
 
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+            {/* <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
 
               <h3 className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2">
 
@@ -698,7 +698,7 @@ const ProfileEditModal = ({ isOpen, onClose, user, onSave, onForceRefresh, darkM
 
               </ul>
 
-            </div>
+            </div> */}
 
 
 

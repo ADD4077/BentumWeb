@@ -91,7 +91,6 @@ class MediaOptimizer:
                 
             except Exception as e:
                 logger.error(f"Error creating {size_name} size: {e}")
-                continue
         
         return sizes
 
@@ -146,11 +145,16 @@ class MediaStorage:
             
             # Оригинал (оптимизированный)
             original_path = f"{base_path}/{file_hash}_original.webp"
-            default_storage.save(original_path, ContentFile(sizes['large']['content']))
+            large_content = sizes.get('large', {}).get('content')
+            if large_content:
+                default_storage.save(original_path, ContentFile(large_content))
+            else:
+                # Если large не создан, используем оригинальный контент
+                default_storage.save(original_path, ContentFile(file_content))
             
             # Сохраняем миниатюры
             for size_name, size_data in sizes.items():
-                if size_name != 'large':
+                if size_name != 'large' and size_data:
                     path = f"{base_path}/{size_data['filename']}"
                     default_storage.save(path, ContentFile(size_data['content']))
             
@@ -173,12 +177,13 @@ class MediaStorage:
             
             # Сохраняем оптимизированные версии
             for size_name, size_data in sizes.items():
-                MediaOptimization.objects.create(
-                    original_media=media,
-                    size_type=size_name,
-                    file_path=f"{base_path}/{size_data['filename']}",
-                    file_size=size_data['size']
-                )
+                if size_data and size_data.get('content'):
+                    MediaOptimization.objects.create(
+                        original_media=media,
+                        size_type=size_name,
+                        file_path=f"{base_path}/{size_data['filename']}",
+                        file_size=size_data['size']
+                    )
             
             return media
             

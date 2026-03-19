@@ -18,7 +18,8 @@ import {
   BarChart3,
   UserX,
   UserPlus,
-  Globe
+  Globe,
+  BookOpen
 } from 'lucide-react';
 import { showWarning, showError, showSuccess } from '../utils/notifications.js';
 import BanModal from './BanModal.jsx';
@@ -753,6 +754,10 @@ function AdminPanel({ darkMode }) {
                   <div>
                     <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Основная информация</h4>
                     <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <BookOpen className="w-4 h-4 text-slate-400" />
+                        <span className="text-slate-900 dark:text-white">{selectedUser.student_code}</span>
+                      </div>
                       <div className="flex items-center gap-3">
                         <BarChart3 className="w-4 h-4 text-slate-400" />
                         <span className="text-slate-900 dark:text-white">{selectedUser.faculty}</span>
