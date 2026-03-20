@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { API_ENDPOINTS } from '../config/api.js';
+import { buildMediaUrl } from '../utils/media.js';
 import { 
   Users, 
   Ban, 
@@ -40,6 +41,12 @@ function AdminPanel({ darkMode }) {
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [banData, setBanData] = useState({ user: null, reason: '', duration: '7' });
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedUserMedia, setSelectedUserMedia] = useState({
+    avatar_url: null,
+    banner_url: null,
+    avatar_placeholder: null,
+    banner_placeholder: null
+  });
   const [stats, setStats] = useState({
     totalUsers: 0,
     bannedUsers: 0,
@@ -48,11 +55,18 @@ function AdminPanel({ darkMode }) {
   });
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [usersPerPage] = useState(10);
 
   useEffect(() => {
     loadUsers();
     loadStats();
   }, []);
+
+  // Сбрасываем страницу при изменении фильтров
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterStatus, sortBy]);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -279,8 +293,31 @@ function AdminPanel({ darkMode }) {
     }
   };
 
-  const handleViewProfile = (user) => {
+  const handleViewProfile = async (user) => {
     setSelectedUser(user);
+    
+    // Загружаем медиа данные пользователя
+    try {
+      const response = await fetch(`${API_ENDPOINTS.USER_MEDIA}?user_id=${user.id}`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setSelectedUserMedia({
+            avatar_url: data.avatar_url,
+            banner_url: data.banner_url,
+            avatar_placeholder: data.avatar_placeholder,
+            banner_placeholder: data.banner_placeholder
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user media:', error);
+      // Оставляем значения по умолчанию если загрузка не удалась
+    }
+    
     setIsProfileModalOpen(true);
   };
 
@@ -307,6 +344,14 @@ function AdminPanel({ darkMode }) {
       }
     });
   }, [users, searchQuery, filterStatus, sortBy]);
+
+  // Пагинация
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   const getStatusColor = (status) => {
     return status === 'active' 
@@ -501,7 +546,7 @@ function AdminPanel({ darkMode }) {
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((user) => (
+                  currentUsers.map((user) => (
                     <tr 
                       key={user.id} 
                       className={`hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-all duration-300 ${
@@ -512,11 +557,19 @@ function AdminPanel({ darkMode }) {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center">
-                          <div className="w-10 h-10 bg-gray-200 dark:bg-slate-600 rounded-full flex items-center justify-center mr-3">
-                            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                              {user.fullname.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
+                          {user.avatar_url ? (
+                            <img 
+                              src={buildMediaUrl(user.avatar_url)}
+                              alt={user.fullname}
+                              className="w-10 h-10 rounded-full object-cover mr-3"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 bg-gray-200 dark:bg-slate-600 rounded-full flex items-center justify-center mr-3">
+                              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                                {user.fullname.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
                           <div>
                             <div className="text-sm font-medium text-slate-900 dark:text-white">
                               {user.fullname}
@@ -615,7 +668,7 @@ function AdminPanel({ darkMode }) {
                 <span className="text-slate-500 dark:text-slate-400">Пользователи не найдены</span>
               </div>
             ) : (
-              filteredUsers.map((user) => (
+              currentUsers.map((user) => (
                 <div 
                   key={user.id} 
                   className={`bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-200 dark:border-slate-600 transition-all duration-300 ${
@@ -627,11 +680,19 @@ function AdminPanel({ darkMode }) {
                   {/* Заголовок карточки */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gray-200 dark:bg-slate-600 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                          {user.fullname.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
+                      {user.avatar_url ? (
+                        <img 
+                          src={buildMediaUrl(user.avatar_url)}
+                          alt={user.fullname}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-gray-200 dark:bg-slate-600 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                            {user.fullname.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
                       <div>
                         <div className="text-sm font-medium text-slate-900 dark:text-white">
                           {user.fullname}
@@ -712,116 +773,199 @@ function AdminPanel({ darkMode }) {
           </div>
         </div>
 
+        {/* Пагинация */}
+        {totalPages > 1 && (
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 sm:p-6 mt-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                Показано {indexOfFirstUser + 1}-{Math.min(indexOfLastUser, filteredUsers.length)} из {filteredUsers.length} пользователей
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => paginate(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    currentPage === 1
+                      ? 'bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                      : 'bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  ←
+                </button>
+                
+                {[...Array(totalPages)].map((_, index) => {
+                  const pageNumber = index + 1;
+                  const isCurrentPage = pageNumber === currentPage;
+                  const isNearCurrent = Math.abs(pageNumber - currentPage) <= 1 || pageNumber === 1 || pageNumber === totalPages;
+                  
+                  if (!isNearCurrent && pageNumber !== 1 && pageNumber !== totalPages) {
+                    if (pageNumber === currentPage - 2 || pageNumber === currentPage + 2) {
+                      return (
+                        <span key={pageNumber} className="px-2 text-slate-400">
+                          ...
+                        </span>
+                      );
+                    }
+                    return null;
+                  }
+                  
+                  return (
+                    <button
+                      key={pageNumber}
+                      onClick={() => paginate(pageNumber)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        isCurrentPage
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-600'
+                      }`}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                })}
+                
+                <button
+                  onClick={() => paginate(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    currentPage === totalPages
+                      ? 'bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                      : 'bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Модальное окно профиля */}
         {isProfileModalOpen && selectedUser && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-              <div className="p-6 border-b border-gray-200 dark:border-slate-700">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                    Профиль пользователя
-                  </h2>
-                  <button
-                    onClick={() => setIsProfileModalOpen(false)}
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+            <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-hidden flex flex-col">
+              <div className="relative h-32">
+                {/* Баннер */}
+                {selectedUserMedia.banner_url ? (
+                  <img 
+                    src={buildMediaUrl(selectedUserMedia.banner_url)}
+                    alt="Profile Banner"
+                    className="w-full h-full object-cover"
+                  />
+                ) : selectedUserMedia.banner_placeholder ? (
+                  <div 
+                    className="w-full h-full"
+                    style={{ background: selectedUserMedia.banner_placeholder.background }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 dark:bg-slate-700" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                
+                {/* Аватар */}
+                <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2">
+                  {selectedUserMedia.avatar_url ? (
+                    <img 
+                      src={buildMediaUrl(selectedUserMedia.avatar_url)}
+                      alt="Profile Avatar"
+                      className="w-32 h-32 rounded-2xl object-cover border-4 border-white dark:border-slate-800"
+                    />
+                  ) : selectedUserMedia.avatar_placeholder ? (
+                    <div 
+                      className="w-32 h-32 rounded-2xl border-4 border-white dark:border-slate-800 flex items-center justify-center text-white font-semibold"
+                      style={{ 
+                        background: selectedUserMedia.avatar_placeholder.background,
+                        color: selectedUserMedia.avatar_placeholder.color,
+                        fontSize: selectedUserMedia.avatar_placeholder.font_size,
+                        fontWeight: selectedUserMedia.avatar_placeholder.font_weight
+                      }}
+                    >
+                      {selectedUserMedia.avatar_placeholder.initials}
+                    </div>
+                  ) : (
+                    <div className="w-32 h-32 rounded-2xl overflow-hidden bg-white dark:bg-slate-800 border-4 border-white dark:border-slate-800 flex items-center justify-center">
+                      <span className="text-4xl font-bold text-slate-600 dark:text-slate-300">
+                        {selectedUser.fullname.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
                 </div>
+                
+                {/* Кнопка закрытия */}
+                <button
+                  onClick={() => setIsProfileModalOpen(false)}
+                  className="absolute top-4 left-4 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
               
-              <div className="p-6">
-                <div className="flex items-center mb-6">
-                  <div className="w-20 h-20 bg-gray-200 dark:bg-slate-600 rounded-full flex items-center justify-center mr-4">
-                    <span className="text-2xl font-bold text-slate-600 dark:text-slate-300">
-                      {selectedUser.fullname.charAt(0).toUpperCase()}
+              {/* Информация о пользователе */}
+              <div className="flex-1 overflow-y-auto p-6 custom-scrollbar pt-20">
+                <div className="text-center mb-6">
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                    {selectedUser.fullname}
+                  </h3>
+                  <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedUser.status)}`}>
+                    {getStatusIcon(selectedUser.status)}
+                    {selectedUser.status === 'active' ? 'Активен' : 'Заблокирован'}
+                  </div>
+                </div>
+                
+                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex justify-between">
+                    <span className="font-medium">Имя:</span>
+                    <span>{selectedUser.fullname || 'Не указано'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Код студента:</span>
+                    <span>{selectedUser.student_code || 'Не указан'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Факультет:</span>
+                    <span>{selectedUser.faculty || 'Не указан'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Статус:</span>
+                    <span className={selectedUser.status === 'active' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>
+                      {selectedUser.status === 'active' ? 'Активен' : 'Заблокирован'}
                     </span>
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      {selectedUser.fullname}
-                    </h3>
-                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedUser.status)} mt-2`}>
-                      {getStatusIcon(selectedUser.status)}
-                      {selectedUser.status === 'active' ? 'Активен' : 'Заблокирован'}
-                    </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Дата регистрации:</span>
+                    <span>
+                      {new Date(selectedUser.registration_date * 1000).toLocaleString('ru-RU', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Последний вход:</span>
+                    <span>
+                      {selectedUser.last_login ? 
+                        new Date(selectedUser.last_login * 1000).toLocaleString('ru-RU', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : 'Не входил'
+                      }
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">IP адрес:</span>
+                    <span className="font-mono text-sm">
+                      {selectedUser.ip_address || 'Не указан'}
+                    </span>
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Основная информация</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <BookOpen className="w-4 h-4 text-slate-400" />
-                        <span className="text-slate-900 dark:text-white">{selectedUser.student_code}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <BarChart3 className="w-4 h-4 text-slate-400" />
-                        <span className="text-slate-900 dark:text-white">{selectedUser.faculty}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Calendar className="w-4 h-4 text-slate-400" />
-                        <span className="text-slate-900 dark:text-white">
-                          {new Date(selectedUser.registration_date * 1000).toLocaleString('ru-RU', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Активность</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <Clock className="w-4 h-4 text-slate-400" />
-                        <span className="text-slate-900 dark:text-white">
-                          {selectedUser.last_login ? 
-                            new Date(selectedUser.last_login * 1000).toLocaleString('ru-RU', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            }) : 'Не входил'
-                          }
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Globe className="w-4 h-4 text-slate-400" />
-                        <span className="text-slate-900 dark:text-white font-mono text-sm">
-                          {selectedUser.last_login_ip || 'Неизвестно'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {selectedUser.status === 'banned' && (
-                  <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-                    <div className="flex items-start gap-3">
-                      <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <h4 className="font-medium text-red-800 dark:text-red-300 mb-1">Информация о блокировке</h4>
-                        <p className="text-sm text-red-700 dark:text-red-400 mb-2">
-                          Причина: {selectedUser.ban_reason}
-                        </p>
-                        {selectedUser.ban_end_date && (
-                          <p className="text-sm text-red-700 dark:text-red-400">
-                            Окончание: {new Date(selectedUser.ban_end_date).toLocaleDateString('ru-RU')}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>

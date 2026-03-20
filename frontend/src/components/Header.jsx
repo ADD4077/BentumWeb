@@ -161,12 +161,6 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                   >
                     Игровая
                   </button>
-                  <button 
-                    onClick={() => setActiveTab('about')}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 whitespace-nowrap flex-shrink-0 ${activeTab === 'about' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
-                  >
-                    О проекте
-                  </button>
                   {isAdmin && (
                     <button 
                       onClick={() => setActiveTab('admin')}
@@ -384,15 +378,6 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
                   className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'games' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
                 >
                   Игровая
-                </button>
-                <button 
-                  onClick={() => {
-                    setActiveTab('about');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'about' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
-                >
-                  О проекте
                 </button>
                 {isAdmin && (
                   <button 

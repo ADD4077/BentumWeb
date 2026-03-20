@@ -39,5 +39,6 @@ urlpatterns = [
     path("api/media/upload", media_views.upload_media),
     path("api/media/set-active", media_views.set_active_media),
     path("api/media/get", media_views.get_user_media),
+    path("api/user/media", media_views.get_user_media_by_id),
     path("api/media/delete/<int:media_id>", media_views.delete_media),
 ]

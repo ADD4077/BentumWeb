@@ -6,6 +6,7 @@ export const API_ENDPOINTS = {
   BASE_URL: API_BASE_URL,
   PROFILE_UPDATE: `${API_BASE_URL}/api/profile/update`,
   MEDIA_UPLOAD: `${API_BASE_URL}/api/media/upload`,
+  USER_MEDIA: `${API_BASE_URL}/api/user/media`,
   BAN_INFO: `${API_BASE_URL}/api/ban/info`,
   SUPPORT_SUBMIT: `${API_BASE_URL}/api/support/submit`,
   SCHEDULE: `${API_BASE_URL}/api/schedule`,

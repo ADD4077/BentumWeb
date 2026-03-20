@@ -69,9 +69,7 @@ def upload_media(request):
             }, status=400)
         
         # Сохраняем медиа
-        logger.error(f"About to call MediaStorage.save_media...")
         media = MediaStorage.save_media(user, media_type, file_content, file.name)
-        logger.error(f"MediaStorage.save_media returned: {media}")
         
         # Делаем медиа активным (деактивируем старые)
         UserProfileMedia.objects.filter(
@@ -95,6 +93,15 @@ def upload_media(request):
         for opt in media.optimized_versions.all():
             sizes[opt.size_type] = MediaStorage.get_media_url(media, opt.size_type)
         
+        # Безопасно получаем created_at
+        created_at = media.created_at
+        if created_at is None:
+            from datetime import datetime
+            created_at_str = datetime.now().isoformat()
+        else:
+            from datetime import datetime
+            created_at_str = datetime.fromtimestamp(created_at).isoformat()
+        
         return JsonResponse({
             "success": True,
             "message": "Файл успешно загружен",
@@ -105,7 +112,7 @@ def upload_media(request):
                 "file_size": media.file_size,
                 "width": media.width,
                 "height": media.height,
-                "created_at": media.created_at.isoformat(),
+                "created_at": created_at_str,
                 "sizes": sizes
             }
         })
@@ -365,4 +372,75 @@ def delete_media(request, media_id):
         return JsonResponse({
             "success": False,
             "detail": f"Ошибка удаления: {str(e)}"
+        }, status=500)
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_user_media_by_id(request):
+    """Получить медиа данные конкретного пользователя по ID"""
+    try:
+        user_id = request.GET.get('user_id')
+        if not user_id:
+            return JsonResponse({
+                "success": False,
+                "detail": "user_id параметр обязателен"
+            }, status=400)
+        
+        # Получаем пользователя
+        from .models import User
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return JsonResponse({
+                "success": False,
+                "detail": "Пользователь не найден"
+            }, status=404)
+        
+        # Получаем активные медиа
+        avatar_media = UserProfileMedia.objects.filter(
+            user=user, 
+            media_type='avatar', 
+            is_active=True
+        ).first()
+        
+        banner_media = UserProfileMedia.objects.filter(
+            user=user, 
+            media_type='banner', 
+            is_active=True
+        ).first()
+        
+        # Собираем URL
+        avatar_url = None
+        banner_url = None
+        
+        if avatar_media:
+            avatar_url = MediaStorage.get_media_url(avatar_media, 'medium')
+        
+        if banner_media:
+            banner_url = MediaStorage.get_media_url(banner_media, 'large')
+        
+        # Генерируем плейсхолдеры если нет медиа
+        avatar_placeholder = None
+        banner_placeholder = None
+        
+        if not avatar_media:
+            from .placeholder_service import PlaceholderGenerator
+            avatar_placeholder = PlaceholderGenerator.get_avatar_placeholder_data(user.fullname)
+        
+        if not banner_media:
+            from .placeholder_service import PlaceholderGenerator
+            banner_placeholder = PlaceholderGenerator.get_banner_placeholder_data()
+        
+        return JsonResponse({
+            "success": True,
+            "avatar_url": avatar_url,
+            "banner_url": banner_url,
+            "avatar_placeholder": avatar_placeholder,
+            "banner_placeholder": banner_placeholder
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "detail": f"Ошибка загрузки медиа: {str(e)}"
         }, status=500)

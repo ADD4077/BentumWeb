@@ -32,6 +32,7 @@ class MediaOptimizer:
         'image/png': 'PNG',
         'image/webp': 'WEBP',
         'image/avif': 'AVIF',
+        'image/gif': 'GIF',
     }
     
     @staticmethod
@@ -45,6 +46,11 @@ class MediaOptimizer:
         try:
             # Открываем изображение
             img = Image.open(io.BytesIO(image_content))
+            
+            # Определяем формат для GIF
+            if img.format == 'GIF':
+                # GIF оставляем как есть без оптимизации
+                return image_content
             
             # Конвертируем RGB если нужно
             if img.mode in ('RGBA', 'LA', 'P'):
@@ -134,7 +140,7 @@ class MediaStorage:
                     
                     return existing_media
                 else:
-                    # Если другой тип медиа, создаем новый файл с другим хешом
+                    # Если другой тип медиа, создаем новый файл с другим хешем
                     pass
             
             # Создаем оптимизированные версии
@@ -146,6 +152,7 @@ class MediaStorage:
             # Оригинал (оптимизированный)
             original_path = f"{base_path}/{file_hash}_original.webp"
             large_content = sizes.get('large', {}).get('content')
+            
             if large_content:
                 default_storage.save(original_path, ContentFile(large_content))
             else:
@@ -172,7 +179,8 @@ class MediaStorage:
                 mime_type=mime_type,
                 width=width,
                 height=height,
-                is_active=False  # Неактивен до подтверждения
+                is_active=False,  # Неактивен до подтверждения
+                created_at=get_unix_timestamp()  # Добавляем временную метку
             )
             
             # Сохраняем оптимизированные версии
@@ -326,7 +334,8 @@ class MediaValidator:
         'image/jpeg',
         'image/png', 
         'image/webp',
-        'image/avif'
+        'image/avif',
+        'image/gif'
     ]
     
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB

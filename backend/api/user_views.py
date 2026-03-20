@@ -36,6 +36,21 @@ def get_all_users(request):
             # Проверяем статус бана через BanService
             ban_status = BanService.check_ban_status(user.student_code)
             
+            # Получаем аватар пользователя
+            avatar_url = None
+            try:
+                from .models import UserProfileMedia
+                from .media_service import MediaStorage
+                avatar_media = UserProfileMedia.objects.filter(
+                    user=user, 
+                    media_type='avatar', 
+                    is_active=True
+                ).first()
+                if avatar_media:
+                    avatar_url = MediaStorage.get_media_url(avatar_media, 'medium')
+            except Exception:
+                avatar_url = None
+            
             users_data.append({
                 'id': user.id,
                 'fullname': user.fullname,
@@ -45,7 +60,7 @@ def get_all_users(request):
                 'last_login': user.last_login,
                 'last_login_ip': user.last_login_ip,
                 'status': 'banned' if ban_status['is_banned'] else 'active',
-                'avatar_url': None,  # Будет добавлено позже
+                'avatar_url': avatar_url,
                 'ban_reason': ban_status['ban_info']['ban_reason'] if ban_status['is_banned'] and ban_status['ban_info'] else None,
                 'ban_end_date': ban_status['ban_info']['ban_end_date'] if ban_status['is_banned'] and ban_status['ban_info'] else None,
                 'is_banned': ban_status['is_banned']

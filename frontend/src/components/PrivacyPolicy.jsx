@@ -3,9 +3,9 @@ import { Shield, Eye, Lock, Database, Mail, Globe, User, Calendar, AlertTriangle
 
 function PrivacyPolicy({ setActiveTab }) {
   const handleGoBack = () => {
-    // Возвращаем на страницу "О проекте"
+    // Возвращаем на главную страницу
     if (setActiveTab) {
-      setActiveTab('about');
+      setActiveTab('home');
     }
   };
 
@@ -19,7 +19,7 @@ function PrivacyPolicy({ setActiveTab }) {
         {/* Кнопка назад */}
         <button
           onClick={handleGoBack}
-          className="mb-6 inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-lg font-medium transition-all duration-200 hover:shadow-md border border-gray-200 dark:border-slate-700"
+          className="mb-6 inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-2xl font-medium transition-all duration-200 hover:shadow-md border border-gray-200 dark:border-slate-700"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Назад</span>

@@ -6,20 +6,22 @@ import SupportModal from './components/SupportModal.jsx';
 import InstructionModal from './components/InstructionModal.jsx';
 import FeatureCard from './components/FeatureCard.jsx';
 import TeamCarousel from './components/TeamCarousel.jsx';
-import AboutPage from './components/AboutPage.jsx';
+import { MissionSection, CTASection } from './components/AboutPage.jsx';
 import NotFoundPage from './components/NotFoundPage.jsx';
 import BannedPage from './components/BannedPage.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
 import ProfileEditModal from './components/ProfileEditModal.jsx';
 import SupportSuccessModal from './components/SupportSuccessModal.jsx';
 import PrivacyPolicy from './components/PrivacyPolicy.jsx';
-import { ArrowRight, Backpack, Book, BookOpen, Calendar, ChevronRight, Clock, Download, Edit, ExternalLink, Filter, Gamepad2, GraduationCap, LogIn, LogOut, Moon, Search, Star, Sun, User } from 'lucide-react';
+import { ArrowRight, Backpack, Book, BookOpen, Calendar, Clock, Download, Edit, ExternalLink, Filter, Gamepad2, GraduationCap, LogIn, LogOut, Moon, Search, Star, Sun, User } from 'lucide-react';
 import { daysOfWeek, quickDayButtons, groupInfo, features, teamMembers } from './utils/constants.js';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
 import { API_ENDPOINTS } from './config/api.js';
 import { safeLogout } from './utils/navigation.js';
+
 import { buildMediaUrl } from './utils/media.js';
 import { safeGetItem, safeSetItem, safeRemoveItem, setCachedItem, getCachedItem } from './utils/storage.js';
+
 const TagsContainer = React.memo(({ tags, onTagClick }) => {
   const [visibleCount, setVisibleCount] = useState(1);
   const containerRef = useRef(null);
@@ -127,11 +129,89 @@ function AppContent() {
   const [isBanned, setIsBanned] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [missionStats, setMissionStats] = useState({
+    totalUsers: 0,
+    facultiesCount: 0,
+    uptime: '99.9%'
+  });
+  const [isMissionLoading, setIsMissionLoading] = useState(true);
+
+  // Загрузка статистики для миссии
+  const loadMissionStats = async () => {
+    try {
+      const response = await fetch(API_ENDPOINTS.USERS_STATS, {
+        credentials: 'include'
+      });
+      
+      if (response.status === 401) {
+        // Пользователь не админ - используем моковые данные
+        setMissionStats({
+          totalUsers: 1000,
+          facultiesCount: 10,
+          uptime: '99.9%'
+        });
+        setIsMissionLoading(false);
+        return;
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Считаем количество уникальных факультетов
+        const usersResponse = await fetch(API_ENDPOINTS.USERS, {
+          credentials: 'include'
+        });
+        
+        if (usersResponse.status === 401) {
+          // Пользователь не админ - используем базовую статистику
+          setMissionStats({
+            totalUsers: data.stats.totalUsers || 0,
+            facultiesCount: 10,
+            uptime: '99.9%'
+          });
+          setIsMissionLoading(false);
+          return;
+        }
+        
+        const usersData = await usersResponse.json();
+        
+        if (usersData.success) {
+          const uniqueFaculties = [...new Set(usersData.users.map(user => user.faculty).filter(Boolean))];
+          
+          setMissionStats({
+            totalUsers: data.stats.totalUsers || 0,
+            facultiesCount: uniqueFaculties.length || 0,
+            uptime: '99.9%'
+          });
+        }
+      } else {
+        // Используем моковые данные при ошибке API
+        setMissionStats({
+          totalUsers: 1000,
+          facultiesCount: 10,
+          uptime: '99.9%'
+        });
+      }
+    } catch (error) {
+      // Используем моковые данные при ошибке
+      setMissionStats({
+        totalUsers: 1000,
+        facultiesCount: 10,
+        uptime: '99.9%'
+      });
+    } finally {
+      setIsMissionLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadMissionStats();
+  }, []);
   
   // Определяем 404 страницу на основе URL
   useEffect(() => {
     const currentPath = window.location.pathname;
-    const validPaths = ['/', '/home', '/about', '/schedule', '/literature', '/news', '/games'];
+    const validPaths = ['/', '/home', '/schedule', '/literature', '/news', '/games'];
     const isValidPath = validPaths.some(path => 
       currentPath === path || currentPath.startsWith(path + '/')
     );
@@ -654,7 +734,7 @@ function AppContent() {
     }
   }, [newsSearchQuery, newsSortBy, selectedNewsCategory]);
   const newsCategories = [
-    { id: 'all', name: 'Все новости' },
+    { id: 'all', name: 'Все' },
     { id: 'academic', name: 'Университет' },
     { id: 'achievements', name: 'Достижения' },
     { id: 'education', name: 'Студенты' },
@@ -723,17 +803,16 @@ function AppContent() {
             <main className="container mx-auto px-4 pt-8 pb-12 relative z-10 flex-1">
               {activeTab === 'home' && (
                 <div className="flex flex-col items-center">
-                  <div className="text-center max-w-4xl mx-auto mb-20 mt-10">
-                    <span className="inline-flex text-sm md:text-base text-emerald-600 font-medium mb-4 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-500 rounded-full items-center gap-2" style={{ animation: 'float 3s ease-in-out infinite' }}>
+                  <div className="text-center max-w-4xl mx-auto mt-10">
+                    <span className="inline-flex text-sm md:text-base text-emerald-600 font-medium mb-10 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-500 rounded-full items-center gap-2" style={{ animation: 'float 3s ease-in-out infinite' }}>
                       <Star className="w-5 h-5 text-emerald-600 flex-shrink-0" />
                       <span>Новая версия 2.0 уже доступна</span>
                       <Star className="w-5 h-5 text-emerald-600 flex-shrink-0" />
                     </span>
                 <h1 className="text-4xl md:text-6xl font-bold mb-8 tracking-tight text-slate-900 dark:text-white leading-[1.1]">
-                  Учебная система <br />
                   <span className="relative inline-block">
                   <span 
-                    className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-5xl md:text-6xl font-bold tracking-tight bg-clip-text text-transparent transition-all duration-1000"
+                    className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-7xl md:text-8xl font-bold tracking-tight bg-clip-text text-transparent transition-all duration-1000"
                     style={{
                       backgroundSize: '200% 100%',
                       backgroundPosition: '0% 50%',
@@ -744,7 +823,7 @@ function AppContent() {
                   </span>
                 </span>
                 </h1>
-                <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 mb-10 leading-relaxed max-w-2xl mx-auto">
+                <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto">
                   Персональный ассистент, который знает, где ваша следующая пара. 
                   Уведомления, навигация по корпусам и синхронизация с группой — всё в одном месте.
                 </p>
@@ -758,16 +837,9 @@ function AppContent() {
                       <span>Начать</span>
                     </button>
                   )}
-                  <button 
-                    onClick={() => setActiveTab('about')}
-                    className="w-full sm:w-auto px-8 py-4 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-slate-900 dark:text-white border border-gray-200 dark:border-slate-700 rounded-3xl font-bold text-lg transition-all hover:-translate-y-1 flex items-center justify-center gap-2 shadow-lg shadow-slate-200/20 dark:shadow-none"
-                  >
-                    <span>Узнать больше</span>
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
                 </div>
               </div>
-              <div className="w-full max-w-6xl mx-auto mt-1">
+              <div className="w-full max-w-6xl mx-auto mt-16">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                   <div className="lg:col-span-2">
                     <FeatureCard 
@@ -793,11 +865,12 @@ function AppContent() {
                   />
                 </div>
               </div>
+              <div className="w-full max-w-6xl mx-auto mt-16">
+                <MissionSection stats={missionStats} isLoading={isMissionLoading} />
+              </div>
               <TeamCarousel teamMembers={teamMembers} />
+              <CTASection setActiveTab={setActiveTab} />
             </div>
-          )}
-          {activeTab === 'about' && (
-            <AboutPage darkMode={darkMode} setActiveTab={setActiveTab} />
           )}
           {activeTab === 'admin' && isAdmin && (
             <AdminPanel darkMode={darkMode} />
@@ -821,7 +894,7 @@ function AppContent() {
                     <span className="text-sm">{user?.faculty || groupInfo.faculty}</span>
                                       </div>
                 </div>
-                <div className="relative bg-white dark:bg-slate-800 p-1.5 rounded-2xl flex shadow-inner border border-gray-200 dark:border-slate-700">
+                <div className="relative bg-white dark:bg-slate-800 p-1.5 rounded-2xl flex shadow-inner border border-gray-200 dark:border-slate-700 w-full max-w-md mx-auto">
                   <div 
                     className={`absolute top-1.5 bottom-1.5 rounded-xl bg-white dark:bg-slate-700 transition-all duration-300 ease-out shadow-sm`}
                     style={{
@@ -831,7 +904,7 @@ function AppContent() {
                   ></div>
                   <button
                     onClick={() => setWeekType('upper')}
-                    className={`relative z-10 px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 w-36 ${
+                    className={`relative z-10 px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 flex-1 ${
                       weekType === 'upper' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
@@ -839,7 +912,7 @@ function AppContent() {
                   </button>
                   <button
                     onClick={() => setWeekType('lower')}
-                    className={`relative z-10 px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 w-36 ${
+                    className={`relative z-10 px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 flex-1 ${
                       weekType === 'lower' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
@@ -1464,14 +1537,18 @@ function AppContent() {
                   </button>
                 </div>
               </div>
-              <div className="flex flex-wrap justify-center gap-3 mb-8">
+              <div className="flex overflow-x-auto gap-3 mb-8 pb-2 px-1 sm:px-0 sm:justify-center" style={{
+  scrollbarWidth: 'none',
+  msOverflowStyle: 'none',
+  WebkitScrollbar: 'display: none'
+}}>
                 {newsCategories.map(category => (
                   <button
                     key={category.id}
                     onClick={() => setSelectedNewsCategory(category.id)}
-                    className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
+                    className={`px-4 sm:px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap flex-shrink-0 ${
                       selectedNewsCategory === category.id
-                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                        ? 'bg-emerald-500 text-white'
                         : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-gray-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:text-emerald-600 dark:hover:text-emerald-400'
                     }`}
                   >
@@ -1523,7 +1600,10 @@ function AppContent() {
                             <div className="flex-1 mr-3 min-w-0">
                               {renderTags(item.tags)}
                             </div>
-                            <button className="flex items-center gap-2 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg flex-shrink-0">
+                            <button 
+                              onClick={() => item.link && window.open(item.link, '_blank')}
+                              className="flex items-center gap-2 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg flex-shrink-0"
+                            >
                               Читать
                               <ArrowRight className="w-4 h-4" />
                             </button>
@@ -1580,7 +1660,10 @@ function AppContent() {
                             <div className="flex-1 mr-3 min-w-0">
                               {renderTags(item.tags, handleNewsTagClick)}
                             </div>
-                            <button className="flex items-center gap-2 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg flex-shrink-0">
+                            <button 
+                              onClick={() => item.link && window.open(item.link, '_blank')}
+                              className="flex items-center gap-2 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg flex-shrink-0"
+                            >
                               Читать
                               <ArrowRight className="w-4 h-4" />
                             </button>
@@ -2111,7 +2194,7 @@ function AppContent() {
                 <div className="text-left flex items-center gap-3 mb-8">
                   <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   <p className="text-base font-medium text-slate-900 dark:text-white">
-                    {user?.created_at ? new Date(user.created_at).toLocaleDateString('ru-RU', {
+                    {user?.last_login ? new Date(user.last_login * 1000).toLocaleDateString('ru-RU', {
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric'

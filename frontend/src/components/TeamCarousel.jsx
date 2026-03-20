@@ -87,7 +87,7 @@ function TeamCarousel({ teamMembers }) {
     };
   }, [isAutoPlaying, teamMembers.length]);
   return (
-    <div className="w-full max-w-6xl mx-auto mt-20">
+    <div className="w-full max-w-6xl mx-auto mt-0">
       <h2 className="text-3xl font-bold text-center text-slate-900 dark:text-white mb-12">
         Наша команда
       </h2>
