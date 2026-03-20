@@ -601,15 +601,31 @@ def get_literature(request):
             params.extend(categories)
 
         if search:
-            # Мощный поиск по названию, авторам и описанию (без учета регистра)
+            # Мощный поиск по названию, авторам и описанию (работает с кириллицей)
             search_terms = search.strip().split()
             search_conditions = []
             
             for term in search_terms:
                 if term:  # Пропускаем пустые термины
-                    term_pattern = f"%{term}%"
-                    search_conditions.append("(LOWER(title) LIKE ? OR LOWER(authors) LIKE ? OR LOWER(description) LIKE ?)")
-                    params.extend([term_pattern, term_pattern, term_pattern])
+                    # Ищем в разных регистрах для кириллицы
+                    term_lower = f"%{term.lower()}%"
+                    term_upper = f"%{term.upper()}%"
+                    term_title = f"%{term.title()}%"
+                    
+                    conditions = []
+                    conditions.extend([
+                        "title LIKE ? OR title LIKE ? OR title LIKE ?",
+                        "authors LIKE ? OR authors LIKE ? OR authors LIKE ?", 
+                        "description LIKE ? OR description LIKE ? OR description LIKE ?"
+                    ])
+                    
+                    params.extend([
+                        term_lower, term_upper, term_title,  # title
+                        term_lower, term_upper, term_title,  # authors
+                        term_lower, term_upper, term_title   # description
+                    ])
+                    
+                    search_conditions.append(f"({' OR '.join(conditions) })")
             
             if search_conditions:
                 where_conditions.append("(" + " OR ".join(search_conditions) + ")")
