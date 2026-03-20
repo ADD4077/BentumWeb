@@ -1,7 +1,6 @@
 **/venv
 **/node_modules
 .env
-requirements.txt
 *.db
 *.db-journal
 **/__pycache__
