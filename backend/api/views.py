@@ -231,7 +231,7 @@ def save_data(request):
                 "fullname": user.fullname,
                 "faculty": user.faculty,
                 "student_code": user.student_code,
-                "created_at": user.created_at.isoformat()
+                "created_at": user.created_at
             }
         }
         

@@ -5,12 +5,17 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: true,
+    allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: process.env.VITE_API_ENDPOINT,
         changeOrigin: true,
         secure: false,
       }
-    }
+    },
+    hmr: {
+      path: process.env.VITE_WS_PATH, 
+    },
   }
 })
