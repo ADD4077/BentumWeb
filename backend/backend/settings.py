@@ -87,13 +87,13 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
      'default': {
          'ENGINE': 'django.db.backends.{}'.format(
-             os.getenv('DATABASE_ENGINE', 'sqlite3')
+             os.getenv('DATABASE_ENGINE')
          ),
-         'NAME': os.getenv('DATABASE_NAME', 'polls'),
-         'USER': os.getenv('DATABASE_USERNAME', 'myprojectuser'),
-         'PASSWORD': os.getenv('DATABASE_PASSWORD', 'password'),
-         'HOST': os.getenv('DATABASE_HOST', '127.0.0.1'),
-         'PORT': os.getenv('DATABASE_PORT', 5432),
+         'NAME': os.getenv('DATABASE_NAME'),
+         'USER': os.getenv('DATABASE_USERNAME'),
+         'PASSWORD': os.getenv('DATABASE_PASSWORD'),
+         'HOST': os.getenv('DATABASE_HOST'),
+         'PORT': os.getenv('DATABASE_PORT'),
      }
 }
 
@@ -144,7 +144,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Telegram Bot settings
-TELEGRAM_BOT_TOKEN = '7962554899:AAE--8q8vIlHqcPLVKM6gIwhT9Lg5NO81hM'  # Замените на токен вашего бота
-TELEGRAM_CHAT_ID = '-1003536495881'      # Замените на ID вашего канала/чата
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 TELEGRAM_TOPIC_ID = 9                   # ID темы для заявок поддержки
 TELEGRAM_NEW_USERS_TOPIC_ID = 3  # ID темы для уведомлений о новых пользователях
