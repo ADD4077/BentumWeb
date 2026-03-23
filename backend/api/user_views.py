@@ -145,7 +145,7 @@ def create_user(request):
         data = json.loads(request.body)
         
         # Валидация
-        required_fields = ['first_name', 'last_name', 'student_code', 'faculty', 'password']
+        required_fields = ['fullname', 'student_code', 'faculty', 'password']
         for field in required_fields:
             if not data.get(field):
                 return JsonResponse({
@@ -175,16 +175,18 @@ def create_user(request):
             }, status=400)
         
         # Создаем пользователя
+        from .views import get_unix_timestamp
         user = User.objects.create(
-            fullname=f"{data['first_name']} {data['last_name']}",
+            fullname=data['fullname'],
             student_code=data['student_code'],
             faculty=data['faculty'],
-            bilet_code=data['password']  # Устанавливаем пароль как bilet_code
+            bilet_code=data['password'],  # Устанавливаем пароль как bilet_code
+            created_at=get_unix_timestamp()
         )
         
         return JsonResponse({
             'success': True,
-            'message': f'Пользователь {data["first_name"]} {data["last_name"]} успешно создан'
+            'message': f'Пользователь {data["fullname"]} успешно создан'
         })
         
     except Exception as e:
