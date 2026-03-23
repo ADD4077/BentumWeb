@@ -3,8 +3,7 @@ import { UserPlus, X, User, GraduationCap, Building, Calendar, Shield } from 'lu
 
 function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
+    fullname: '',
     student_code: '',
     faculty: '',
     registration_date: new Date().toISOString().split('T')[0],
@@ -54,12 +53,8 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.first_name.trim()) {
-      newErrors.first_name = 'Имя обязательно';
-    }
-
-    if (!formData.last_name.trim()) {
-      newErrors.last_name = 'Фамилия обязательна';
+    if (!formData.fullname.trim()) {
+      newErrors.fullname = 'Полное имя обязательно';
     }
 
     if (!formData.student_code.trim()) {
@@ -97,8 +92,7 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
 
     try {
       const userData = {
-        first_name: formData.first_name,
-        last_name: formData.last_name,
+        fullname: formData.fullname,
         student_code: formData.student_code,
         faculty: formData.faculty,
         registration_date: formData.registration_date,
@@ -109,8 +103,7 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
       
       // Сброс формы после успешного добавления
       setFormData({
-        first_name: '',
-        last_name: '',
+        fullname: '',
         student_code: '',
         faculty: '',
         registration_date: new Date().toISOString().split('T')[0],
@@ -128,8 +121,7 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
 
   const handleClose = () => {
     setFormData({
-      first_name: '',
-      last_name: '',
+      fullname: '',
       student_code: '',
       faculty: '',
       registration_date: new Date().toISOString().split('T')[0],
@@ -189,54 +181,29 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
               Основная информация
             </h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
               <div>
                 <label className={`block text-sm font-medium mb-2 ${
                   darkMode ? 'text-slate-300' : 'text-gray-700'
                 }`}>
-                  Имя *
+                  Полное имя *
                 </label>
                 <input
                   type="text"
-                  name="first_name"
-                  value={formData.first_name}
+                  name="fullname"
+                  value={formData.fullname}
                   onChange={handleInputChange}
                   className={`w-full px-4 py-2 rounded-lg border ${
                     darkMode 
                       ? 'bg-slate-700 border-slate-600 text-white' 
                       : 'bg-white border-gray-300 text-gray-900'
                   } focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                    errors.first_name ? 'border-red-500' : ''
+                    errors.fullname ? 'border-red-500' : ''
                   }`}
-                  placeholder="Введите имя"
+                  placeholder="Введите полное имя"
                 />
-                {errors.first_name && (
-                  <p className="text-red-500 text-sm mt-1">{errors.first_name}</p>
-                )}
-              </div>
-
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${
-                  darkMode ? 'text-slate-300' : 'text-gray-700'
-                }`}>
-                  Фамилия *
-                </label>
-                <input
-                  type="text"
-                  name="last_name"
-                  value={formData.last_name}
-                  onChange={handleInputChange}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    darkMode 
-                      ? 'bg-slate-700 border-slate-600 text-white' 
-                      : 'bg-white border-gray-300 text-gray-900'
-                  } focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                    errors.last_name ? 'border-red-500' : ''
-                  }`}
-                  placeholder="Введите фамилию"
-                />
-                {errors.last_name && (
-                  <p className="text-red-500 text-sm mt-1">{errors.last_name}</p>
+                {errors.fullname && (
+                  <p className="text-red-500 text-sm mt-1">{errors.fullname}</p>
                 )}
               </div>
             </div>

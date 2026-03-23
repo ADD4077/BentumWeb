@@ -831,7 +831,7 @@ function AppContent() {
                   {!isAuthenticated && (
                     <button 
                       onClick={() => setIsLoginModalOpen(true)}
-                      className="w-full sm:w-auto px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-3xl font-bold text-lg shadow-xl shadow-emerald-500/30 transition-all hover:-translate-y-1 flex items-center justify-center gap-2 pl-5"
+                      className="w-full sm:w-auto px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-3xl font-bold text-lg shadow-xl shadow-emerald-500/30 transition-all hover:-translate-y-1 flex items-center justify-center gap-2 pl-5 mt-10"
                     >
                       <LogIn className="w-5 h-5" />
                       <span>Начать</span>
