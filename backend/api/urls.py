@@ -1,4 +1,7 @@
 from django.urls import path
+from django.contrib import admin as admin_django
+from django.conf import settings
+from django.conf.urls.static import static
 
 from .views import save_data, dashboard, logout, theme, get_schedule, get_literature, get_news
 
@@ -84,5 +87,5 @@ urlpatterns = [
 
     path("api/media/delete/<int:media_id>", media_views.delete_media),
 
-]
-
+    path("admin/", admin_django.site.urls),
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

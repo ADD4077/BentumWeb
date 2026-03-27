@@ -15,7 +15,8 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
+STATIC_ROOT = BASE_DIR / "static"
+STATIC_URL = '/static/'
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 
