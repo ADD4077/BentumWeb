@@ -3,7 +3,7 @@ from django.contrib import admin as admin_django
 from django.conf import settings
 from django.conf.urls.static import static
 
-from .views import save_data, dashboard, logout, theme, get_schedule, get_literature, get_news
+from .views import save_data, dashboard, logout, theme, get_schedule, get_literature, get_news, get_public_stats
 
 from .profile_views import update_profile, update_avatar, update_banner
 
@@ -34,6 +34,8 @@ urlpatterns = [
     path("api/literature", get_literature),
 
     path("api/news", get_news),
+
+    path("api/public/stats", get_public_stats),
 
     path("api/profile/update", update_profile),
 
