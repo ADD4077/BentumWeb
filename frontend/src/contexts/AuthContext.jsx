@@ -15,25 +15,20 @@ export const AuthProvider = ({ children }) => {
   }, [checked]);
   const checkAuth = async () => {
     try {
-      const data = await api.getDashboard();
-      if (data.success) {
+      // Проверяем только localStorage без API запросов
+      const storedUser = safeGetUserData();
+      if (storedUser) {
         setIsAuthenticated(true);
-        // Добавляем ID из localStorage если его нет в ответе API
-        const userData = data.user || {};
-        const localStorageUser = safeGetUserData();
-        if (!userData.id && localStorageUser?.id) {
-          userData.id = localStorageUser.id;
-        }
-        setUser(userData);
-      }
-    } catch (error) {
-      if (error.response?.status === 401) {
-        setIsAuthenticated(false);
-        setUser(null);
+        setUser(storedUser);
       } else {
         setIsAuthenticated(false);
         setUser(null);
       }
+    } catch (error) {
+      // Любая ошибка - считаем пользователя неавторизованным
+      setIsAuthenticated(false);
+      setUser(null);
+      safeRemoveItem('user');
     } finally {
       setLoading(false);
     }

@@ -23,7 +23,8 @@ export const API_ENDPOINTS = {
   MEDIA_SET_ACTIVE: `${API_BASE_URL}/api/media/set-active`,
   MEDIA_DELETE: `${API_BASE_URL}/api/media/delete`,
   SAVE_DATA: `${API_BASE_URL}/api/save_data`,
-  AUTH_CHECK: `${API_BASE_URL}/api/auth/check`
+  AUTH_CHECK: `${API_BASE_URL}/api/auth/check`,
+  PUBLIC_STATS: `${API_BASE_URL}/api/public/stats`
 };
 
 // Вспомогательная функция для построения URL с API базой

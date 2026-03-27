@@ -444,3 +444,66 @@ def get_user_media_by_id(request):
             "success": False,
             "detail": f"Ошибка загрузки медиа: {str(e)}"
         }, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_media_by_type(request):
+    """Удаление медиа по типу (avatar/banner)"""
+    try:
+        # Проверяем авторизацию
+        if not request.session.get('is_authenticated'):
+            return JsonResponse({
+                "success": False,
+                "detail": "Требуется авторизация"
+            }, status=401)
+        
+        student_code = request.session.get('student_code')
+        user = User.objects.filter(student_code=student_code).first()
+        
+        if not user:
+            return JsonResponse({
+                "success": False,
+                "detail": "Пользователь не найден"
+            }, status=404)
+        
+        # Получаем тип медиа из запроса
+        data = json.loads(request.body)
+        media_type = data.get('media_type')
+        
+        if media_type not in ['avatar', 'banner']:
+            return JsonResponse({
+                "success": False,
+                "detail": "Неверный тип медиа"
+            }, status=400)
+        
+        # Находим активное медиа указанного типа
+        media = UserProfileMedia.objects.filter(
+            user=user,
+            media_type=media_type,
+            is_active=True
+        ).first()
+        
+        if not media:
+            return JsonResponse({
+                "success": False,
+                "detail": "Медиа не найдено"
+            }, status=404)
+        
+        # Удаляем файлы и запись с помощью MediaStorage
+        MediaStorage.delete_media_files(media)
+        
+        return JsonResponse({
+            "success": True,
+            "message": f"{media_type.capitalize()} успешно удален"
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "success": False,
+            "detail": "Неверный формат JSON"
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "detail": f"Ошибка сервера: {str(e)}"
+        }, status=500)

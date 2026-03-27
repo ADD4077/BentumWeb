@@ -21,35 +21,28 @@ from .ban_service import BanService
 SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 
 
-def _check_login_attempts(student_code: str, ip_address: str) -> tuple[bool, str]:
+def _check_login_attempts(student_code: str) -> tuple[bool, str]:
     """Проверяет количество попыток входа для защиты от подбора пароля"""
     
-    # Ключи для кэша
+    # Ключ для кэша
     user_key = f"login_attempts_user:{student_code}"
-    ip_key = f"login_attempts_ip:{ip_address}"
     
-    # Получаем текущие счетчики
+    # Получаем текущий счетчик
     user_attempts = cache.get(user_key, 0)
-    ip_attempts = cache.get(ip_key, 0)
     
     # Проверяем лимиты
     if user_attempts >= 5:
         return False, "Слишком много попыток входа. Попробуйте позже."
     
-    if ip_attempts >= 10:
-        return False, "Слишком много попыток входа с этого IP. Попробуйте позже."
-    
-    # Увеличиваем счетчики
+    # Увеличиваем счетчик
     cache.set(user_key, user_attempts + 1, 15)  # 15 секунд
-    cache.set(ip_key, ip_attempts + 1, 15)      # 15 секунд
     
     return True, ""
 
 
-def _clear_login_attempts(student_code: str, ip_address: str):
+def _clear_login_attempts(student_code: str):
     """Сбрасывает счетчики попыток входа после успешной авторизации"""
     cache.delete(f"login_attempts_user:{student_code}")
-    cache.delete(f"login_attempts_ip:{ip_address}")
 
 
 def _enforce_session_limits(student_code: str, current_session_key: str) -> None:
@@ -75,16 +68,6 @@ def _enforce_session_limits(student_code: str, current_session_key: str) -> None
 # Вспомогательная функция для получения времени в UNIX формате
 def get_unix_timestamp():
     return int(datetime.now().timestamp())
-
-
-# Вспомогательная функция для получения реального IP адреса клиента
-def get_client_ip(request):
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0].strip()
-    else:
-        ip = request.META.get('HTTP_X_REAL_IP', request.META.get('REMOTE_ADDR', 'unknown'))
-    return ip
 
 
 @csrf_exempt
@@ -118,11 +101,8 @@ def save_data(request):
                 status=400
             )
 
-        # Получаем реальный IP адрес пользователя
-        ip_address = get_client_ip(request)
-        
         # Проверяем количество попыток входа
-        can_login, error_message = _check_login_attempts(student_code, ip_address)
+        can_login, error_message = _check_login_attempts(student_code)
         if not can_login:
             return JsonResponse(
                 {"detail": error_message},
@@ -139,11 +119,10 @@ def save_data(request):
                 )
             
             # Сбрасываем счетчики попыток после успешного входа
-            _clear_login_attempts(student_code, ip_address)
+            _clear_login_attempts(student_code)
             
-            # Обновляем время входа и IP
+            # Обновляем время входа
             existing_user.last_login = get_unix_timestamp()
-            existing_user.last_login_ip = ip_address
             existing_user.save()
             
             request.session['student_code'] = existing_user.student_code
@@ -181,7 +160,7 @@ def save_data(request):
             )
         
         # Сбрасываем счетчики попыток после успешной авторизации
-        _clear_login_attempts(student_code, ip_address)
+        _clear_login_attempts(student_code)
         
         fullname, faculty = auth_result
         
@@ -194,7 +173,7 @@ def save_data(request):
         )
         
         # Сбрасываем счетчики попыток после успешной регистрации
-        _clear_login_attempts(student_code, ip_address)
+        _clear_login_attempts(student_code)
         
         # Отправляем уведомление о новом пользователе в Telegram
         try:
@@ -312,8 +291,7 @@ def dashboard(request):
                 "student_code": user.student_code,
                 "created_at": user.created_at,
                 "is_banned": ban_status['is_banned'],
-                "last_login": user.last_login,
-                "last_login_ip": user.last_login_ip
+                "last_login": user.last_login
             }
         }, status=200)
     
@@ -914,3 +892,49 @@ def get_news(request):
         return JsonResponse({"detail": "Ошибка базы данных новостей"}, status=500)
     except Exception as e:
         return JsonResponse({"detail": f"Внутренняя ошибка сервера: {str(e)}"}, status=500)
+
+
+@csrf_exempt
+def get_public_stats(request):
+    """
+    Публичный эндпоинт для получения статистики (доступен всем)
+    """
+    if request.method != "GET":
+        return JsonResponse(
+            {"detail": "Метод не разрешён"},
+            status=405
+        )
+    
+    try:
+        from .models import User
+        from .ban_service import BanService
+        
+        total_users = User.objects.count()
+        
+        # Считаем количество уникальных факультетов
+        unique_faculties = User.objects.values_list('faculty', flat=True).distinct()
+        faculties_count = len([f for f in unique_faculties if f])
+        
+        # Считаем заблокированных пользователей
+        banned_count = 0
+        for user in User.objects.all():
+            ban_status = BanService.check_ban_status(user.student_code)
+            if ban_status['is_banned']:
+                banned_count += 1
+        
+        return JsonResponse({
+            "success": True,
+            "stats": {
+                "totalUsers": total_users,
+                "facultiesCount": faculties_count,
+                "bannedUsers": banned_count,
+                "activeUsers": total_users - banned_count,
+                "uptime": "99.9%"
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "detail": f"Ошибка загрузки статистики: {str(e)}"
+        }, status=500)

@@ -118,25 +118,26 @@ function AdminPanel({ darkMode }) {
         credentials: 'include'
       });
       
-      if (response.status === 401) {
-        // Пользователь не авторизован или не админ
-        setStats({
-          totalUsers: 0,
-          bannedUsers: 0,
-          activeUsers: 0,
+      if (!response.ok) {
+        // Любой неуспешный ответ - используем моковые данные
+        const mockStats = {
+          totalUsers: users.length,
+          bannedUsers: users.filter(u => u.status === 'banned').length,
+          activeUsers: users.filter(u => u.status === 'active').length,
           newUsersToday: 0,
           newUsersThisWeek: 0,
           newUsersThisMonth: 0
-        });
+        };
+        setStats(mockStats);
         return;
       }
       
       const data = await response.json();
       
-      if (data.success) {
+      if (data.success && data.stats) {
         setStats(data.stats);
       } else {
-        // Если API недоступен, используем моковые данные
+        // Некорректный ответ API - используем моковые данные
         const mockStats = {
           totalUsers: users.length,
           bannedUsers: users.filter(u => u.status === 'banned').length,
@@ -148,7 +149,7 @@ function AdminPanel({ darkMode }) {
         setStats(mockStats);
       }
     } catch (error) {
-      // При ошибке используем моковые данные
+      // Любая ошибка - используем моковые данные
       const mockStats = {
         totalUsers: users.length,
         bannedUsers: users.filter(u => u.status === 'banned').length,
@@ -400,25 +401,6 @@ function AdminPanel({ darkMode }) {
               </div>
             </div>
           </div>
-
-          {/* Инструкция */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-2xl p-3 sm:p-4 mb-6">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-blue-600 dark:text-blue-400 text-sm">💡</span>
-              </div>
-              <div className="text-left flex-1">
-                <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-2 text-sm sm:text-base">Как пользоваться админкой:</h3>
-                <div className="text-xs sm:text-sm text-blue-700 dark:text-blue-400 space-y-1">
-                  <p>👁️ <strong className="hidden sm:inline">Просмотр профиля:</strong> <span className="sm:hidden">Профиль:</span> нажмите на глазок 👁️ чтобы увидеть детали</p>
-                  <p>🚫 <strong className="hidden sm:inline">Бан пользователя:</strong> <span className="sm:hidden">Бан:</span> нажмите на красный крест 🚫 → введите причину и срок</p>
-                  <p>✅ <strong className="hidden sm:inline">Разбан:</strong> <span className="sm:hidden">Разбан:</span> нажмите на зеленую галочку ✅ чтобы разблокировать</p>
-                  <p>🛡️ <strong className="hidden sm:inline">Администраторы:</strong> <span className="sm:hidden">Админы:</span> не могут быть забанены (защита щитом)</p>
-                  <p>🔍 <strong className="hidden sm:inline">Поиск:</strong> <span className="sm:hidden">Поиск:</span> используйте поиск по имени или номеру студбилета</p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Статистика */}
@@ -605,7 +587,7 @@ function AdminPanel({ darkMode }) {
                               year: 'numeric',
                               hour: '2-digit',
                               minute: '2-digit'
-                            }) : '—'
+                            }) : 'Никогда'
                           }
                         </div>
                       </td>
@@ -738,23 +720,20 @@ function AdminPanel({ darkMode }) {
                       onClick={() => handleViewProfile(user)}
                       className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/30 transition-colors text-sm"
                     >
-                      <Eye className="w-4 h-4" />
-                      <span>Профиль</span>
+                      <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                     
                     {user.status === 'active' ? (
                       (user.id === 1 || user.fullname?.includes('Admin')) ? (
                         <div className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-gray-100 dark:bg-slate-600 text-gray-500 dark:text-gray-400 rounded-lg cursor-not-allowed text-sm">
-                          <Shield className="w-4 h-4" />
-                          <span>Защита</span>
+                          <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
                       ) : (
                         <button
                           onClick={() => handleBanUser(user.id)}
                           className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/30 transition-colors text-sm"
                         >
-                          <Ban className="w-4 h-4" />
-                          <span>Забан</span>
+                          <Ban className="w-4 h-4 sm:w-5 sm:h-5" />
                         </button>
                       )
                     ) : (
@@ -762,8 +741,7 @@ function AdminPanel({ darkMode }) {
                         onClick={() => handleUnbanUser(user.id)}
                         className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900/30 transition-colors text-sm"
                       >
-                        <UserCheck className="w-4 h-4" />
-                        <span>Разбан</span>
+                        <UserCheck className="w-4 h-4 sm:w-5 sm:h-5" />
                       </button>
                     )}
                   </div>
@@ -949,20 +927,8 @@ function AdminPanel({ darkMode }) {
                     <span className="font-medium">Последний вход:</span>
                     <span>
                       {selectedUser.last_login ? 
-                        new Date(selectedUser.last_login * 1000).toLocaleString('ru-RU', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        }) : 'Не входил'
+                        new Date(selectedUser.last_login * 1000).toLocaleDateString('ru-RU') : 'Никогда'
                       }
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">IP адрес:</span>
-                    <span className="font-mono text-sm">
-                      {selectedUser.ip_address || 'Не указан'}
                     </span>
                   </div>
                 </div>

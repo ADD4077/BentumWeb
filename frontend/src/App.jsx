@@ -11,9 +11,10 @@ import NotFoundPage from './components/NotFoundPage.jsx';
 import BannedPage from './components/BannedPage.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
 import ProfileEditModal from './components/ProfileEditModal.jsx';
+import ProfileSettings from './components/ProfileSettings.jsx';
 import SupportSuccessModal from './components/SupportSuccessModal.jsx';
 import PrivacyPolicy from './components/PrivacyPolicy.jsx';
-import { ArrowRight, Backpack, Book, BookOpen, Calendar, Clock, Download, Edit, ExternalLink, Filter, Gamepad2, GraduationCap, LogIn, LogOut, Moon, Search, Star, Sun, User } from 'lucide-react';
+import { ArrowRight, Backpack, Book, BookOpen, Calendar, Clock, Download, Edit, ExternalLink, Filter, Gamepad2, GraduationCap, LogIn, LogOut, Moon, Search, Settings, Star, Sun, User } from 'lucide-react';
 import { daysOfWeek, quickDayButtons, groupInfo, features, teamMembers } from './utils/constants.js';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
 import { API_ENDPOINTS } from './config/api.js';
@@ -130,21 +131,22 @@ function AppContent() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [missionStats, setMissionStats] = useState({
-    totalUsers: 0,
-    facultiesCount: 0,
+    totalUsers: 1000,
+    facultiesCount: 10,
     uptime: '99.9%'
   });
-  const [isMissionLoading, setIsMissionLoading] = useState(true);
+  const [isMissionLoading, setIsMissionLoading] = useState(false);
 
   // Загрузка статистики для миссии
   const loadMissionStats = async () => {
     try {
-      const response = await fetch(API_ENDPOINTS.USERS_STATS, {
+      // Используем публичный эндпоинт статистики, доступный всем
+      const response = await fetch(API_ENDPOINTS.PUBLIC_STATS, {
         credentials: 'include'
       });
       
-      if (response.status === 401) {
-        // Пользователь не админ - используем моковые данные
+      if (!response.ok) {
+        // Любой неуспешный ответ - используем моковые данные
         setMissionStats({
           totalUsers: 1000,
           facultiesCount: 10,
@@ -156,36 +158,15 @@ function AppContent() {
       
       const data = await response.json();
       
-      if (data.success) {
-        // Считаем количество уникальных факультетов
-        const usersResponse = await fetch(API_ENDPOINTS.USERS, {
-          credentials: 'include'
+      if (data.success && data.stats) {
+        // Реальные данные успешно загружены
+        setMissionStats({
+          totalUsers: data.stats.totalUsers || 1000,
+          facultiesCount: data.stats.facultiesCount || 10,
+          uptime: '99.9%'
         });
-        
-        if (usersResponse.status === 401) {
-          // Пользователь не админ - используем базовую статистику
-          setMissionStats({
-            totalUsers: data.stats.totalUsers || 0,
-            facultiesCount: 10,
-            uptime: '99.9%'
-          });
-          setIsMissionLoading(false);
-          return;
-        }
-        
-        const usersData = await usersResponse.json();
-        
-        if (usersData.success) {
-          const uniqueFaculties = [...new Set(usersData.users.map(user => user.faculty).filter(Boolean))];
-          
-          setMissionStats({
-            totalUsers: data.stats.totalUsers || 0,
-            facultiesCount: uniqueFaculties.length || 0,
-            uptime: '99.9%'
-          });
-        }
       } else {
-        // Используем моковые данные при ошибке API
+        // Некорректный ответ API - используем моковые данные
         setMissionStats({
           totalUsers: 1000,
           facultiesCount: 10,
@@ -193,7 +174,7 @@ function AppContent() {
         });
       }
     } catch (error) {
-      // Используем моковые данные при ошибке
+      // Любая ошибка - используем моковые данные
       setMissionStats({
         totalUsers: 1000,
         facultiesCount: 10,
@@ -205,6 +186,7 @@ function AppContent() {
   };
 
   useEffect(() => {
+    // Загружаем статистику для всех пользователей через публичный эндпоинт
     loadMissionStats();
   }, []);
   
@@ -326,6 +308,7 @@ function AppContent() {
   const [isSortModalOpen, setIsSortModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isProfileEditModalOpen, setIsProfileEditModalOpen] = useState(false);
+  const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   
   const handleProfileUpdate = (updatedUser) => {
     // Обновляем состояние пользователя с новыми URL медиа
@@ -783,6 +766,43 @@ function AppContent() {
         {/* Если пользователь заблокирован, показываем страницу бана */}
         {isBanned ? (
           <BannedPage />
+        ) : isProfileSettingsOpen ? (
+          (() => {
+            // Закрываем модальное окно профиля при открытии настроек
+            if (isProfileModalOpen) {
+              setIsProfileModalOpen(false);
+            }
+            return (
+              <ProfileSettings 
+                darkMode={darkMode}
+                onBack={() => setIsProfileSettingsOpen(false)}
+                user={user}
+                userMedia={userMedia}
+                onProfileUpdate={handleProfileUpdate}
+                onForceRefresh={(updatedData) => {
+                  // Принудительное обновление медиа в профиле
+                  if (updatedData) {
+                    setUserMedia({
+                      avatar_url: updatedData.avatar_url,
+                      banner_url: updatedData.banner_url,
+                      avatar_placeholder: updatedData.avatar_placeholder,
+                      banner_placeholder: updatedData.banner_placeholder
+                    });
+                  } else {
+                    // Если обновленных данных нет, используем текущие данные пользователя
+                    if (user) {
+                      setUserMedia({
+                        avatar_url: user.avatar_url,
+                        banner_url: user.banner_url,
+                        avatar_placeholder: user.avatar_placeholder,
+                        banner_placeholder: user.banner_placeholder
+                      });
+                    }
+                  }
+                }}
+              />
+            );
+          })()
         ) : (
           <>
             {!isLoginModalOpen && !isSupportModalOpen && !isInstructionModalOpen && !isCategoryModalOpen && !isSortModalOpen && !isProfileModalOpen && (
@@ -989,83 +1009,85 @@ function AppContent() {
             </div>
           )}
           {activeTab === 'literature' && (
-            <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-10">
-                <h2 className="text-4xl font-bold mb-4 text-slate-900 dark:text-white tracking-tight">Литература</h2>
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6">
+              <div className="text-center mb-8 sm:mb-10">
+                <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4 text-slate-900 dark:text-white tracking-tight">Литература</h2>
+                <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto px-4">
                   Учебные материалы, пособия и методические указания для студентов БНТУ
                 </p>
               </div>
-              <div className="flex flex-row gap-2 mb-8">
+              <div className="flex items-center gap-2 mb-6 sm:mb-8">
                 <div className="flex-1 relative">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                  <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
                   <input
                     type="text"
                     placeholder="Поиск по названию, автору или описанию..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full pl-10 sm:pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl sm:rounded-2xl text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm sm:text-base"
                   />
                 </div>
-                <button
-                  onClick={() => setIsCategoryModalOpen(true)}
-                  className="flex items-center justify-center w-12 h-12 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex-shrink-0"
-                  title="Фильтр категорий"
-                >
-                  <Filter className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setIsSortModalOpen(true)}
-                  className="flex items-center justify-center w-12 h-12 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex-shrink-0"
-                  title="Сортировка"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                  </svg>
-                </button>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => setIsCategoryModalOpen(true)}
+                    className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl sm:rounded-2xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex-shrink-0"
+                    title="Фильтр категорий"
+                  >
+                    <Filter className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
+                  <button
+                    onClick={() => setIsSortModalOpen(true)}
+                    className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl sm:rounded-2xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex-shrink-0"
+                    title="Сортировка"
+                  >
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <div className="mb-6">
-                <div className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+              <div className="mb-4 sm:mb-6">
+                <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-2 sm:mb-3 px-1">
                   Найдено материалов: <span className="font-medium text-slate-900 dark:text-white">{literatureTotal}</span>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
                   {searchQuery && (
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 rounded-full text-sm font-medium">
-                      <Search className="w-4 h-4" />
-                      <span>{searchQuery}</span>
+                    <div className="inline-flex items-center gap-2 px-2 sm:px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 rounded-full text-xs sm:text-sm font-medium">
+                      <Search className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="truncate max-w-[100px] sm:max-w-none">{searchQuery}</span>
                       <button
                         onClick={() => setSearchQuery('')}
-                        className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center hover:bg-emerald-700 transition-colors"
+                        className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center hover:bg-emerald-700 transition-colors flex-shrink-0"
                       >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-2 h-2 sm:w-3 sm:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
                     </div>
                   )}
                   {selectedCategories.length > 0 && !selectedCategories.includes('all') && (
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
-                      <Filter className="w-4 h-4" />
+                    <div className="inline-flex items-center gap-2 px-2 sm:px-3 py-1.5 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full text-xs sm:text-sm font-medium">
+                      <Filter className="w-3 h-3 sm:w-4 sm:h-4" />
                       <span>{selectedCategories.length} {selectedCategories.length === 1 ? 'категория' : selectedCategories.length < 5 ? 'категории' : 'категорий'}</span>
                       <button
                         onClick={() => {
                           setSelectedCategories(['all']);
                           setLiteraturePage(1);
                         }}
-                        className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors"
+                        className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors flex-shrink-0"
                       >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-2 h-2 sm:w-3 sm:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
                     </div>
                   )}
                   {sortBy !== 'default' && (
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-full text-sm font-medium">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="inline-flex items-center gap-2 px-2 sm:px-3 py-1.5 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-full text-xs sm:text-sm font-medium">
+                      <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                       </svg>
-                      <span>
+                      <span className="truncate max-w-[80px] sm:max-w-none">
                         {(() => {
                           const option = [
                             { id: 'title_asc', name: 'А-Я' },
@@ -1085,9 +1107,9 @@ function AppContent() {
                           setSortBy('default');
                           setLiteraturePage(1);
                         }}
-                        className="w-4 h-4 rounded-full bg-purple-600 text-white flex items-center justify-center hover:bg-purple-700 transition-colors"
+                        className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-purple-600 text-white flex items-center justify-center hover:bg-purple-700 transition-colors flex-shrink-0"
                       >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-2 h-2 sm:w-3 sm:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
@@ -1101,7 +1123,7 @@ function AppContent() {
                         setSortBy('default');
                         setLiteraturePage(1);
                       }}
-                      className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                      className="px-2 sm:px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs sm:text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                     >
                       Сбросить все
                     </button>
@@ -1110,23 +1132,23 @@ function AppContent() {
               </div>
               {literatureItems.length > 0 ? (
                 <div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {literatureItems.map((item) => (
                     <div
                       key={item.id}
-                      className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between h-full"
+                      className="bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-slate-700 p-4 sm:p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between h-full"
                     >
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/20 rounded-md flex items-center justify-center overflow-hidden">
+                      <div className="flex items-start justify-between mb-3 sm:mb-4">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-100 dark:bg-emerald-900/20 rounded-md flex items-center justify-center overflow-hidden flex-shrink-0">
                             {item.image_url ? (
                               <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
                             ) : (
-                              <BookOpen className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                              <BookOpen className="w-4 h-4 sm:w-6 sm:h-6 text-emerald-600 dark:text-emerald-400" />
                             )}
                           </div>
-                          <div>
-                            <span className="inline-block px-2 py-1 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 text-xs font-medium rounded-lg mb-1">
+                          <div className="min-w-0 flex-1">
+                            <span className="inline-block px-1.5 sm:px-2 py-0.5 sm:py-1 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 text-xs font-medium rounded-lg mb-1">
                               {item.category || 'Без категории'}
                             </span>
                             <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -1135,13 +1157,13 @@ function AppContent() {
                           </div>
                         </div>
                       </div>
-                      <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-2 line-clamp-2">
+                      <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white mb-2 line-clamp-2">
                         {item.title}
                       </h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-1">
                         {item.author}
                       </p>
-                      <p className="text-sm text-slate-500 dark:text-slate-500 mb-4 line-clamp-3">
+                      <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-500 mb-3 sm:mb-4 line-clamp-2 sm:line-clamp-3">
                         {item.description}
                       </p>
                       <div className="flex gap-2">
@@ -1151,9 +1173,9 @@ function AppContent() {
                             target="_blank"
                             rel="noopener noreferrer"
                             download
-                            className="flex-1 flex items-center justify-center gap-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium transition-colors"
+                            className="flex-1 flex items-center justify-center gap-1 px-3 sm:px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-colors"
                           >
-                            <Download className="w-4 h-4" />
+                            <Download className="w-3 h-3 sm:w-4 sm:h-4" />
                               Скачать
                               { (item.downloadSize || item.size) && (
                                 <span className="text-sm text-slate-200 dark:text-slate-300 ml-1">({item.downloadSize || item.size})</span>
@@ -1162,10 +1184,11 @@ function AppContent() {
                         ) : (
                           <button
                             disabled
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 text-gray-500 rounded-xl text-sm font-medium"
+                            className="flex-1 flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-gray-200 text-gray-500 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium"
                           >
-                            <Download className="w-4 h-4" />
-                            Скачать
+                            <Download className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <span className="hidden sm:inline">Скачать</span>
+                            <span className="sm:hidden">↓</span>
                           </button>
                         )}
                         { (item.downloadUrl || item.download_url) ? (
@@ -1173,35 +1196,35 @@ function AppContent() {
                             href={item.downloadUrl || item.download_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center justify-center px-4 py-2 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 border border-gray-200 dark:border-slate-600 rounded-xl text-sm font-medium transition-colors"
+                            className="hidden sm:flex items-center justify-center px-3 sm:px-4 py-2 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 border border-gray-200 dark:border-slate-600 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-colors"
                           >
-                            <ExternalLink className="w-4 h-4" />
+                            <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4" />
                           </a>
                         ) : (
                           <button
                             disabled
-                            className="flex items-center justify-center px-4 py-2 bg-gray-200 text-gray-500 rounded-xl text-sm font-medium"
+                            className="hidden sm:flex items-center justify-center px-3 sm:px-4 py-2 bg-gray-200 text-gray-500 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium"
                           >
-                            <ExternalLink className="w-4 h-4" />
+                            <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4" />
                           </button>
                         )}
                       </div>
                     </div>
                   ))}
                   </div>
-                  <div className="flex items-center justify-center mt-10">
-                    <div className="flex items-center gap-2 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-white/50 dark:border-slate-700/50 rounded-2xl p-2 shadow-lg">
+                  <div className="flex items-center justify-center mt-8 sm:mt-10">
+                    <div className="flex items-center gap-1 sm:gap-2 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-white/50 dark:border-slate-700/50 rounded-xl sm:rounded-2xl p-1 sm:p-2 shadow-lg">
                       <button
                         onClick={() => setLiteraturePage(1)}
                         disabled={literaturePage === 1}
                         title="В начало"
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                        className={`w-10 h-10 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center text-xs sm:text-sm font-medium transition-all duration-300 ${
                           literaturePage === 1 
                             ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed' 
                             : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
                         }`}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
                         </svg>
                       </button>
@@ -1209,17 +1232,17 @@ function AppContent() {
                         onClick={() => literaturePage > 1 && setLiteraturePage(literaturePage - 1)}
                         disabled={literaturePage === 1}
                         title="Предыдущая"
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                        className={`w-10 h-10 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center text-xs sm:text-sm font-medium transition-all duration-300 ${
                           literaturePage === 1 
                             ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed' 
                             : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
                         }`}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                         </svg>
                       </button>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-0.5 sm:gap-1">
                         <input
                           type="number"
                           min="1"
@@ -1239,12 +1262,12 @@ function AppContent() {
                               }
                             }
                           }}
-                          className="w-12 px-1.5 py-2 bg-emerald-500 dark:bg-emerald-600 text-white rounded-xl text-sm font-medium shadow-sm text-center focus:outline-none focus:ring-2 focus:ring-emerald-400 [-moz-appearance:_textfield] [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none"
+                          className="w-12 sm:w-12 px-1 sm:px-1.5 py-2 bg-emerald-500 dark:bg-emerald-600 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium shadow-sm text-center focus:outline-none focus:ring-2 focus:ring-emerald-400 [-moz-appearance:_textfield] [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none"
                         />
-                        <div className="text-slate-400 dark:text-slate-500 text-sm font-medium px-1">
+                        <div className="text-slate-400 dark:text-slate-500 text-xs sm:text-sm font-medium px-0.5 sm:px-1">
                           из
                         </div>
-                        <div className="px-3 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-medium">
+                        <div className="px-2 sm:px-3 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium">
                           {literatureMaxPage}
                         </div>
                       </div>
@@ -1254,13 +1277,13 @@ function AppContent() {
                         }}
                         disabled={literaturePage >= literatureMaxPage}
                         title="Следующая"
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                        className={`w-10 h-10 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center text-xs sm:text-sm font-medium transition-all duration-300 ${
                           literaturePage >= literatureMaxPage 
                             ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed' 
                             : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
                         }`}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </button>
@@ -1268,13 +1291,13 @@ function AppContent() {
                         onClick={() => setLiteraturePage(literatureMaxPage)}
                         disabled={literaturePage === literatureMaxPage}
                         title="В конец"
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                        className={`w-10 h-10 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center text-xs sm:text-sm font-medium transition-all duration-300 ${
                           literaturePage === literatureMaxPage 
                             ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed' 
                             : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
                         }`}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
                         </svg>
                       </button>
@@ -1282,32 +1305,34 @@ function AppContent() {
                   </div>
                 </div>
               ) : literatureLoading ? (
-                <div className="flex flex-col items-center justify-center py-24 text-center">
-                  <div className="w-16 h-16 border-4 border-emerald-200 dark:border-emerald-800 border-t-emerald-600 dark:border-t-emerald-400 rounded-full animate-spin mb-6"></div>
-                  <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                <div className="flex flex-col items-center justify-center py-16 sm:py-24 text-center px-4">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-emerald-200 dark:border-emerald-800 border-t-emerald-600 dark:border-t-emerald-400 rounded-full animate-spin mb-4 sm:mb-6"></div>
+                  <h3 className="text-lg sm:text-xl font-semibold text-slate-700 dark:text-slate-300 mb-2">
                     Загрузка материалов...
                   </h3>
-                  <p className="text-slate-500 dark:text-slate-400">
+                  <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400">
                     Пожалуйста, подождите немного
                   </p>
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-24 text-center">
-                  <div className="w-20 h-20 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
-                    <BookOpen className="w-10 h-10 text-gray-400 dark:text-slate-500" />
+                <div className="flex flex-col items-center justify-center py-16 sm:py-24 text-center px-4">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 sm:mb-6">
+                    <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 dark:text-slate-500" />
                   </div>
-                  <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
+                  <h3 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white mb-2">
                     Материалы не найдены
                   </h3>
-                  <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
+                  <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-4 sm:mb-6">
                     Попробуйте изменить параметры поиска или выбрать другую категорию
                   </p>
                   <button
                     onClick={() => {
                       setSearchQuery('');
-                      setSelectedCategory('all');
+                      setSelectedCategories(['all']);
+                      setSortBy('default');
+                      setLiteraturePage(1);
                     }}
-                    className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-colors"
+                    className="px-4 sm:px-6 py-2.5 sm:py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg sm:rounded-xl font-medium transition-colors text-sm sm:text-base"
                   >
                     Сбросить фильтры
                   </button>
@@ -1507,37 +1532,37 @@ function AppContent() {
             </div>
           )}
           {activeTab === 'news' && (
-            <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-10">
-                <h2 className="text-4xl font-bold mb-4 text-slate-900 dark:text-white tracking-tight">Новости</h2>
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6">
+              <div className="text-center mb-8 sm:mb-10">
+                <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4 text-slate-900 dark:text-white tracking-tight">Новости</h2>
+                <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto px-4">
                   Актуальные события, достижения и важные объявления БНТУ
                 </p>
               </div>
-              <div className="max-w-2xl mx-auto mb-8">
-                <div className="flex gap-3">
+              <div className="max-w-2xl mx-auto mb-6 sm:mb-8">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />
                     <input
                       type="text"
                       placeholder="Поиск новостей..."
                       value={newsSearchQuery}
                       onChange={(e) => setNewsSearchQuery(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300"
+                      className="w-full pl-9 sm:pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl sm:rounded-2xl text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300 text-sm sm:text-base"
                     />
                   </div>
                   <button
                     onClick={() => setIsNewsSortModalOpen(true)}
-                    className="flex items-center justify-center w-12 h-12 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex-shrink-0"
+                    className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl sm:rounded-2xl text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex-shrink-0"
                     title="Сортировка"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                     </svg>
                   </button>
                 </div>
               </div>
-              <div className="flex overflow-x-auto gap-3 mb-8 pb-2 px-1 sm:px-0 sm:justify-center" style={{
+              <div className="flex overflow-x-auto gap-2 sm:gap-3 mb-6 sm:mb-8 pb-2 px-1 sm:px-0 sm:justify-center" style={{
   scrollbarWidth: 'none',
   msOverflowStyle: 'none',
   WebkitScrollbar: 'display: none'
@@ -1546,7 +1571,7 @@ function AppContent() {
                   <button
                     key={category.id}
                     onClick={() => setSelectedNewsCategory(category.id)}
-                    className={`px-4 sm:px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap flex-shrink-0 ${
+                    className={`px-3 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 whitespace-nowrap flex-shrink-0 ${
                       selectedNewsCategory === category.id
                         ? 'bg-emerald-500 text-white'
                         : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-gray-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:text-emerald-600 dark:hover:text-emerald-400'
@@ -1557,17 +1582,17 @@ function AppContent() {
                 ))}
               </div>
               {newsPage === 1 && filteredNews.length > 0 && !newsSearchQuery && selectedNewsCategory === 'all' && newsSortBy === 'date_desc' && (
-                <div className="mb-12">
-                  <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">Последние новости</h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="mb-8 sm:mb-12">
+                  <h3 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-slate-900 dark:text-white">Последние новости</h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                     {filteredNews.slice(0, 2).map((item) => (
                       <div
                         key={item.id}
-                        className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-800/30 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                        className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl sm:rounded-2xl border border-emerald-200 dark:border-emerald-800/30 p-4 sm:p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                       >
                         <div className="flex flex-col h-full">
                           {item.imageUrl && (
-                            <div className="relative h-48 rounded-xl overflow-hidden mb-4">
+                            <div className="relative h-36 sm:h-48 rounded-lg sm:rounded-xl overflow-hidden mb-3 sm:mb-4">
                               <img 
                                 src={item.imageUrl} 
                                 alt={item.title}
@@ -1580,9 +1605,9 @@ function AppContent() {
                               <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
                             </div>
                           )}
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                              <Calendar className="w-4 h-4" />
+                          <div className="flex items-start justify-between mb-3 sm:mb-4">
+                            <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                              <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
                               {formatDate(item.timestamp)}
                             </div>
                             <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
@@ -1590,22 +1615,22 @@ function AppContent() {
                               {item.readTime}
                             </span>
                           </div>
-                          <h3 className="font-bold text-xl text-slate-900 dark:text-white mb-3 line-clamp-2">
+                          <h3 className="font-bold text-lg sm:text-xl text-slate-900 dark:text-white mb-2 sm:mb-3 line-clamp-2">
                             {item.title}
                           </h3>
-                          <p className="text-slate-600 dark:text-slate-400 mb-4 line-clamp-3 flex-grow">
+                          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mb-3 sm:mb-4 line-clamp-2 sm:line-clamp-3 flex-grow">
                             {item.excerpt}
                           </p>
                           <div className="flex items-center justify-between mt-auto">
-                            <div className="flex-1 mr-3 min-w-0">
+                            <div className="flex-1 mr-2 sm:mr-3 min-w-0">
                               {renderTags(item.tags)}
                             </div>
                             <button 
                               onClick={() => item.link && window.open(item.link, '_blank')}
-                              className="flex items-center gap-2 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg flex-shrink-0"
+                              className="flex items-center gap-1 sm:gap-2 px-3 sm:px-3 py-2.5 sm:py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg sm:rounded-xl font-medium text-sm sm:text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg flex-shrink-0"
                             >
-                              Читать
-                              <ArrowRight className="w-4 h-4" />
+                              <span className="hidden sm:inline">Читать</span>
+                              <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
                             </button>
                           </div>
                         </div>
@@ -1615,19 +1640,19 @@ function AppContent() {
                 </div>
               )}
               <div>
-                <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">
+                <h3 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-slate-900 dark:text-white">
                   {selectedNewsCategory === 'all' ? 'Все новости' : newsCategories.find(cat => cat.id === selectedNewsCategory)?.name}
                 </h3>
                 {filteredNews.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {filteredNews.map((item) => (
                       <div
                         key={item.id}
-                        className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                        className="bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-slate-700 p-4 sm:p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                       >
                         <div className="flex flex-col h-full">
                           {item.imageUrl && (
-                            <div className="relative h-40 rounded-xl overflow-hidden mb-4">
+                            <div className="relative h-32 sm:h-40 rounded-lg sm:rounded-xl overflow-hidden mb-3 sm:mb-4">
                               <img 
                                 src={item.imageUrl} 
                                 alt={item.title}
@@ -1640,9 +1665,9 @@ function AppContent() {
                               <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
                             </div>
                           )}
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                              <Calendar className="w-4 h-4" />
+                          <div className="flex items-start justify-between mb-3 sm:mb-4">
+                            <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                              <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
                               {formatDate(item.timestamp)}
                             </div>
                             <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
@@ -1650,22 +1675,22 @@ function AppContent() {
                               {item.readTime}
                             </span>
                           </div>
-                          <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-3 line-clamp-2">
+                          <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white mb-2 sm:mb-3 line-clamp-2">
                             {item.title}
                           </h3>
-                          <p className="text-slate-600 dark:text-slate-400 mb-4 line-clamp-3 flex-grow">
+                          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-3 sm:mb-4 line-clamp-2 sm:line-clamp-3 flex-grow">
                             {item.excerpt}
                           </p>
-                          <div className="flex items-center justify-between text-sm mt-auto">
-                            <div className="flex-1 mr-3 min-w-0">
+                          <div className="flex items-center justify-between text-xs sm:text-sm mt-auto">
+                            <div className="flex-1 mr-2 sm:mr-3 min-w-0">
                               {renderTags(item.tags, handleNewsTagClick)}
                             </div>
                             <button 
                               onClick={() => item.link && window.open(item.link, '_blank')}
-                              className="flex items-center gap-2 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg flex-shrink-0"
+                              className="flex items-center gap-1 sm:gap-2 px-3 sm:px-3 py-2.5 sm:py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg sm:rounded-xl font-medium text-sm sm:text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg flex-shrink-0"
                             >
-                              Читать
-                              <ArrowRight className="w-4 h-4" />
+                              <span className="hidden sm:inline">Читать</span>
+                              <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
                             </button>
                           </div>
                         </div>
@@ -1673,38 +1698,38 @@ function AppContent() {
                     ))}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-24 text-center">
-                    <div className="w-20 h-20 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
-                      <Calendar className="w-10 h-10 text-gray-400 dark:text-slate-500" />
+                  <div className="flex flex-col items-center justify-center py-16 sm:py-24 text-center px-4">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 sm:mb-6">
+                      <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 dark:text-slate-500" />
                     </div>
-                    <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white mb-2">
                       Новостей не найдено
                     </h3>
-                    <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
+                    <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-4 sm:mb-6">
                       В выбранной категории пока нет новостей. Попробуйте выбрать другую категорию.
                     </p>
                     <button
                       onClick={() => setSelectedNewsCategory('all')}
-                      className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-colors"
+                      className="px-4 sm:px-6 py-2.5 sm:py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg sm:rounded-xl font-medium transition-colors text-sm sm:text-base"
                     >
                       Показать все новости
                     </button>
                   </div>
                 )}
               {newsTotal > newsPageSize && (
-                <div className="flex items-center justify-center mt-10">
-                  <div className="flex items-center gap-2 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-white/50 dark:border-slate-700/50 rounded-2xl p-2 shadow-lg">
+                <div className="flex items-center justify-center mt-8 sm:mt-10">
+                  <div className="flex items-center gap-1 sm:gap-2 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-white/50 dark:border-slate-700/50 rounded-xl sm:rounded-2xl p-1 sm:p-2 shadow-lg">
                     <button
                       onClick={() => setNewsPage(1)}
                       disabled={newsPage === 1}
                       title="В начало"
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                      className={`w-10 h-10 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center text-xs sm:text-sm font-medium transition-all duration-300 ${
                         newsPage === 1 
                           ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed' 
                           : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
                       }`}
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
                       </svg>
                     </button>
@@ -1712,17 +1737,17 @@ function AppContent() {
                       onClick={() => newsPage > 1 && setNewsPage(newsPage - 1)}
                       disabled={newsPage === 1}
                       title="Предыдущая"
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                      className={`w-10 h-10 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center text-xs sm:text-sm font-medium transition-all duration-300 ${
                         newsPage === 1 
                           ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed' 
                           : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
                       }`}
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
                     </button>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-0.5 sm:gap-1">
                       <input
                         type="number"
                         min="1"
@@ -1742,12 +1767,12 @@ function AppContent() {
                             }
                           }
                         }}
-                        className="w-12 px-1.5 py-2 bg-emerald-500 dark:bg-emerald-600 text-white rounded-xl text-sm font-medium shadow-sm text-center focus:outline-none focus:ring-2 focus:ring-emerald-400 [-moz-appearance:_textfield] [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none"
+                        className="w-12 sm:w-12 px-1 sm:px-1.5 py-2 bg-emerald-500 dark:bg-emerald-600 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium shadow-sm text-center focus:outline-none focus:ring-2 focus:ring-emerald-400 [-moz-appearance:_textfield] [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none"
                       />
-                      <div className="text-slate-400 dark:text-slate-500 text-sm font-medium px-1">
+                      <div className="text-slate-400 dark:text-slate-500 text-xs sm:text-sm font-medium px-0.5 sm:px-1">
                         из
                       </div>
-                      <div className="px-3 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-medium">
+                      <div className="px-2 sm:px-3 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium">
                         {newsMaxPage}
                       </div>
                     </div>
@@ -1757,13 +1782,13 @@ function AppContent() {
                       }}
                       disabled={newsPage >= newsMaxPage}
                       title="Следующая"
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                      className={`w-10 h-10 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center text-xs sm:text-sm font-medium transition-all duration-300 ${
                         newsPage >= newsMaxPage 
                           ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed' 
                           : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
                       }`}
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </button>
@@ -1771,13 +1796,13 @@ function AppContent() {
                       onClick={() => setNewsPage(newsMaxPage)}
                       disabled={newsPage === newsMaxPage}
                       title="В конец"
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                      className={`w-10 h-10 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center text-xs sm:text-sm font-medium transition-all duration-300 ${
                         newsPage === newsMaxPage 
                           ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed' 
                           : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
                       }`}
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
                       </svg>
                     </button>
@@ -1841,19 +1866,19 @@ function AppContent() {
             </div>
           )}
           {activeTab === 'games' && (
-            <div className="max-w-7xl mx-auto">
-              <div className="text-center mb-10">
-                <h2 className="text-4xl font-bold mb-4 text-slate-900 dark:text-white tracking-tight">Игры</h2>
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6">
+              <div className="text-center mb-8 sm:mb-10">
+                <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4 text-slate-900 dark:text-white tracking-tight">Игры</h2>
+                <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto px-4">
                   Лучшие игры для студентов БНТУ - отдыхайте с пользой
                 </p>
               </div>
-              <div className="flex flex-wrap justify-center gap-3 mb-8">
+              <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 px-1">
                 {gameCategories.map(category => (
                   <button
                     key={category.id}
                     onClick={() => setSelectedGameCategory(category.id)}
-                    className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
+                    className={`px-3 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 ${
                       selectedGameCategory === category.id
                         ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
                         : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-gray-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:text-emerald-600 dark:hover:text-emerald-400'
@@ -1864,66 +1889,66 @@ function AppContent() {
                 ))}
               </div>
               {filteredGames.filter(item => item.featured).length > 0 && (
-                <div className="mb-12">
-                  <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">Рекомендуемые игры</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="mb-8 sm:mb-12">
+                  <h3 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-slate-900 dark:text-white">Рекомендуемые игры</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {filteredGames.filter(item => item.featured).map((game) => (
                       <div
                         key={game.id}
-                        className={`group relative bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 ${
+                        className={`group relative bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl overflow-hidden border hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 ${
                           game.serverUrl 
                             ? 'border-gray-200 dark:border-slate-700' 
                             : 'border-gray-200 dark:border-slate-700'
                         }`}
                       >
-                        <div className="relative h-48 overflow-hidden">
+                        <div className="relative h-36 sm:h-48 overflow-hidden">
                           <img 
                             src={game.image} 
                             alt={game.title}
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                           />
                           {game.discount > 0 && (
-                            <div className="absolute top-3 left-3 bg-red-500 text-white px-3 py-1 rounded-lg text-sm font-bold">
+                            <div className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-red-500 text-white px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-bold">
                               -{game.discount}%
                             </div>
                           )}
                           {game.serverUrl ? (
-                            <div className="absolute top-3 left-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1">
+                            <div className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-1">
                               <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                               Онлайн
                             </div>
                           ) : game.price === 0 && (
-                            <div className="absolute top-3 left-3 bg-emerald-500 text-white px-3 py-1 rounded-lg text-sm font-bold">
+                            <div className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-emerald-500 text-white px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-bold">
                               Бесплатно
                             </div>
                           )}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                         </div>
-                        <div className="p-6">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <h3 className="font-bold text-xl text-slate-900 dark:text-white mb-1 line-clamp-1">
+                        <div className="p-4 sm:p-6">
+                          <div className="flex items-start justify-between mb-2 sm:mb-3">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-bold text-lg sm:text-xl text-slate-900 dark:text-white mb-1 line-clamp-1">
                                 {game.title}
                               </h3>
-                              <p className="text-sm text-slate-500 dark:text-slate-400">
+                              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                                 {game.developer}
                               </p>
                             </div>
-                            <div className="flex items-center gap-1 ml-3">
-                              <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                            <div className="flex items-center gap-1 ml-2 sm:ml-3 flex-shrink-0">
+                              <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 fill-current" />
+                              <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
                                 {game.rating}
                               </span>
                             </div>
                           </div>
-                          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 line-clamp-2">
+                          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-3 sm:mb-4 line-clamp-2">
                             {game.description}
                           </p>
-                          <div className="flex flex-wrap gap-2 mb-4">
+                          <div className="flex flex-wrap gap-1 sm:gap-2 mb-3 sm:mb-4">
                             {game.tags.slice(0, 3).map((tag, index) => (
                               <span 
                                 key={index}
-                                className="px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 text-xs rounded-lg"
+                                className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 text-xs rounded-lg"
                               >
                                 {tag}
                               </span>
@@ -1932,31 +1957,31 @@ function AppContent() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               {game.price === 0 ? (
-                                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-lg">
+                                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-base sm:text-lg">
                                   Бесплатно
                                 </span>
                               ) : (
                                 <>
                                   {game.originalPrice && (
-                                    <span className="text-sm text-slate-500 dark:text-slate-400 line-through">
+                                    <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 line-through">
                                       ${game.originalPrice}
                                     </span>
                                   )}
-                                  <span className="text-slate-900 dark:text-white font-bold text-lg">
+                                  <span className="text-slate-900 dark:text-white font-bold text-base sm:text-lg">
                                     ${game.price}
                                   </span>
                                 </>
                               )}
                             </div>
                             {game.serverUrl ? (
-                              <div className="flex gap-2">
+                              <div className="flex gap-1 sm:gap-2">
                                 <a
                                   href={game.serverUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-1"
+                                  className="px-2 sm:px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-colors flex items-center gap-1"
                                 >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                   </svg>
                                   Сайт
@@ -1965,18 +1990,19 @@ function AppContent() {
                                   onClick={() => {
                                     navigator.clipboard.writeText(game.serverIP);
                                   }}
-                                  className="px-3 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-1"
+                                  className="px-3 sm:px-3 py-2.5 sm:py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg sm:rounded-xl text-sm sm:text-sm font-medium transition-colors flex items-center gap-1"
                                 >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                   </svg>
-                                  IP
+                                  <span className="hidden sm:inline">IP</span>
                                 </button>
                               </div>
                             ) : (
-                              <button className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2">
-                                <Download className="w-4 h-4" />
-                                {game.price === 0 ? 'Получить' : 'Купить'}
+                              <button className="px-3 sm:px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-colors flex items-center gap-1 sm:gap-2">
+                                <Download className="w-3 h-3 sm:w-4 sm:h-4" />
+                                <span className="hidden sm:inline">{game.price === 0 ? 'Получить' : 'Купить'}</span>
+                                <span className="sm:hidden">{game.price === 0 ? '↓' : '🛒'}</span>
                               </button>
                             )}
                           </div>
@@ -1987,41 +2013,41 @@ function AppContent() {
                 </div>
               )}
               <div>
-                <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">
+                <h3 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-slate-900 dark:text-white">
                   {selectedGameCategory === 'all' ? 'Все игры' : gameCategories.find(cat => cat.id === selectedGameCategory)?.name}
                 </h3>
                 {filteredGames.filter(item => !item.featured).length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                     {filteredGames.filter(item => !item.featured).map((game) => (
                       <div
                         key={game.id}
-                        className="group bg-white dark:bg-slate-800 rounded-xl overflow-hidden border border-gray-200 dark:border-slate-700 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                        className="group bg-white dark:bg-slate-800 rounded-lg sm:rounded-xl overflow-hidden border border-gray-200 dark:border-slate-700 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
                       >
-                        <div className="relative h-32 overflow-hidden">
+                        <div className="relative h-28 sm:h-32 overflow-hidden">
                           <img 
                             src={game.image} 
                             alt={game.title}
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                           />
                           {game.discount > 0 && (
-                            <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">
+                            <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2 bg-red-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-bold">
                               -{game.discount}%
                             </div>
                           )}
                           {game.price === 0 && (
-                            <div className="absolute top-2 left-2 bg-emerald-500 text-white px-2 py-1 rounded text-xs font-bold">
+                            <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2 bg-emerald-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-bold">
                               Бесплатно
                             </div>
                           )}
                         </div>
-                        <div className="p-4">
-                          <h4 className="font-bold text-sm text-slate-900 dark:text-white mb-1 line-clamp-1">
+                        <div className="p-3 sm:p-4">
+                          <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white mb-1 line-clamp-1">
                             {game.title}
                           </h4>
                           <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
                             {game.developer}
                           </p>
-                          <div className="flex items-center gap-1 mb-3">
+                          <div className="flex items-center gap-1 mb-2 sm:mb-3">
                             <Star className="w-3 h-3 text-yellow-500 fill-current" />
                             <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
                               {game.rating}
@@ -2030,7 +2056,7 @@ function AppContent() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1">
                               {game.price === 0 ? (
-                                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">
+                                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-xs">
                                   Бесплатно
                                 </span>
                               ) : (
@@ -2040,14 +2066,15 @@ function AppContent() {
                                       ${game.originalPrice}
                                     </span>
                                   )}
-                                  <span className="text-slate-900 dark:text-white font-bold text-sm">
+                                  <span className="text-xs sm:text-sm text-slate-900 dark:text-white font-bold">
                                     ${game.price}
                                   </span>
                                 </>
                               )}
                             </div>
-                            <button className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-medium transition-colors">
-                              {game.price === 0 ? 'Получить' : 'Купить'}
+                            <button className="px-2 sm:px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-medium transition-colors">
+                              <span className="hidden sm:inline">{game.price === 0 ? 'Получить' : 'Купить'}</span>
+                              <span className="sm:hidden">{game.price === 0 ? '↓' : '🛒'}</span>
                             </button>
                           </div>
                         </div>
@@ -2055,19 +2082,19 @@ function AppContent() {
                     ))}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-24 text-center">
-                    <div className="w-20 h-20 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
-                      <Gamepad2 className="w-10 h-10 text-gray-400 dark:text-slate-500" />
+                  <div className="flex flex-col items-center justify-center py-16 sm:py-24 text-center px-4">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 sm:mb-6">
+                      <Gamepad2 className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 dark:text-slate-500" />
                     </div>
-                    <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white mb-2">
                       Игры не найдены
                     </h3>
-                    <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
+                    <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-4 sm:mb-6">
                       В выбранной категории пока нет игр. Попробуйте выбрать другую категорию.
                     </p>
                     <button
                       onClick={() => setSelectedGameCategory('all')}
-                      className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-colors"
+                      className="px-4 sm:px-6 py-2.5 sm:py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg sm:rounded-xl font-medium transition-colors text-sm sm:text-base"
                     >
                       Показать все игры
                     </button>
@@ -2099,14 +2126,12 @@ function AppContent() {
                 />
               ) : userMedia.banner_placeholder ? (
                 <div 
-                  className="w-full h-full"
-                  style={{ background: userMedia.banner_placeholder.background }}
+                  className="w-full h-full bg-gray-200 dark:bg-slate-700"
                 />
               ) : (
                 <div className="w-full h-full bg-gray-200" />
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-              <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2">
+                            <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2">
                 {userMedia.avatar_url ? (
                   <img 
                     src={buildMediaUrl(userMedia.avatar_url)}
@@ -2115,10 +2140,9 @@ function AppContent() {
                   />
                 ) : userMedia.avatar_placeholder ? (
                   <div 
-                    className="w-32 h-32 rounded-2xl border-4 border-white dark:border-slate-800 flex items-center justify-center text-white font-semibold"
+                    className="w-32 h-32 rounded-2xl border-4 border-white dark:border-slate-800 flex items-center justify-center font-semibold bg-gray-200 dark:bg-slate-700"
                     style={{ 
-                      background: userMedia.avatar_placeholder.background,
-                      color: userMedia.avatar_placeholder.color,
+                      color: 'rgb(156 163 175)', // gray-400
                       fontSize: userMedia.avatar_placeholder.font_size,
                       fontWeight: userMedia.avatar_placeholder.font_weight
                     }}
@@ -2134,11 +2158,11 @@ function AppContent() {
               {/* Кнопка редактирования профиля - только для незабаненных пользователей */}
               {!isBanned && (
                 <button
-                  onClick={() => setIsProfileEditModalOpen(true)}
+                  onClick={() => setIsProfileSettingsOpen(true)}
                   className="absolute top-4 right-16 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 border border-white/30"
-                  title="Редактировать профиль"
+                  title="Настройки профиля"
                 >
-                  <Edit className="w-5 h-5" />
+                  <Settings className="w-5 h-5" />
                 </button>
               )}
               <button

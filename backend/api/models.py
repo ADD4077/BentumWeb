@@ -7,7 +7,6 @@ class User(models.Model):
     bilet_code = models.CharField(max_length=7)
     created_at = models.IntegerField(null=True, blank=True)
     last_login = models.IntegerField(null=True, blank=True)
-    last_login_ip = models.GenericIPAddressField(null=True, blank=True)
 
     class Meta:
         db_table = 'users'
