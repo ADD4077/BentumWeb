@@ -11,7 +11,7 @@ from api.models import (
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    exclude = ["created_at", "last_login", "last_login_ip"]
+    list_display = ["fullname", "created_at"]
 
 
 admin.site.register(UserSession)
