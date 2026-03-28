@@ -15,6 +15,7 @@ export const API_ENDPOINTS = {
   USERS_STATS: `${API_BASE_URL}/api/admin/users/stats`,
   USERS_BAN: `${API_BASE_URL}/api/admin/users/ban`,
   USERS_UNBAN: `${API_BASE_URL}/api/admin/users/unban`,
+  ADMINISTRATORS: `${API_BASE_URL}/api/admin/administrators`,
   NEWS: `${API_BASE_URL}/api/news`,
   LITERATURE: `${API_BASE_URL}/api/literature`,
   DASHBOARD: `${API_BASE_URL}/api/dashboard`,

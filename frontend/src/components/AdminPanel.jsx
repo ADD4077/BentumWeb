@@ -72,13 +72,40 @@ function AdminPanel({ darkMode }) {
     setLoading(true);
     setIsRefreshing(true);
     try {
+      // Создаем заголовки с cookies
+      const headers = {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      };
+      
       // Загружаем пользователей из реальной базы данных
       const response = await fetch(API_ENDPOINTS.USERS, {
-        credentials: 'include'
+        method: 'GET',
+        headers: headers,
+        credentials: 'include',
+        mode: 'cors'
       });
       
       if (response.status === 401) {
         // Пользователь не авторизован или не админ
+        setUsers([]);
+        return;
+      }
+      
+      if (response.status === 403) {
+        // Доступ запрещен
+        setUsers([]);
+        return;
+      }
+      
+      if (response.status === 404) {
+        // Эндпоинт не найден
+        setUsers([]);
+        return;
+      }
+      
+      if (response.status === 500) {
+        // Ошибка сервера
         setUsers([]);
         return;
       }
@@ -587,7 +614,7 @@ function AdminPanel({ darkMode }) {
                               year: 'numeric',
                               hour: '2-digit',
                               minute: '2-digit'
-                            }) : 'Никогда'
+                            }) : '—'
                           }
                         </div>
                       </td>
@@ -927,7 +954,13 @@ function AdminPanel({ darkMode }) {
                     <span className="font-medium">Последний вход:</span>
                     <span>
                       {selectedUser.last_login ? 
-                        new Date(selectedUser.last_login * 1000).toLocaleDateString('ru-RU') : 'Никогда'
+                        new Date(selectedUser.last_login * 1000).toLocaleString('ru-RU', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : 'Не входил'
                       }
                     </span>
                   </div>

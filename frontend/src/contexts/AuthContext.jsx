@@ -15,20 +15,36 @@ export const AuthProvider = ({ children }) => {
   }, [checked]);
   const checkAuth = async () => {
     try {
-      // Проверяем только localStorage без API запросов
       const storedUser = safeGetUserData();
-      if (storedUser) {
+
+      if (!storedUser) {
+        setIsAuthenticated(false);
+        setUser(null);
+        return;
+      }
+
+      const auth = await api.authCheck();
+
+      if (auth?.success && auth?.user) {
         setIsAuthenticated(true);
-        setUser(storedUser);
+        setUser(auth.user);
+        safeSetUserData(auth.user);
       } else {
         setIsAuthenticated(false);
         setUser(null);
+        safeRemoveItem('token');
+        safeRemoveItem('user');
+        safeRemoveItem('banEndDate');
+        safeRemoveItem('activeTab');
       }
     } catch (error) {
       // Любая ошибка - считаем пользователя неавторизованным
       setIsAuthenticated(false);
       setUser(null);
+      safeRemoveItem('token');
       safeRemoveItem('user');
+      safeRemoveItem('banEndDate');
+      safeRemoveItem('activeTab');
     } finally {
       setLoading(false);
     }

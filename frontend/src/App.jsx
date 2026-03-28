@@ -250,10 +250,10 @@ function AppContent() {
 
   // Проверка прав администратора
   useEffect(() => {
-    if (!isAuthenticated || !user) return; // Выходим если пользователь не авторизован или еще не загружен
+    if (!isAuthenticated || !user) return;
     
-    // Простая проверка - пользователь с ID 1 является админом
-    if (user?.id === 1) {
+    // Проверяем права администратора по данным от сервера
+    if (user.is_admin) {
       setIsAdmin(true);
     } else {
       setIsAdmin(false);
@@ -888,7 +888,7 @@ function AppContent() {
               <div className="w-full max-w-6xl mx-auto mt-16">
                 <MissionSection stats={missionStats} isLoading={isMissionLoading} />
               </div>
-              <TeamCarousel teamMembers={teamMembers} />
+              <TeamCarousel teamMembers={teamMembers} darkMode={darkMode} />
               <CTASection setActiveTab={setActiveTab} />
             </div>
           )}

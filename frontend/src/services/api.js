@@ -31,6 +31,30 @@ export const api = {
       throw error;
     }
   },
+
+  async authCheck() {
+    try {
+      const response = await fetch(API_ENDPOINTS.AUTH_CHECK, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
+
+      return {
+        ok: response.ok,
+        status: response.status,
+        ...(data || {}),
+      };
+    } catch (error) {
+      throw error;
+    }
+  },
   async getDashboard() {
     try {
       const response = await fetch(API_ENDPOINTS.DASHBOARD, {

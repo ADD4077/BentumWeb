@@ -1,13 +1,51 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import UserProfileModal from './UserProfileModal.jsx';
+import { API_ENDPOINTS } from '../config/api.js';
 
-function TeamCarousel({ teamMembers }) {
+function TeamCarousel({ teamMembers, darkMode }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [selectedStudentCode, setSelectedStudentCode] = useState(null);
   const intervalRef = useRef(null);
   const timeoutRef = useRef(null);
   const carouselRef = useRef(null);
+
+  // Маппинг имен администраторов на их студенческие коды
+  const adminMapping = {
+    'Свиридович Павел': '1090352523',
+    'Смоленский Андрей': '1090372523', 
+    'Гончарик Александр': '1090352506',
+    'Абраменко Александр': '1090352501',
+    'Альшевский Алексей': '1030522501'
+  };
+
+  const handleAvatarClick = async (memberName) => {
+    const studentCode = adminMapping[memberName];
+    if (!studentCode) return;
+
+    try {
+      const response = await fetch(`${API_ENDPOINTS.BASE_URL}/api/user/by-code/${studentCode}`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+      if (!data?.success || !data?.user) {
+        return;
+      }
+
+      setSelectedStudentCode(studentCode);
+      setIsProfileModalOpen(true);
+    } catch {
+      return;
+    }
+  };
   const startAutoPlay = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -111,7 +149,10 @@ function TeamCarousel({ teamMembers }) {
               <div key={index} className="w-full flex-shrink-0 px-4">
                 <div className="max-w-md mx-auto bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/50 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-md">
                   <div className="flex flex-col items-center text-center">
-                    <div className="w-32 h-32 rounded-3xl overflow-hidden bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg flex items-center justify-center mb-6 transition-all duration-300 ease-out transform translate-y-0 rotate-0 hover:shadow-2xl hover:shadow-gray-400/50 group cursor-pointer hover:-translate-y-2 hover:rotate-6">
+                    <div 
+                      className="w-32 h-32 rounded-3xl overflow-hidden bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg flex items-center justify-center mb-6 transition-all duration-300 ease-out transform translate-y-0 rotate-0 hover:shadow-2xl hover:shadow-gray-400/50 group cursor-pointer hover:-translate-y-2 hover:rotate-6"
+                      onClick={() => handleAvatarClick(member.name)}
+                    >
                       {member.image ? (
                         <img 
                           src={member.image} 
@@ -167,6 +208,17 @@ function TeamCarousel({ teamMembers }) {
           <span className="text-slate-900 dark:text-white text-xl">›</span>
         </button>
       </div>
+      
+      {/* Модальное окно профиля пользователя */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => {
+          setIsProfileModalOpen(false);
+          setSelectedStudentCode(null);
+        }}
+        studentCode={selectedStudentCode}
+        darkMode={darkMode}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ from datetime import datetime
 from django.conf import settings
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework.decorators import api_view
 from .func import authorize
 from django.contrib.sessions.models import Session
 from django.contrib.sessions.backends.db import SessionStore
@@ -139,6 +140,10 @@ def save_data(request):
             # Проверяем статус бана через BanService
             ban_status = BanService.check_ban_status(existing_user.student_code)
             
+            # Проверяем права администратора
+            from .models import Administration
+            admin_check = Administration.objects.filter(administrator=existing_user, is_active=True).exists()
+            
             return JsonResponse({
                 "success": True,
                 "message": "Вход выполнен успешно",
@@ -147,7 +152,8 @@ def save_data(request):
                     "fullname": existing_user.fullname,
                     "student_code": existing_user.student_code,
                     "faculty": existing_user.faculty,
-                    "is_banned": ban_status['is_banned']
+                    "is_banned": ban_status['is_banned'],
+                    "is_admin": admin_check
                 }
             }, status=200)
 
@@ -304,6 +310,65 @@ def dashboard(request):
     except Exception as e:
         return JsonResponse(
             {"detail": "Ошибка при работе с базой данных"},
+            status=500
+        )
+
+
+@csrf_exempt
+def auth_check(request):
+    """
+    Проверка статуса авторизации пользователя
+    """
+    if request.method != "GET":
+        return JsonResponse(
+            {"detail": "Метод не разрешён"},
+            status=405
+        )
+    
+    if not request.session.get('is_authenticated'):
+        return JsonResponse(
+            {"success": False, "detail": "Пользователь не авторизован"},
+            status=401
+        )
+    
+    student_code = request.session.get('student_code')
+    if not student_code:
+        return JsonResponse(
+            {"success": False, "detail": "Отсутствует код студента"},
+            status=401
+        )
+    
+    try:
+        user = User.objects.get(student_code=student_code)
+        
+        # Проверяем статус бана через BanService
+        ban_status = BanService.check_ban_status(student_code)
+        
+        # Проверяем права администратора
+        from .models import Administration
+        admin_check = Administration.objects.filter(administrator=user, is_active=True).exists()
+        
+        return JsonResponse({
+            "success": True,
+            "user": {
+                "id": user.id,
+                "fullname": user.fullname,
+                "student_code": user.student_code,
+                "faculty": user.faculty,
+                "is_banned": ban_status['is_banned'],
+                "is_admin": admin_check
+            }
+        }, status=200)
+    
+    except User.DoesNotExist:
+        return JsonResponse(
+            {"success": False, "detail": "Пользователь не найден"},
+            status=404
+        )
+    
+    except Exception as e:
+        return JsonResponse(
+            {"success": False, "detail": "Ошибка при проверке авторизации"},
             status=500
         )
 
@@ -556,9 +621,6 @@ def get_literature(request):
     search = (request.GET.get('search') or '').strip().lower()
     category = (request.GET.get('category') or '').strip()
     categories = request.GET.getlist('category')
-    
-    # Логирование для отладки
-    print(f"Literature search: '{search}', categories: {categories}")
 
     try:
         db_path = os.path.join(settings.BASE_DIR, 'books', 'literature.db')
@@ -749,9 +811,6 @@ def get_news(request):
     search = (request.GET.get('search') or '').strip()
     category = (request.GET.get('category') or '').strip()
     sort_by = (request.GET.get('sort_by') or 'date_desc').strip()
-    
-    # Логирование для отладки
-    print(f"News search: '{search}', category: '{category}', sort_by: '{sort_by}'")
 
     try:
         db_path = os.path.join(settings.BASE_DIR, 'news', 'times_news.db')
@@ -895,6 +954,85 @@ def get_news(request):
 
 
 @csrf_exempt
+@api_view(['GET'])
+def get_user_by_code(request, student_code):
+    """Получить информацию о пользователе по студенческому коду"""
+    try:
+        # Ищем пользователя по студенческому коду
+        user = User.objects.filter(student_code=student_code).first()
+        
+        if not user:
+            return JsonResponse({
+                'success': False,
+                'detail': 'Пользователь не найден'
+            }, status=404)
+        
+        # Проверяем статус бана
+        ban_status = BanService.check_ban_status(student_code)
+        
+        # Проверяем права администратора
+        from .models import Administration
+        admin_check = Administration.objects.filter(administrator=user, is_active=True).exists()
+        
+        # Получаем активные медиа файлы или плейсхолдеры (как в profile_views.update_profile)
+        avatar_url = None
+        banner_url = None
+        avatar_placeholder = None
+        banner_placeholder = None
+
+        from .models import UserProfileMedia
+        from .media_service import MediaStorage
+
+        active_avatar = UserProfileMedia.objects.filter(
+            user=user,
+            media_type='avatar',
+            is_active=True
+        ).first()
+        if active_avatar:
+            avatar_url = MediaStorage.get_media_url(active_avatar, 'medium')
+        else:
+            avatar_placeholder = MediaStorage.get_placeholder_data(user, 'avatar')
+
+        active_banner = UserProfileMedia.objects.filter(
+            user=user,
+            media_type='banner',
+            is_active=True
+        ).first()
+        if active_banner:
+            banner_url = MediaStorage.get_media_url(active_banner, 'medium')
+        else:
+            banner_placeholder = MediaStorage.get_placeholder_data(user, 'banner')
+
+        # Формируем ответ
+        user_data = {
+            'id': user.id,
+            'fullname': user.fullname,
+            'student_code': user.student_code,
+            'faculty': user.faculty,
+            'created_at': user.created_at,
+            'last_login': user.last_login,
+            'status': 'banned' if ban_status['is_banned'] else 'active',
+            'is_admin': admin_check,
+            'is_banned': ban_status['is_banned'],
+            'avatar_url': avatar_url,
+            'banner_url': banner_url,
+            'avatar_placeholder': avatar_placeholder,
+            'banner_placeholder': banner_placeholder,
+        }
+            
+        return JsonResponse({
+            'success': True,
+            'user': user_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'detail': f'Ошибка: {str(e)}'
+        }, status=500)
+
+@csrf_exempt
+@api_view(['GET'])
 def get_public_stats(request):
     """
     Публичный эндпоинт для получения статистики (доступен всем)

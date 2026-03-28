@@ -20,7 +20,9 @@ def get_all_users(request):
         except User.DoesNotExist:
             return JsonResponse({'detail': 'Пользователь не найден'}, status=404)
         
-        if current_user.id != 1:
+        # Проверяем что текущий пользователь - администратор
+        from .models import Administration
+        if not Administration.objects.filter(administrator=current_user, is_active=True).exists():
             return JsonResponse({'detail': 'Доступ запрещен'}, status=403)
         
         users = User.objects.all().values('id', 'fullname', 'student_code', 'faculty', 'created_at')
@@ -55,7 +57,9 @@ def get_users_stats(request):
         except User.DoesNotExist:
             return JsonResponse({'detail': 'Пользователь не найден'}, status=404)
         
-        if current_user.id != 1:
+        # Проверяем что текущий пользователь - администратор
+        from .models import Administration
+        if not Administration.objects.filter(administrator=current_user, is_active=True).exists():
             return JsonResponse({'detail': 'Доступ запрещен'}, status=403)
         
         total_users = User.objects.count()
@@ -106,7 +110,9 @@ def create_user(request):
         except User.DoesNotExist:
             return JsonResponse({'detail': 'Пользователь не найден'}, status=404)
         
-        if current_user.id != 1:
+        # Проверяем что текущий пользователь - администратор
+        from .models import Administration
+        if not Administration.objects.filter(administrator=current_user, is_active=True).exists():
             return JsonResponse({'detail': 'Доступ запрещен'}, status=403)
         
         data = json.loads(request.body)
@@ -169,7 +175,9 @@ def ban_user(request):
         except User.DoesNotExist:
             return JsonResponse({'detail': 'Пользователь не найден'}, status=404)
         
-        if current_user.id != 1:
+        # Проверяем что текущий пользователь - администратор
+        from .models import Administration
+        if not Administration.objects.filter(administrator=current_user, is_active=True).exists():
             return JsonResponse({'detail': 'Доступ запрещен'}, status=403)
         
         data = json.loads(request.body)
@@ -232,7 +240,9 @@ def unban_user(request):
         except User.DoesNotExist:
             return JsonResponse({'detail': 'Пользователь не найден'}, status=404)
         
-        if current_user.id != 1:
+        # Проверяем что текущий пользователь - администратор
+        from .models import Administration
+        if not Administration.objects.filter(administrator=current_user, is_active=True).exists():
             return JsonResponse({'detail': 'Доступ запрещен'}, status=403)
         
         data = json.loads(request.body)

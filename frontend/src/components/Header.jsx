@@ -62,7 +62,8 @@ function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModa
   useEffect(() => {
     if (!isAuthenticated || !user) return; // Выходим если пользователь не авторизован или еще не загружен
     
-    if (user.id === 1) {
+    // Проверяем права администратора по данным от сервера
+    if (user.is_admin) {
       setIsAdmin(true);
     } else {
       setIsAdmin(false);

@@ -24,8 +24,9 @@ class BanService:
             # Получаем пользователя
             user = User.objects.get(student_code=student_code)
             
-            # Проверяем что не забанен администратор
-            if user.id == 1 or user.fullname.lower().startswith('admin'):
+            # Проверяем что пользователь не является администратором
+            from .models import Administration
+            if Administration.objects.filter(administrator=user, is_active=True).exists():
                 return {
                     'success': False,
                     'detail': 'Нельзя забанить администратора'

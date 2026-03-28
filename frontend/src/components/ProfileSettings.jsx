@@ -348,21 +348,21 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       {/* Header */}
-      <div className="bg-gradient-to-br from-white via-white to-slate-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-900 border-b border-slate-200/50 dark:border-slate-700/50 sticky top-0 z-50 backdrop-blur-xl">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      <div className="bg-white/70 dark:bg-slate-900/60 border-b border-slate-200/60 dark:border-slate-800/60 sticky top-0 z-50 backdrop-blur-xl">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 sm:gap-4">
               <button
                 onClick={onBack}
-                className="group relative w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-white/80 dark:bg-slate-700/80 backdrop-blur-sm border border-slate-200/50 dark:border-slate-600/50 text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-600 hover:shadow-lg hover:shadow-slate-200/20 dark:hover:shadow-slate-900/20 hover:scale-105 transition-all duration-200"
+                className="group relative w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center bg-white/70 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:shadow-lg hover:shadow-slate-200/30 dark:hover:shadow-black/20 hover:scale-[1.02] transition-all duration-200"
               >
                 <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-translate-x-0.5 transition-transform duration-200" />
               </button>
               <div className="flex flex-col gap-0.5">
-                <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-br from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">Настройки</h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">Управление профилем</p>
+                <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">Настройки</h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">Профиль, безопасность и приватность</p>
               </div>
             </div>
           </div>
@@ -370,29 +370,31 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 sm:py-7">
         <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
           {/* Sidebar */}
-          <div className="lg:w-64">
-            <nav className="flex flex-row lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0">
+          <div className="lg:w-72">
+            <div className="bg-white/70 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200/60 dark:border-slate-800/60 rounded-3xl p-2 shadow-sm">
+              <nav className="flex flex-row lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible pb-1 lg:pb-0">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all whitespace-nowrap flex-shrink-0 ${
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-2xl font-medium transition-all whitespace-nowrap flex-shrink-0 ${
                       activeTab === tab.id
-                        ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 dark:shadow-emerald-900/30'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
                     <span className="text-sm">{tab.label}</span>
                   </button>
                 );
               })}
-            </nav>
+              </nav>
+            </div>
           </div>
 
           {/* Main Content */}
@@ -403,7 +405,7 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                   <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-4 sm:mb-6">Информация профиля</h2>
                   
                   {/* Profile Preview */}
-                  <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 sm:p-6 mb-4 sm:mb-6">
+                  <div className="bg-white/70 dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200/60 dark:border-slate-800/60 p-4 sm:p-6 mb-4 sm:mb-6 shadow-sm">
                     {/* Banner Container */}
                     <div className="relative h-32 bg-gray-200 dark:bg-slate-700 rounded-2xl mb-16 sm:mb-20">
                       {/* Banner */}
@@ -529,7 +531,7 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                       </p>
                       
                       {/* User Stats */}
-                      <div className="grid grid-cols-2 gap-3 mb-6">
+                      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
                         <div className="text-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                           <div className="text-lg font-semibold text-slate-900 dark:text-white">1</div>
                           <div className="text-xs text-slate-600 dark:text-slate-400">Курс</div>
