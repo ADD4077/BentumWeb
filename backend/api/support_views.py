@@ -73,7 +73,7 @@ def submit_support_request(request):
         }
         
         # Отправляем в Telegram
-        telegram_success = telegram_service.send_support_request(user_data, message, request_type)
+        telegram_success = telegram_service.send_support_request_sync(user_data, message, request_type)
         
         # Логируем заявку
         logger.info(f"Support request from {user.student_code}: {request_type} - {'sent' if telegram_success else 'failed'}")
@@ -111,7 +111,7 @@ def test_telegram_connection(request):
         }, status=403)
     
     try:
-        is_connected, message = telegram_service.test_connection()
+        is_connected, message = telegram_service.test_connection_sync()
         
         return JsonResponse({
             "success": is_connected,

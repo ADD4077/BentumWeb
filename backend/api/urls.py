@@ -4,8 +4,9 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from .views import save_data, dashboard, logout, theme, get_schedule, get_literature, get_news, get_public_stats, get_user_by_code, auth_check
+from .telegram_binding_views import generate_telegram_link, get_telegram_binding_status, unlink_telegram_account, process_telegram_callback
 
-from .profile_views import update_profile, update_avatar, update_banner
+from .profile_views import update_profile, update_avatar, update_banner, change_password
 
 from .support_views import submit_support_request, test_telegram_connection, test_new_user_notification, send_new_user_notification
 
@@ -45,9 +46,17 @@ urlpatterns = [
 
     path("api/profile/banner", update_banner),
 
+    path("api/change-password", change_password),
+
     path("api/user/by-code/<str:student_code>", get_user_by_code),
 
     path("api/ban/info", get_ban_info),
+
+    # Telegram binding endpoints
+    path("api/telegram/generate-link", generate_telegram_link),
+    path("api/telegram/binding-status", get_telegram_binding_status),
+    path("api/telegram/unlink", unlink_telegram_account),
+    path("api/telegram/bind", process_telegram_callback),
 
     # Support endpoints
 

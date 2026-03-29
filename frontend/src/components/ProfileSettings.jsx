@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_ENDPOINTS } from '../config/api.js';
-import { Save, Upload, Camera, User, AlertTriangle, ArrowLeft, Shield, Bell, Palette, HelpCircle, LogOut, Settings2, Key, Smartphone, Mail, Globe, Trash2, Download, Eye, EyeOff, Edit3, Lock, UserCheck, CreditCard, MapPin, Calendar, BookOpen, Award, ChevronRight } from 'lucide-react';
+import { Save, Upload, Camera, User, AlertTriangle, ArrowLeft, Shield, Bell, Palette, HelpCircle, LogOut, Settings2, Key, Smartphone, Mail, Globe, Trash2, Download, Eye, EyeOff, Edit3, Lock, UserCheck, CreditCard, MapPin, Calendar, BookOpen, Award, ChevronRight, Send, Link } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { buildMediaUrl } from '../utils/media.js';
 
@@ -8,6 +8,7 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
   const { isAuthenticated, logout } = useAuth();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [successMessage, setSuccessMessage] = useState('');
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [bannerPreview, setBannerPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
@@ -44,6 +45,11 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
     showStudentCode: false,
     allowMessages: true
   });
+
+  // Состояние привязки Telegram
+  const [telegramBinding, setTelegramBinding] = useState(null);
+  const [telegramLink, setTelegramLink] = useState(null);
+  const [loadingTelegram, setLoadingTelegram] = useState(false);
 
   // Получаем информацию о бане пользователя
   const [banInfo, setBanInfo] = useState(null);
@@ -183,8 +189,18 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
+    console.log('🔵 handlePasswordChange started');
     setLoading(true);
     setErrors({});
+    setSuccessMessage('');
+
+    // Проверяем что пользователь все еще авторизован
+    if (!isAuthenticated) {
+      console.log('🔴 User not authenticated');
+      setErrors({ password: 'Сессия истекла. Пожалуйста, войдите снова.' });
+      setLoading(false);
+      return;
+    }
 
     if (newPassword !== confirmPassword) {
       setErrors({ password: 'Пароли не совпадают' });
@@ -199,15 +215,46 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
     }
 
     try {
-      setTimeout(() => {
-        setLoading(false);
+      console.log('🔵 Sending password change request');
+      const response = await fetch(API_ENDPOINTS.CHANGE_PASSWORD, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+          confirm_password: confirmPassword,
+        }),
+        credentials: 'include',
+      });
+
+      console.log('🔵 Password change response status:', response.status);
+      const data = await response.json();
+      console.log('🔵 Password change response data:', data);
+
+      if (data.success) {
         setShowPasswordForm(false);
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
-      }, 1500);
+        setSuccessMessage('Пароль успешно изменен');
+        // Скрыть сообщение об успехе через 3 секунды
+        setTimeout(() => {
+          setSuccessMessage('');
+        }, 3000);
+      } else {
+        setErrors({ password: data.detail || 'Ошибка смены пароля' });
+        // Если ошибка "Неверный пароль", не разлогиниваем пользователя
+        if (data.detail && data.detail.includes('Неверный пароль')) {
+          console.log('🟡 Неверный текущий пароль, но сессия сохранена');
+        }
+      }
     } catch (error) {
-      setErrors({ password: 'Ошибка смены пароля' });
+      console.log('🔴 Password change error:', error);
+      setErrors({ password: 'Ошибка сети при смене пароля' });
+    } finally {
+      console.log('🔵 handlePasswordChange finished');
       setLoading(false);
     }
   };
@@ -253,8 +300,56 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
 
   const handleLogout = () => {
     logout();
-    onBack();
   };
+
+  // Функции для работы с Telegram
+  const fetchTelegramBinding = async () => {
+    try {
+      const response = await fetch(API_ENDPOINTS.TELEGRAM_BINDING_STATUS, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setTelegramBinding(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching Telegram binding status:', error);
+    }
+  };
+
+  const generateTelegramLink = async () => {
+    setLoadingTelegram(true);
+    try {
+      const response = await fetch(API_ENDPOINTS.TELEGRAM_GENERATE_LINK, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setTelegramLink(data.data.link);
+        // Копируем ссылку в буфер обмена
+        navigator.clipboard.writeText(data.data.link);
+        // Автоматически открываем ссылку в новой вкладке
+        window.open(data.data.link, '_blank');
+      } else {
+        setErrors({ telegram: data.detail });
+      }
+    } catch (error) {
+      setErrors({ telegram: 'Ошибка при генерации ссылки' });
+    } finally {
+      setLoadingTelegram(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTelegramBinding();
+  }, []);
 
   const handleDeleteAvatar = () => {
     setDeleteModal({ isOpen: true, type: 'avatar' });
@@ -262,15 +357,6 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
 
   const handleDeleteBanner = () => {
     setDeleteModal({ isOpen: true, type: 'banner' });
-  };
-
-  const confirmDelete = async () => {
-    if (deleteModal.type === 'avatar') {
-      await performDeleteAvatar();
-    } else if (deleteModal.type === 'banner') {
-      await performDeleteBanner();
-    }
-    setDeleteModal({ isOpen: false, type: null });
   };
 
   const performDeleteAvatar = async () => {
@@ -348,21 +434,21 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       {/* Header */}
-      <div className="bg-white/70 dark:bg-slate-900/60 border-b border-slate-200/60 dark:border-slate-800/60 sticky top-0 z-50 backdrop-blur-xl">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-5">
+      <div className="bg-white/80 dark:bg-slate-900/70 border-b border-slate-200/60 dark:border-slate-800/60 sticky top-0 z-50 backdrop-blur-xl">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 sm:gap-4">
               <button
                 onClick={onBack}
-                className="group relative w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center bg-white/70 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:shadow-lg hover:shadow-slate-200/30 dark:hover:shadow-black/20 hover:scale-[1.02] transition-all duration-200"
+                className="group relative w-10 h-10 rounded-2xl flex items-center justify-center bg-white/80 dark:bg-slate-800/70 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:shadow-lg hover:shadow-slate-200/30 dark:hover:shadow-black/20 hover:scale-[1.02] transition-all duration-300"
               >
-                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-translate-x-0.5 transition-transform duration-200" />
+                <ArrowLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform duration-300" />
               </button>
               <div className="flex flex-col gap-0.5">
-                <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">Настройки</h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">Профиль, безопасность и приватность</p>
+                <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">Настройки профиля</h1>
+                <p className="text-sm text-slate-500 dark:text-slate-400 hidden sm:block">Управление аккаунтом и персонализация</p>
               </div>
             </div>
           </div>
@@ -370,71 +456,111 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
       </div>
 
       {/* Content */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 sm:py-7">
-        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="flex flex-col xl:flex-row gap-6 sm:gap-8">
           {/* Sidebar */}
-          <div className="lg:w-72">
-            <div className="bg-white/70 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200/60 dark:border-slate-800/60 rounded-3xl p-2 shadow-sm">
-              <nav className="flex flex-row lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible pb-1 lg:pb-0">
+          <div className="xl:w-80">
+            <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/60 rounded-3xl p-3 shadow-lg">
+              <div className="mb-4">
+                <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Разделы настроек</h2>
+              </div>
+              <nav className="flex flex-row xl:flex-col gap-2 overflow-x-auto xl:overflow-x-visible pb-2 xl:pb-0">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-2xl font-medium transition-all whitespace-nowrap flex-shrink-0 ${
+                    className={`group relative flex items-center gap-3 px-4 py-3 rounded-2xl font-medium transition-all duration-300 whitespace-nowrap flex-shrink-0 ${
                       activeTab === tab.id
-                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 dark:shadow-emerald-900/30'
-                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
+                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/25 dark:shadow-emerald-900/40 transform scale-[1.02]'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100/80 dark:hover:bg-slate-800/60 hover:scale-[1.01]'
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
-                    <span className="text-sm">{tab.label}</span>
+                    <div className={`p-1.5 rounded-lg transition-all duration-300 ${
+                      activeTab === tab.id 
+                        ? 'bg-white/20' 
+                        : 'bg-slate-100/50 dark:bg-slate-700/50 group-hover:bg-slate-200/70 dark:group-hover:bg-slate-700/70'
+                    }`}>
+                      <Icon className={`w-4 h-4 transition-colors duration-300 ${
+                        activeTab === tab.id ? 'text-white' : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300'
+                      }`} />
+                    </div>
+                    <span className="text-sm font-medium">{tab.label}</span>
+                    {activeTab === tab.id && (
+                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+                    )}
                   </button>
                 );
               })}
               </nav>
             </div>
+            
+            {/* Quick Stats */}
+            <div className="mt-6 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 backdrop-blur-xl border border-emerald-200/60 dark:border-emerald-800/60 rounded-3xl p-4">
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Статистика профиля</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-slate-600 dark:text-slate-400">Заполненность профиля</span>
+                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">85%</span>
+                </div>
+                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
+                  <div className="bg-gradient-to-r from-emerald-500 to-teal-500 h-1.5 rounded-full" style={{width: '85%'}}></div>
+                </div>
+                <div className="flex justify-between items-center pt-2">
+                  <span className="text-xs text-slate-600 dark:text-slate-400">Последнее обновление</span>
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Сегодня</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Main Content */}
-          <div className="flex-1">
+          <div className="flex-1 space-y-6">
             {activeTab === 'profile' && (
               <div className="space-y-6">
-                <div>
-                  <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-4 sm:mb-6">Информация профиля</h2>
+                <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-lg">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center">
+                      <User className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Информация профиля</h2>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">Управление внешним видом и данными</p>
+                    </div>
+                  </div>
                   
                   {/* Profile Preview */}
-                  <div className="bg-white/70 dark:bg-slate-900/50 backdrop-blur-md rounded-3xl border border-slate-200/60 dark:border-slate-800/60 p-4 sm:p-6 mb-4 sm:mb-6 shadow-sm">
+                  <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-900/50 rounded-3xl p-6 mb-6 border border-slate-200/60 dark:border-slate-700/60">
                     {/* Banner Container */}
-                    <div className="relative h-32 bg-gray-200 dark:bg-slate-700 rounded-2xl mb-16 sm:mb-20">
+                    <div className="relative h-40 bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 rounded-2xl mb-20">
                       {/* Banner */}
-                      <div className="absolute inset-0">
+                      <div className="absolute inset-0 rounded-2xl overflow-hidden">
                         {bannerPreview ? (
                           <img 
                             src={bannerPreview} 
                             alt="Banner" 
-                            className="w-full h-full object-cover rounded-2xl"
+                            className="w-full h-full object-cover"
                           />
                         ) : userMedia?.banner_url ? (
                           <img 
                             src={buildMediaUrl(userMedia.banner_url)}
                             alt="Banner" 
-                            className="w-full h-full object-cover rounded-2xl"
+                            className="w-full h-full object-cover"
                           />
                         ) : userMedia?.banner_placeholder ? (
                           <div 
-                            className="w-full h-full rounded-2xl bg-gray-200 dark:bg-slate-700"
+                            className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800"
                           />
                         ) : (
-                          <div className="w-full h-full bg-gray-200 dark:bg-slate-700 rounded-2xl" />
+                          <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800" />
                         )}
                       </div>
                       
-                      {/* Banner upload button - только для незабаненных */}
+                      {/* Banner upload button */}
                       {!banInfo && (
-                        <label className="absolute top-2 sm:top-4 right-2 sm:right-4 w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all cursor-pointer">
-                          <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <label className="absolute top-4 right-4 w-12 h-12 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-2xl flex items-center justify-center text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:scale-105 transition-all cursor-pointer shadow-lg">
+                          <Upload className="w-6 h-6" />
                           <input
                             type="file"
                             accept="image/*"
@@ -444,24 +570,24 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                         </label>
                       )}
 
-                      {/* Delete banner button - только если есть баннер */}
+                      {/* Delete banner button */}
                       {!banInfo && userMedia?.banner_url && (
                         <button
                           onClick={handleDeleteBanner}
                           disabled={deletingBanner}
-                          className="absolute top-2 sm:top-4 right-14 sm:right-16 w-8 h-8 sm:w-10 sm:h-10 bg-red-500/80 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="absolute top-4 right-20 w-12 h-12 bg-red-500/90 dark:bg-red-600/90 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white hover:bg-red-600 dark:hover:bg-red-700 hover:scale-105 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                           title="Удалить баннер"
                         >
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
                       )}
 
-                      {/* Avatar - абсолютно позиционирован как в обычном профиле */}
-                      <div className="absolute -bottom-12 sm:-bottom-16 left-1/2 transform -translate-x-1/2 z-10">
+                      {/* Avatar */}
+                      <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 z-20">
                         <div className="relative group">
-                          <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl overflow-hidden bg-white dark:bg-slate-800 border-4 border-white dark:border-slate-800 shadow-lg">
+                          <div className="w-32 h-32 rounded-3xl overflow-hidden bg-white dark:bg-slate-800 border-4 border-white dark:border-slate-800 shadow-2xl">
                             {avatarPreview ? (
                               <img 
                                 src={avatarPreview} 
@@ -476,9 +602,9 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                               />
                             ) : userMedia?.avatar_placeholder ? (
                               <div 
-                                className="w-full h-full flex items-center justify-center text-white font-semibold bg-gray-200 dark:bg-slate-700"
+                                className="w-full h-full flex items-center justify-center text-white font-semibold bg-gradient-to-br from-slate-400 to-slate-600 dark:from-slate-600 dark:to-slate-800"
                                 style={{ 
-                                  color: 'rgb(156 163 175)', // gray-400
+                                  color: 'rgb(156 163 175)',
                                   fontSize: userMedia.avatar_placeholder.font_size,
                                   fontWeight: userMedia.avatar_placeholder.font_weight
                                 }}
@@ -486,16 +612,18 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                                 {userMedia.avatar_placeholder.initials}
                               </div>
                             ) : (
-                              <div className="w-full h-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center">
-                                <User className="w-8 h-8 sm:w-12 sm:h-12 text-gray-400 dark:text-slate-500" />
+                              <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-400 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center">
+                                <User className="w-12 h-12 text-slate-400 dark:text-slate-500" />
                               </div>
                             )}
                           </div>
                           
-                          {/* Avatar upload button - только для незабаненных */}
+                          {/* Avatar upload button */}
                           {!banInfo && (
-                            <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl sm:rounded-2xl cursor-pointer">
-                              <Camera className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                            <label className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-3xl cursor-pointer">
+                              <div className="bg-white/90 dark:bg-slate-800/90 p-3 rounded-2xl">
+                                <Camera className="w-8 h-8 text-slate-700 dark:text-slate-300" />
+                              </div>
                               <input
                                 type="file"
                                 accept="image/*"
@@ -505,15 +633,15 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                             </label>
                           )}
                           
-                          {/* Delete avatar button - только если есть аватар */}
+                          {/* Delete avatar button */}
                           {!banInfo && userMedia?.avatar_url && (
                             <button
                               onClick={handleDeleteAvatar}
                               disabled={deletingAvatar}
-                              className="absolute top-1 sm:top-2 right-1 sm:right-2 w-6 h-6 sm:w-8 sm:h-8 bg-red-500/80 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="absolute top-2 right-2 w-8 h-8 bg-red-500/90 dark:bg-red-600/90 backdrop-blur-sm rounded-xl flex items-center justify-center text-white hover:bg-red-600 dark:hover:bg-red-700 hover:scale-105 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                               title="Удалить аватар"
                             >
-                              <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>
                             </button>
@@ -522,47 +650,51 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                       </div>
                     </div>
                     
-                    <div className="text-center">
-                      <h3 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                    <div className="text-center pt-4">
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
                         {user?.fullname || 'Пользователь'}
                       </h3>
-                      <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mb-6">
+                      <p className="text-base text-slate-600 dark:text-slate-400 mb-6">
                         ID: {user?.id || 'Неизвестно'}
                       </p>
                       
                       {/* User Stats */}
-                      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
-                        <div className="text-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                          <div className="text-lg font-semibold text-slate-900 dark:text-white">1</div>
-                          <div className="text-xs text-slate-600 dark:text-slate-400">Курс</div>
+                      <div className="grid grid-cols-3 gap-4 mb-6">
+                        <div className="text-center p-4 bg-white/70 dark:bg-slate-800/70 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
+                          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">1</div>
+                          <div className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wider">Курс</div>
                         </div>
-                        <div className="text-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                          <div className="text-lg font-semibold text-slate-900 dark:text-white">ИПФ</div>
-                          <div className="text-xs text-slate-600 dark:text-slate-400">Факультет</div>
+                        <div className="text-center p-4 bg-white/70 dark:bg-slate-800/70 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
+                          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">ИПФ</div>
+                          <div className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wider">Факультет</div>
                         </div>
-                        <div className="text-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                          <div className="text-lg font-semibold text-slate-900 dark:text-white">
+                        <div className="text-center p-4 bg-white/70 dark:bg-slate-800/70 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
+                          <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                             {user?.faculty?.slice(0, 3) || '---'}
                           </div>
-                          <div className="text-xs text-slate-600 dark:text-slate-400">Группа</div>
+                          <div className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wider">Группа</div>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {banInfo ? (
-                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 sm:p-4 mb-4 sm:mb-6">
-                      <div className="flex items-start gap-3">
-                        <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <div className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border border-red-200 dark:border-red-800 rounded-2xl p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 bg-red-500/20 dark:bg-red-600/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+                          <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                        </div>
                         <div className="text-left">
-                          <h3 className="font-semibold text-red-800 dark:text-red-300 mb-2 text-sm sm:text-base">
+                          <h3 className="font-bold text-red-800 dark:text-red-300 mb-2 text-lg">
                             Аккаунт заблокирован
                           </h3>
-                          <p className="text-red-700 dark:text-red-400 text-xs sm:text-sm">
+                          <p className="text-red-700 dark:text-red-400 text-sm mb-3">
                             {banInfo.reason}
                           </p>
-                          <div className="mt-2 text-red-600 dark:text-red-400 text-xs">
-                            Срок: {banInfo.duration_text}
+                          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                            <span className="text-xs font-medium text-red-600 dark:text-red-400">
+                              Срок: {banInfo.duration_text}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -570,41 +702,61 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                   ) : (
                     <>
                       {errors.general && (
-                        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-                          <p className="text-red-600 dark:text-red-400 text-xs sm:text-sm">{errors.general}</p>
+                        <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border border-red-200 dark:border-red-800 rounded-2xl">
+                          <div className="flex items-start gap-3">
+                            <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                            <p className="text-red-600 dark:text-red-400 text-sm font-medium">{errors.general}</p>
+                          </div>
                         </div>
                       )}
                       
-                      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+                      <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Upload Instructions */}
-                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 sm:p-4">
-                          <h3 className="text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2">
-                            Инструкция по загрузке
-                          </h3>
-                          <ul className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 space-y-1">
-                            <li>• Нажмите на аватар или баннер для загрузки нового изображения</li>
-                            <li>• Поддерживаемые форматы: JPEG, PNG, WebP</li>
-                            <li>• Максимальный размер файла: 10MB</li>
-                            <li>• Вы можете загрузить только аватар, только баннер или оба вместе</li>
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-6">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 bg-blue-500/20 dark:bg-blue-600/20 rounded-2xl flex items-center justify-center">
+                              <HelpCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                              Инструкция по загрузке
+                            </h3>
+                          </div>
+                          <ul className="space-y-2 text-sm text-blue-600 dark:text-blue-400">
+                            <li className="flex items-start gap-2">
+                              <span className="text-blue-500 mt-0.5">•</span>
+                              <span>Нажмите на аватар или баннер для загрузки нового изображения</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-blue-500 mt-0.5">•</span>
+                              <span>Поддерживаемые форматы: JPEG, PNG, WebP</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-blue-500 mt-0.5">•</span>
+                              <span>Максимальный размер файла: 10MB</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-blue-500 mt-0.5">•</span>
+                              <span>Вы можете загрузить только аватар, только баннер или оба вместе</span>
+                            </li>
                           </ul>
                         </div>
                         
                         {/* Action buttons */}
-                        <div className="flex gap-3">
+                        <div className="flex gap-4">
                           <button
                             type="submit"
-                            className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg sm:rounded-xl font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
+                            className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-2xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transform hover:scale-[1.02] disabled:scale-100"
                             disabled={loading || (!avatarFile && !bannerFile)}
                           >
                             {loading ? (
                               <>
-                                <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                Загрузка...
+                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                <span>Загрузка...</span>
                               </>
                             ) : (
                               <>
-                                <Save className="w-4 h-4 sm:w-5 sm:h-5" />
-                                Сохранить изменения
+                                <Save className="w-5 h-5" />
+                                <span>Сохранить изменения</span>
                               </>
                             )}
                           </button>
@@ -617,154 +769,291 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
             )}
 
             {activeTab === 'security' && (
-              <div className="space-y-4">
-                {/* Password */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                        <Lock className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-900 dark:text-white">Пароль</h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">Измените пароль для повышения безопасности</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setShowPasswordForm(!showPasswordForm)}
-                      className="px-3 py-1.5 text-sm bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
-                    >
-                      {showPasswordForm ? 'Отмена' : 'Изменить'}
-                    </button>
-                  </div>
-
-                  {showPasswordForm && (
-                    <form onSubmit={handlePasswordChange} className="space-y-4 mt-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                          Текущий пароль
-                        </label>
-                        <div className="relative">
-                          <input
-                            type={showPasswords.current ? 'text' : 'password'}
-                            value={currentPassword}
-                            onChange={(e) => setCurrentPassword(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                            required
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPasswords({...showPasswords, current: !showPasswords.current})}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                          >
-                            {showPasswords.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                          Новый пароль
-                        </label>
-                        <div className="relative">
-                          <input
-                            type={showPasswords.new ? 'text' : 'password'}
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                            required
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPasswords({...showPasswords, new: !showPasswords.new})}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                          >
-                            {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                          Подтвердите пароль
-                        </label>
-                        <div className="relative">
-                          <input
-                            type={showPasswords.confirm ? 'text' : 'password'}
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                            required
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPasswords({...showPasswords, confirm: !showPasswords.confirm})}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                          >
-                            {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {errors.password && (
-                        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                          <p className="text-red-600 dark:text-red-400 text-sm">{errors.password}</p>
-                        </div>
-                      )}
-
-                      <button
-                        type="submit"
-                        className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={loading}
-                      >
-                        {loading ? 'Сохранение...' : 'Сохранить пароль'}
-                      </button>
-                    </form>
-                  )}
-                </div>
-
-                {/* 2FA */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                        <Smartphone className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-900 dark:text-white">Двухфакторная аутентификация</h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">Дополнительный уровень безопасности</p>
-                      </div>
-                    </div>
-                    <button className="px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center gap-1">
-                      Настроить
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Active Sessions */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                      <Globe className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              <div className="space-y-6">
+                <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-lg">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 bg-gradient-to-br from-red-400 to-orange-500 rounded-2xl flex items-center justify-center">
+                      <Shield className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-slate-900 dark:text-white">Активные сессии</h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">Управление активными входами в аккаунт</p>
+                      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Безопасность</h2>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">Защита вашего аккаунта</p>
                     </div>
                   </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">Тек</span>
+                  
+                  <div className="space-y-6">
+                    {/* Password */}
+                    <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-900/50 rounded-2xl p-6 border border-slate-200/60 dark:border-slate-700/60">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center">
+                            <Lock className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Пароль</h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Измените пароль для повышения безопасности</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setShowPasswordForm(!showPasswordForm)}
+                          className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transform hover:scale-[1.02]"
+                        >
+                          {showPasswordForm ? 'Отмена' : 'Изменить'}
+                        </button>
+                      </div>
+
+                      {showPasswordForm && (
+                        <form onSubmit={handlePasswordChange} className="space-y-4 mt-6">
+                          <div>
+                            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                              Текущий пароль
+                            </label>
+                            <div className="relative">
+                              <input
+                                type={showPasswords.current ? 'text' : 'password'}
+                                value={currentPassword}
+                                onChange={(e) => setCurrentPassword(e.target.value)}
+                                className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                                required
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPasswords({...showPasswords, current: !showPasswords.current})}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                              >
+                                {showPasswords.current ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                              Новый пароль
+                            </label>
+                            <div className="relative">
+                              <input
+                                type={showPasswords.new ? 'text' : 'password'}
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                                required
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPasswords({...showPasswords, new: !showPasswords.new})}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                              >
+                                {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                              Подтвердите пароль
+                            </label>
+                            <div className="relative">
+                              <input
+                                type={showPasswords.confirm ? 'text' : 'password'}
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                                required
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPasswords({...showPasswords, confirm: !showPasswords.confirm})}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                              >
+                                {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                              </button>
+                            </div>
+                          </div>
+
+                          {errors.password && (
+                            <div className="p-4 bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border border-red-200 dark:border-red-800 rounded-xl">
+                              <div className="flex items-start gap-3">
+                                <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                                <p className="text-red-600 dark:text-red-400 text-sm font-medium">{errors.password}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          {successMessage && (
+                            <div className="p-4 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+                              <div className="flex items-start gap-3">
+                                <div className="w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                </div>
+                                <p className="text-emerald-600 dark:text-emerald-400 text-sm font-medium">{successMessage}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          <button
+                            type="submit"
+                            className="w-full px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                            disabled={loading}
+                          >
+                            {loading ? (
+                              <>
+                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-2" />
+                                Сохранение...
+                              </>
+                            ) : (
+                              'Сохранить пароль'
+                            )}
+                          </button>
+                        </form>
+                      )}
+                    </div>
+
+                    {/* Telegram Binding */}
+                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-2xl flex items-center justify-center">
+                          <Send className="w-6 h-6 text-white" />
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-slate-900 dark:text-white">Это устройство</div>
-                          <div className="text-xs text-slate-600 dark:text-slate-400">Chrome • Windows</div>
+                          <h3 className="font-bold text-slate-900 dark:text-white text-lg">Привязка Telegram</h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">Связать аккаунт с Telegram ботом для уведомлений</p>
                         </div>
                       </div>
-                      <span className="text-xs text-emerald-600 dark:text-emerald-400">Активно</span>
+                      
+                      {telegramBinding?.is_linked ? (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between p-4 bg-white/70 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-xl flex items-center justify-center">
+                                <span className="text-lg font-bold text-white">
+                                  {telegramBinding.telegram_username ? telegramBinding.telegram_username[0].toUpperCase() : 'T'}
+                                </span>
+                              </div>
+                              <div>
+                                <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                                  @{telegramBinding.telegram_username || telegramBinding.telegram_id}
+                                </div>
+                                <div className="text-xs text-slate-600 dark:text-slate-400">
+                                  Привязан {new Date(telegramBinding.linked_at).toLocaleDateString('ru-RU')}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Подключено</span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {telegramLink ? (
+                            <div className="space-y-3">
+                              <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+                                <div className="flex items-start gap-3">
+                                  <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <Link className="w-4 h-4 text-white" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200 mb-1">
+                                      Ссылка для привязки открыта в новой вкладке
+                                    </p>
+                                    <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                                      Перейдите в Telegram и нажмите /start для завершения привязки
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                                <p className="text-xs text-slate-600 dark:text-slate-400 break-all font-mono">
+                                  {telegramLink}
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                              <p className="text-sm text-slate-600 dark:text-slate-400 text-center">
+                                Нажмите "Привязать Telegram" - ссылка откроется автоматически
+                              </p>
+                            </div>
+                          )}
+                          
+                          <button
+                            onClick={generateTelegramLink}
+                            disabled={loadingTelegram}
+                            className="w-full px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 flex items-center justify-center gap-2"
+                          >
+                            {loadingTelegram ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                Генерация ссылки...
+                              </>
+                            ) : (
+                              <>
+                                <Link className="w-4 h-4" />
+                                Привязать Telegram
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                      
+                      {errors.telegram && (
+                        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                          <p className="text-red-600 dark:text-red-400 text-sm">{errors.telegram}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 2FA */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center">
+                            <Smartphone className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Двухфакторная аутентификация</h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Дополнительный уровень безопасности</p>
+                          </div>
+                        </div>
+                        <button className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transform hover:scale-[1.02] flex items-center gap-2">
+                          Настроить
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Active Sessions */}
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl p-6 border border-purple-200 dark:border-purple-800">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center">
+                          <Globe className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-slate-900 dark:text-white text-lg">Активные сессии</h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">Управление активными входами в аккаунт</p>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-4 bg-white/70 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center">
+                              <span className="text-sm font-bold text-white">Тек</span>
+                            </div>
+                            <div>
+                              <div className="text-sm font-semibold text-slate-900 dark:text-white">Это устройство</div>
+                              <div className="text-xs text-slate-600 dark:text-slate-400">Chrome • Windows</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Активно</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -772,96 +1061,114 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
             )}
 
             {activeTab === 'notifications' && (
-              <div className="space-y-4">
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
+              <div className="space-y-6">
+                <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-lg">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center">
+                      <Bell className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Уведомления</h2>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">Настройте способ оповещений</p>
+                    </div>
+                  </div>
+                  
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                          <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center">
+                            <Mail className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Email уведомления</h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Получать уведомления на почту</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-medium text-slate-900 dark:text-white">Email уведомления</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Получать уведомления на почту</p>
-                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={notifications.email}
+                            onChange={(e) => setNotifications({...notifications, email: e.target.checked})}
+                            className="sr-only peer"
+                          />
+                          <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-gradient-to-r peer-checked:from-emerald-500 peer-checked:to-emerald-600"></div>
+                        </label>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={notifications.email}
-                          onChange={(e) => setNotifications({...notifications, email: e.target.checked})}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-600"></div>
-                      </label>
                     </div>
 
-                    <div className="flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                          <Bell className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl p-6 border border-emerald-200 dark:border-emerald-800">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center">
+                            <Bell className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Push уведомления</h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Уведомления в браузере</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-medium text-slate-900 dark:text-white">Push уведомления</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Уведомления в браузере</p>
-                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={notifications.push}
+                            onChange={(e) => setNotifications({...notifications, push: e.target.checked})}
+                            className="sr-only peer"
+                          />
+                          <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-gradient-to-r peer-checked:from-emerald-500 peer-checked:to-emerald-600"></div>
+                        </label>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={notifications.push}
-                          onChange={(e) => setNotifications({...notifications, push: e.target.checked})}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-600"></div>
-                      </label>
                     </div>
 
-                    <div className="flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                          <span className="text-lg">📰</span>
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl p-6 border border-purple-200 dark:border-purple-800">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center">
+                            <span className="text-2xl">📰</span>
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Новости и обновления</h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Информация о новостях платформы</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-medium text-slate-900 dark:text-white">Новости и обновления</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Информация о новостях платформы</p>
-                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={notifications.news}
+                            onChange={(e) => setNotifications({...notifications, news: e.target.checked})}
+                            className="sr-only peer"
+                          />
+                          <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-gradient-to-r peer-checked:from-emerald-500 peer-checked:to-emerald-600"></div>
+                        </label>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={notifications.news}
-                          onChange={(e) => setNotifications({...notifications, news: e.target.checked})}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-600"></div>
-                      </label>
                     </div>
 
-                    <div className="flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-                          <Shield className="w-5 h-5 text-red-600 dark:text-red-400" />
+                    <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-2xl p-6 border border-red-200 dark:border-red-800">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-red-400 to-orange-500 rounded-2xl flex items-center justify-center">
+                            <Shield className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Безопасность</h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Уведомления о безопасности аккаунта</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-medium text-slate-900 dark:text-white">Безопасность</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Уведомления о безопасности аккаунта</p>
-                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={notifications.security}
+                            onChange={(e) => setNotifications({...notifications, security: e.target.checked})}
+                            className="sr-only peer"
+                          />
+                          <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-gradient-to-r peer-checked:from-emerald-500 peer-checked:to-emerald-600"></div>
+                        </label>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={notifications.security}
-                          onChange={(e) => setNotifications({...notifications, security: e.target.checked})}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-600"></div>
-                      </label>
                     </div>
                   </div>
 
-                  <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
-                    <button className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors">
+                  <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
+                    <button className="w-full px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transform hover:scale-[1.02]">
                       Сохранить настройки уведомлений
                     </button>
                   </div>
@@ -870,96 +1177,114 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
             )}
 
             {activeTab === 'privacy' && (
-              <div className="space-y-4">
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
+              <div className="space-y-6">
+                <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-lg">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-2xl flex items-center justify-center">
+                      <Eye className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Приватность</h2>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">Управление видимостью профиля</p>
+                    </div>
+                  </div>
+                  
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
-                          <Eye className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl p-6 border border-indigo-200 dark:border-indigo-800">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-2xl flex items-center justify-center">
+                            <Eye className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Видимость профиля</h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Показывать профиль другим пользователям</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-medium text-slate-900 dark:text-white">Видимость профиля</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Показывать профиль другим пользователям</p>
-                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={privacy.profileVisible}
+                            onChange={(e) => setPrivacy({...privacy, profileVisible: e.target.checked})}
+                            className="sr-only peer"
+                          />
+                          <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-gradient-to-r peer-checked:from-emerald-500 peer-checked:to-emerald-600"></div>
+                        </label>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={privacy.profileVisible}
-                          onChange={(e) => setPrivacy({...privacy, profileVisible: e.target.checked})}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-600"></div>
-                      </label>
                     </div>
 
-                    <div className="flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                          <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-2xl flex items-center justify-center">
+                            <Mail className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Показывать email</h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Отображать email в профиле</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-medium text-slate-900 dark:text-white">Показывать email</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Отображать email в профиле</p>
-                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={privacy.showEmail}
+                            onChange={(e) => setPrivacy({...privacy, showEmail: e.target.checked})}
+                            className="sr-only peer"
+                          />
+                          <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-gradient-to-r peer-checked:from-emerald-500 peer-checked:to-emerald-600"></div>
+                        </label>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={privacy.showEmail}
-                          onChange={(e) => setPrivacy({...privacy, showEmail: e.target.checked})}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-600"></div>
-                      </label>
                     </div>
 
-                    <div className="flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                          <span className="text-lg">🎓</span>
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl p-6 border border-green-200 dark:border-green-800">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center">
+                            <span className="text-2xl">🎓</span>
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Показывать код студента</h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Отображать номер студенческого билета</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-medium text-slate-900 dark:text-white">Показывать код студента</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Отображать номер студенческого билета</p>
-                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={privacy.showStudentCode}
+                            onChange={(e) => setPrivacy({...privacy, showStudentCode: e.target.checked})}
+                            className="sr-only peer"
+                          />
+                          <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-gradient-to-r peer-checked:from-emerald-500 peer-checked:to-emerald-600"></div>
+                        </label>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={privacy.showStudentCode}
-                          onChange={(e) => setPrivacy({...privacy, showStudentCode: e.target.checked})}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-600"></div>
-                      </label>
                     </div>
 
-                    <div className="flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                          <span className="text-lg">💬</span>
+                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl p-6 border border-emerald-200 dark:border-emerald-800">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center">
+                            <span className="text-2xl">💬</span>
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Разрешить сообщения</h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Другие пользователи могут отправлять сообщения</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-medium text-slate-900 dark:text-white">Разрешить сообщения</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Другие пользователи могут отправлять сообщения</p>
-                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={privacy.allowMessages}
+                            onChange={(e) => setPrivacy({...privacy, allowMessages: e.target.checked})}
+                            className="sr-only peer"
+                          />
+                          <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-gradient-to-r peer-checked:from-emerald-500 peer-checked:to-emerald-600"></div>
+                        </label>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={privacy.allowMessages}
-                          onChange={(e) => setPrivacy({...privacy, allowMessages: e.target.checked})}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-600"></div>
-                      </label>
                     </div>
                   </div>
 
-                  <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
-                    <button className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors">
+                  <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
+                    <button className="w-full px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transform hover:scale-[1.02]">
                       Сохранить настройки приватности
                     </button>
                   </div>
@@ -968,45 +1293,78 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
             )}
 
             {activeTab === 'advanced' && (
-              <div className="space-y-4">
-                {/* Data Export */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                        <Download className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-900 dark:text-white">Экспорт данных</h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">Скачать все ваши данные</p>
-                      </div>
+              <div className="space-y-6">
+                <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-lg">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 bg-gradient-to-br from-gray-400 to-slate-500 rounded-2xl flex items-center justify-center">
+                      <Settings2 className="w-6 h-6 text-white" />
                     </div>
-                    <button className="px-3 py-1.5 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors flex items-center gap-1">
-                      Экспортировать
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Дополнительно</h2>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">Расширенные настройки аккаунта</p>
+                    </div>
                   </div>
-                </div>
-
-                {/* Logout */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-                        <LogOut className="w-5 h-5 text-red-600 dark:text-red-400" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-900 dark:text-white">Выйти из аккаунта</h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">Завершить текущую сессию</p>
+                  
+                  <div className="space-y-6">
+                    {/* Data Export */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center">
+                            <Download className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Экспорт данных</h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Скачать все ваши данные</p>
+                          </div>
+                        </div>
+                        <button className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transform hover:scale-[1.02] flex items-center gap-2">
+                          Экспортировать
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
-                    <button 
-                      onClick={handleLogout}
-                      className="px-3 py-1.5 text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors flex items-center gap-1"
-                    >
-                      Выйти
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
+
+                    {/* Account Deletion */}
+                    <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-2xl p-6 border border-red-200 dark:border-red-800">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-red-400 to-orange-500 rounded-2xl flex items-center justify-center">
+                            <Trash2 className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Удалить аккаунт</h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Полностью удалить все данные</p>
+                          </div>
+                        </div>
+                        <button className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-red-500/25 hover:shadow-red-500/40 transform hover:scale-[1.02] flex items-center gap-2">
+                          Удалить
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Logout */}
+                    <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-800/50 dark:to-slate-800/50 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-gray-400 to-slate-500 rounded-2xl flex items-center justify-center">
+                            <LogOut className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Выйти из аккаунта</h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Завершить текущую сессию</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={handleLogout}
+                          className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-gray-500 to-slate-600 hover:from-gray-600 hover:to-slate-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-gray-500/25 hover:shadow-gray-500/40 transform hover:scale-[1.02] flex items-center gap-2"
+                        >
+                          Выйти
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1017,17 +1375,17 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
 
       {/* Delete Confirmation Modal */}
       {deleteModal.isOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+          <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-2xl max-w-md w-full p-8 border border-slate-200/60 dark:border-slate-800/60">
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-                <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <div className="w-14 h-14 bg-gradient-to-br from-red-400 to-red-600 rounded-2xl flex items-center justify-center">
+                <Trash2 className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
                   Удалить {deleteModal.type === 'avatar' ? 'аватар' : 'баннер'}?
                 </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
                   Это действие нельзя будет отменить
                 </p>
               </div>
@@ -1036,14 +1394,14 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setDeleteModal({ isOpen: false, type: null })}
-                className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all duration-300"
               >
                 Отмена
               </button>
               <button
                 onClick={confirmDelete}
                 disabled={deletingAvatar || deletingBanner}
-                className="px-4 py-2 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-red-500/25 hover:shadow-red-500/40 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
               >
                 {deletingAvatar || deletingBanner ? 'Удаление...' : 'Удалить'}
               </button>

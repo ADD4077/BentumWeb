@@ -962,6 +962,16 @@ def get_user_by_code(request, student_code):
         user = User.objects.filter(student_code=student_code).first()
         
         if not user:
+            # Логируем для отладки
+            print(f"Пользователь с кодом {student_code} не найден")
+            # Выведем всех пользователей для отладки
+            all_users = User.objects.all()
+            print(f"Все пользователи в системе ({all_users.count()}):")
+            for u in all_users[:5]:  # первые 5 пользователей
+                print(f"  - {u.fullname} ({u.student_code})")
+            if all_users.count() > 5:
+                print(f"  ... и еще {all_users.count() - 5} пользователей")
+            
             return JsonResponse({
                 'success': False,
                 'detail': 'Пользователь не найден'

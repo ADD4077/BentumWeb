@@ -50,21 +50,26 @@ export const AuthProvider = ({ children }) => {
     }
   };
   const login = async (studentCode, password) => {
+    console.log('🔵 AuthContext.login called with:', { studentCode, password: '***' });
     try {
       const data = await api.saveData({
         studentCode: studentCode,
         studentRedCode: password,
       });
+      console.log('🔵 AuthContext.login response:', data);
       if (data.success) {
         setIsAuthenticated(true);
         setUser(data.user);
         // Безопасно сохраняем данные пользователя
         safeSetUserData(data.user);
+        console.log('🟢 AuthContext.login success');
         return { success: true };
       } else {
+        console.log('🔴 AuthContext.login failed:', data.detail);
         return { success: false, error: data.detail || 'Ошибка входа' };
       }
     } catch (error) {
+      console.log('🔴 AuthContext.login error:', error);
       return { success: false, error: 'Ошибка соединения с сервером' };
     }
   };

@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  telegram-bot:
+    build: ./backend
+    container_name: bentum-telegram-bot
+    restart: unless-stopped
+    environment:
+      - DATABASE_ENGINE=mysql
+      - DATABASE_NAME=${DATABASE_NAME}
+      - DATABASE_USERNAME=${DATABASE_USERNAME}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_HOST=${DATABASE_HOST}
+      - DATABASE_PORT=${DATABASE_PORT}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - TELEGRAM_TOPIC_ID=${TELEGRAM_TOPIC_ID:-9}
+      - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME:-admin}
+      - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL:-admin@example.com}
+      - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD}
+    volumes:
+      - ./backend:/app
+      - media_volume:/app/media
+    networks:
+      - bentum-network
+    command: python run_bot.py
+    depends_on:
+      - db
+
+networks:
+  bentum-network:
+    external: true
+
+volumes:
+  media_volume:
+    external: true

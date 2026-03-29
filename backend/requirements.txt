@@ -8,3 +8,6 @@ pillow
 mysqlclient
 PyMySQL
 gunicorn
+aiogram
+python-dotenv
+asgiref

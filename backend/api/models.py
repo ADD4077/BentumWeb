@@ -4,7 +4,7 @@ class User(models.Model):
     fullname = models.CharField(max_length=100)
     faculty = models.CharField(max_length=10)
     student_code = models.CharField(max_length=10, unique=True)
-    bilet_code = models.CharField(max_length=7)
+    bilet_code = models.CharField(max_length=30)
     created_at = models.IntegerField(null=True, blank=True)
     last_login = models.IntegerField(null=True, blank=True)
 
@@ -117,4 +117,29 @@ class UserBan(models.Model):
         ]
     
     def __str__(self):
-        return f"Ban: {self.student_code} (by {self.banned_by_id}) - {self.ban_duration_seconds}s"
+        return f"Ban: {self.student_code} (до {self.ban_date})"
+
+
+class TelegramBinding(models.Model):
+    """Модель для хранения привязки Telegram аккаунтов к пользователям"""
+    user = models.OneToOneField('User', on_delete=models.CASCADE, related_name='telegram_binding')
+    telegram_id = models.BigIntegerField(default=0, db_index=True)  # 0 = не привязан
+    telegram_username = models.CharField(max_length=32, blank=True, null=True)
+    telegram_first_name = models.CharField(max_length=64, blank=True, null=True)
+    telegram_last_name = models.CharField(max_length=64, blank=True, null=True)
+    binding_token = models.CharField(max_length=64, unique=True, db_index=True)  # Токен для привязки
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'telegram_bindings'
+        indexes = [
+            models.Index(fields=['user', 'is_active']),
+            models.Index(fields=['telegram_id']),
+            models.Index(fields=['binding_token']),
+            models.Index(fields=['created_at']),
+        ]
+    
+    def __str__(self):
+        return f"Telegram binding: {self.user.student_code} -> @{self.telegram_username or self.telegram_id}"

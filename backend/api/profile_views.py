@@ -220,3 +220,77 @@ def update_banner(request):
             "success": False,
             "detail": f"Ошибка сервера: {str(e)}"
         }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def change_password(request):
+    """Смена пароля пользователя"""
+    try:
+        # Проверяем авторизацию
+        if not request.session.get('is_authenticated'):
+            return JsonResponse({
+                "success": False,
+                "detail": "Требуется авторизация"
+            }, status=401)
+        
+        student_code = request.session.get('student_code')
+        user = User.objects.filter(student_code=student_code).first()
+        
+        if not user:
+            return JsonResponse({
+                "success": False,
+                "detail": "Пользователь не найден"
+            }, status=404)
+        
+        # Получаем данные из запроса
+        data = json.loads(request.body)
+        current_password = data.get('current_password')
+        new_password = data.get('new_password')
+        confirm_password = data.get('confirm_password')
+        
+        # Валидация
+        if not current_password or not new_password or not confirm_password:
+            return JsonResponse({
+                "success": False,
+                "detail": "Все поля обязательны для заполнения"
+            }, status=400)
+        
+        if new_password != confirm_password:
+            return JsonResponse({
+                "success": False,
+                "detail": "Новые пароли не совпадают"
+            }, status=400)
+        
+        if len(new_password) < 8:
+            return JsonResponse({
+                "success": False,
+                "detail": "Пароль должен содержать минимум 8 символов"
+            }, status=400)
+        
+        # Проверяем текущий пароль (хранится в bilet_code)
+        if user.bilet_code != current_password:
+            return JsonResponse({
+                "success": False,
+                "detail": "Текущий пароль указан неверно"
+            }, status=400)
+        
+        # Устанавливаем новый пароль в поле bilet_code
+        user.bilet_code = new_password
+        user.save()
+        
+        return JsonResponse({
+            "success": True,
+            "message": "Пароль успешно изменен"
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "success": False,
+            "detail": "Неверный формат данных"
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "detail": f"Ошибка сервера: {str(e)}"
+        }, status=500)

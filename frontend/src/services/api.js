@@ -2,6 +2,7 @@ import { API_ENDPOINTS } from '../config/api.js';
 
 export const api = {
   async saveData(userData) {
+    console.log('🔵 api.saveData called with:', { studentCode: userData.studentCode, studentRedCode: '***' });
     try {
       const response = await fetch(API_ENDPOINTS.SAVE_DATA, {
         method: 'POST',
@@ -11,6 +12,7 @@ export const api = {
         body: JSON.stringify(userData),
         credentials: 'include',
       });
+      console.log('🔵 api.saveData response status:', response.status);
       if (!response.ok) {
         const error = new Error(`HTTP error! status: ${response.status}`);
         error.response = { status: response.status };
@@ -22,12 +24,14 @@ export const api = {
       } catch {
         data = null;
       }
+      console.log('🔵 api.saveData response data:', data);
       return {
         ok: response.ok,
         status: response.status,
         ...(data || {}),
       };
     } catch (error) {
+      console.log('🔴 api.saveData error:', error);
       throw error;
     }
   },

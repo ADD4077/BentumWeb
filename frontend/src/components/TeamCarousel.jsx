@@ -9,6 +9,7 @@ function TeamCarousel({ teamMembers, darkMode }) {
   const [touchEnd, setTouchEnd] = useState(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedStudentCode, setSelectedStudentCode] = useState(null);
+  const [memberAvatars, setMemberAvatars] = useState({});
   const intervalRef = useRef(null);
   const timeoutRef = useRef(null);
   const carouselRef = useRef(null);
@@ -21,6 +22,44 @@ function TeamCarousel({ teamMembers, darkMode }) {
     'Абраменко Александр': '1090352501',
     'Альшевский Алексей': '1030522501'
   };
+
+  // Загрузка аватарок пользователей
+  useEffect(() => {
+    const loadMemberAvatars = async () => {
+      const avatars = {};
+      
+      for (const member of teamMembers) {
+        const studentCode = adminMapping[member.name];
+        if (studentCode) {
+          try {
+            const response = await fetch(`${API_ENDPOINTS.BASE_URL}/api/user/by-code/${studentCode}`, {
+              credentials: 'include',
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              if (data?.success && data?.user) {
+                // Проверяем avatar_url на верхнем уровне ответа
+                if (data.user.avatar_url) {
+                  avatars[member.name] = data.user.avatar_url;
+                }
+              }
+            } else {
+              // Пользователь не найден, оставляем плейсхолдер
+            }
+          } catch {
+            // Игнорируем ошибки, оставляем плейсхолдер
+          }
+        }
+      }
+      
+      setMemberAvatars(avatars);
+    };
+
+    if (teamMembers.length > 0) {
+      loadMemberAvatars();
+    }
+  }, [teamMembers]);
 
   const handleAvatarClick = async (memberName) => {
     const studentCode = adminMapping[memberName];
@@ -153,13 +192,18 @@ function TeamCarousel({ teamMembers, darkMode }) {
                       className="w-32 h-32 rounded-3xl overflow-hidden bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg flex items-center justify-center mb-6 transition-all duration-300 ease-out transform translate-y-0 rotate-0 hover:shadow-2xl hover:shadow-gray-400/50 group cursor-pointer hover:-translate-y-2 hover:rotate-6"
                       onClick={() => handleAvatarClick(member.name)}
                     >
-                      {member.image ? (
+                      {memberAvatars[member.name] ? (
                         <img 
-                          src={member.image} 
+                          src={memberAvatars[member.name].startsWith('/') ? `${API_ENDPOINTS.BASE_URL}${memberAvatars[member.name]}` : memberAvatars[member.name]}
                           alt={member.name}
                           className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:contrast-105"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
                         />
-                      ) : (
+                      ) : null}
+                      {!memberAvatars[member.name] && (
                         <span className="text-white text-4xl font-bold transition-all duration-300 group-hover:text-white group-hover:scale-110">
                           {member.name.split(' ').map(n => n[0]).join('')}
                         </span>

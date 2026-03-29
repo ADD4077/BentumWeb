@@ -25,7 +25,13 @@ export const API_ENDPOINTS = {
   MEDIA_DELETE: `${API_BASE_URL}/api/media/delete`,
   SAVE_DATA: `${API_BASE_URL}/api/save_data`,
   AUTH_CHECK: `${API_BASE_URL}/api/auth/check`,
-  PUBLIC_STATS: `${API_BASE_URL}/api/public/stats`
+  PUBLIC_STATS: `${API_BASE_URL}/api/public/stats`,
+  CHANGE_PASSWORD: `${API_BASE_URL}/api/change-password`,
+  // Telegram binding endpoints
+  TELEGRAM_GENERATE_LINK: `${API_BASE_URL}/api/telegram/generate-link`,
+  TELEGRAM_BINDING_STATUS: `${API_BASE_URL}/api/telegram/binding-status`,
+  TELEGRAM_UNLINK: `${API_BASE_URL}/api/telegram/unlink`,
+  TELEGRAM_BIND: `${API_BASE_URL}/api/telegram/bind`
 };
 
 // Вспомогательная функция для построения URL с API базой
