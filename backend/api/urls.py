@@ -3,8 +3,9 @@ from django.contrib import admin as admin_django
 from django.conf import settings
 from django.conf.urls.static import static
 
-from .views import save_data, dashboard, logout, theme, get_schedule, get_literature, get_news, get_public_stats, get_user_by_code, auth_check
+from .views import save_data, dashboard, logout, theme, get_schedule, get_literature, get_news, get_public_stats, get_user_by_code, auth_check, get_user_sessions
 from .telegram_binding_views import generate_telegram_link, get_telegram_binding_status, unlink_telegram_account, process_telegram_callback
+from .twofa_views import get_2fa_config, set_2fa_config, verify_2fa, resend_2fa_code
 
 from .profile_views import update_profile, update_avatar, update_banner, change_password
 
@@ -57,6 +58,15 @@ urlpatterns = [
     path("api/telegram/binding-status", get_telegram_binding_status),
     path("api/telegram/unlink", unlink_telegram_account),
     path("api/telegram/bind", process_telegram_callback),
+
+    # 2FA endpoints
+    path("api/2fa/config", get_2fa_config),
+    path("api/2fa/config", set_2fa_config),
+    path("api/2fa/verify", verify_2fa),
+    path("api/2fa/resend", resend_2fa_code),
+
+    # Sessions endpoints
+    path("api/sessions", get_user_sessions),
 
     # Support endpoints
 

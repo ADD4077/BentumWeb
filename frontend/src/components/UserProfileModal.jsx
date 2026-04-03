@@ -84,20 +84,9 @@ export default function UserProfileModal({ isOpen, onClose, studentCode, darkMod
                 alt="Profile Avatar"
                 className="w-32 h-32 rounded-2xl object-cover border-4 border-white dark:border-slate-800"
               />
-            ) : userMedia.avatar_placeholder ? (
-              <div 
-                className="w-32 h-32 rounded-2xl border-4 border-white dark:border-slate-800 flex items-center justify-center font-semibold bg-gray-200 dark:bg-slate-700"
-                style={{ 
-                  color: 'rgb(156 163 175)',
-                  fontSize: userMedia.avatar_placeholder.font_size,
-                  fontWeight: userMedia.avatar_placeholder.font_weight
-                }}
-              >
-                {userMedia.avatar_placeholder.initials}
-              </div>
             ) : (
               <div className="w-32 h-32 rounded-2xl border-4 border-white dark:border-slate-800 bg-gray-300 flex items-center justify-center text-gray-600 font-semibold" style={{ fontSize: '300%' }}>
-                U
+                {user?.fullname?.charAt(0)?.toUpperCase() || 'U'}
               </div>
             )}
           </div>
@@ -160,7 +149,7 @@ export default function UserProfileModal({ isOpen, onClose, studentCode, darkMod
                 <div className="text-left flex items-center gap-3 mb-8">
                   <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   <p className="text-base font-medium text-slate-900 dark:text-white">
-                    {user?.last_login ? new Date(user.last_login * 1000).toLocaleDateString('ru-RU', {
+                    {user?.created_at ? new Date(user.created_at * 1000).toLocaleDateString('ru-RU', {
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric'

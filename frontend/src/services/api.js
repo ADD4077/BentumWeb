@@ -2,7 +2,6 @@ import { API_ENDPOINTS } from '../config/api.js';
 
 export const api = {
   async saveData(userData) {
-    console.log('🔵 api.saveData called with:', { studentCode: userData.studentCode, studentRedCode: '***' });
     try {
       const response = await fetch(API_ENDPOINTS.SAVE_DATA, {
         method: 'POST',
@@ -12,27 +11,25 @@ export const api = {
         body: JSON.stringify(userData),
         credentials: 'include',
       });
-      console.log('🔵 api.saveData response status:', response.status);
-      if (!response.ok) {
-        const error = new Error(`HTTP error! status: ${response.status}`);
-        error.response = { status: response.status };
-        throw error;
-      }
+      
       let data;
       try {
         data = await response.json();
       } catch {
         data = null;
       }
-      console.log('🔵 api.saveData response data:', data);
+      
       return {
         ok: response.ok,
         status: response.status,
         ...(data || {}),
       };
     } catch (error) {
-      console.log('🔴 api.saveData error:', error);
-      throw error;
+      return {
+        ok: false,
+        status: 0,
+        detail: 'Ошибка сети'
+      };
     }
   },
 
@@ -40,6 +37,114 @@ export const api = {
     try {
       const response = await fetch(API_ENDPOINTS.AUTH_CHECK, {
         method: 'GET',
+        credentials: 'include',
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
+
+      return {
+        ok: response.ok,
+        status: response.status,
+        ...(data || {}),
+      };
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async verify2FACode(code) {
+    try {
+      const response = await fetch(API_ENDPOINTS.TWO_FA_VERIFY, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code }),
+        credentials: 'include',
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
+
+      return {
+        ok: response.ok,
+        status: response.status,
+        ...(data || {}),
+      };
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async get2FAConfig() {
+    try {
+      const response = await fetch(API_ENDPOINTS.TWO_FA_CONFIG, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
+
+      return {
+        ok: response.ok,
+        status: response.status,
+        ...(data || {}),
+      };
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async set2FAConfig(enabled, method) {
+    try {
+      const response = await fetch(API_ENDPOINTS.TWO_FA_CONFIG, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ enabled, method }),
+        credentials: 'include',
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
+
+      return {
+        ok: response.ok,
+        status: response.status,
+        ...(data || {}),
+      };
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async resend2FACode() {
+    try {
+      const response = await fetch(API_ENDPOINTS.TWO_FA_RESEND, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
         credentials: 'include',
       });
 

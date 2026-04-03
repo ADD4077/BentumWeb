@@ -19,11 +19,6 @@ def upload_media(request):
     import logging
     logger = logging.getLogger(__name__)
     
-    logger.error(f"=== MEDIA UPLOAD REQUEST ===")
-    logger.error(f"Session authenticated: {request.session.get('is_authenticated')}")
-    logger.error(f"FILES: {request.FILES}")
-    logger.error(f"POST: {request.POST}")
-    
     try:
         # Проверяем авторизацию
         if not request.session.get('is_authenticated'):

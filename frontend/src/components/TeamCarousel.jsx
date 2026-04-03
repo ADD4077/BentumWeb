@@ -36,13 +36,11 @@ function TeamCarousel({ teamMembers, darkMode }) {
               credentials: 'include',
             });
 
-            if (response.ok) {
-              const data = await response.json();
-              if (data?.success && data?.user) {
-                // Проверяем avatar_url на верхнем уровне ответа
-                if (data.user.avatar_url) {
-                  avatars[member.name] = data.user.avatar_url;
-                }
+            const data = await response.json();
+            if (data?.success && data?.user) {
+              // Проверяем avatar_url на верхнем уровне ответа
+              if (data.user.avatar_url) {
+                avatars[member.name] = data.user.avatar_url;
               }
             } else {
               // Пользователь не найден, оставляем плейсхолдер
@@ -69,10 +67,6 @@ function TeamCarousel({ teamMembers, darkMode }) {
       const response = await fetch(`${API_ENDPOINTS.BASE_URL}/api/user/by-code/${studentCode}`, {
         credentials: 'include',
       });
-
-      if (!response.ok) {
-        return;
-      }
 
       const data = await response.json();
       if (!data?.success || !data?.user) {

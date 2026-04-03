@@ -262,10 +262,10 @@ def change_password(request):
                 "detail": "Новые пароли не совпадают"
             }, status=400)
         
-        if len(new_password) < 8:
+        if len(new_password) < 7:
             return JsonResponse({
                 "success": False,
-                "detail": "Пароль должен содержать минимум 8 символов"
+                "detail": "Пароль должен содержать минимум 7 символов"
             }, status=400)
         
         # Проверяем текущий пароль (хранится в bilet_code)

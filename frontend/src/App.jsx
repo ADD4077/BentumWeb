@@ -13,6 +13,8 @@ import AdminPanel from './components/AdminPanel.jsx';
 import ProfileEditModal from './components/ProfileEditModal.jsx';
 import ProfileSettings from './components/ProfileSettings.jsx';
 import SupportSuccessModal from './components/SupportSuccessModal.jsx';
+import TwoFAModal from './components/TwoFAModal.jsx';
+import TwoFASetupModal from './components/TwoFASetupModal.jsx';
 import PrivacyPolicy from './components/PrivacyPolicy.jsx';
 import { ArrowRight, Backpack, Book, BookOpen, Calendar, Clock, Download, Edit, ExternalLink, Filter, Gamepad2, GraduationCap, LogIn, LogOut, Moon, Search, Settings, Star, Sun, User } from 'lucide-react';
 import { daysOfWeek, quickDayButtons, groupInfo, features, teamMembers } from './utils/constants.js';
@@ -118,7 +120,7 @@ const TagsContainer = React.memo(({ tags, onTagClick }) => {
 });
 
 function AppContent() {
-  const { loading, isAuthenticated, user, logout } = useAuth();
+  const { loading, isAuthenticated, user, logout, requires2FA, verify2FA } = useAuth();
   
   const [darkMode, setDarkMode] = useState(() => {
     return getCachedItem('darkMode', true, 300000); // Кэш на 5 минут
@@ -309,7 +311,30 @@ function AppContent() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isProfileEditModalOpen, setIsProfileEditModalOpen] = useState(false);
   const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
+  const [isTwoFAModalOpen, setIsTwoFAModalOpen] = useState(false);
+  const [isTwoFASetupModalOpen, setIsTwoFASetupModalOpen] = useState(false);
+  const [twoFAMessage, setTwoFAMessage] = useState('');
   
+  // Обработчик успешной 2FA
+  const handle2FASuccess = (message) => {
+    setTwoFAMessage(message || 'Двухфакторная аутентификация успешно пройдена');
+  };
+
+  // Обработчик успешной настройки 2FA
+  const handle2FASetupSuccess = (message) => {
+    setTwoFAMessage(message || 'Настройки двухфакторной аутентификации обновлены');
+  };
+
+  // Обработчик для открытия модального окна 2FA
+  const handle2FAModalOpen = () => {
+    setIsTwoFAModalOpen(true);
+  };
+
+  // Обработчик для открытия модального окна настройки 2FA
+  const handle2FASetupModalOpen = () => {
+    setIsTwoFASetupModalOpen(true);
+  };
+
   const handleProfileUpdate = (updatedUser) => {
     // Обновляем состояние пользователя с новыми URL медиа
     if (updatedUser) {
@@ -800,6 +825,7 @@ function AppContent() {
                     }
                   }
                 }}
+                on2FASetupOpen={handle2FASetupModalOpen}
               />
             );
           })()
@@ -2218,7 +2244,7 @@ function AppContent() {
                 <div className="text-left flex items-center gap-3 mb-8">
                   <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   <p className="text-base font-medium text-slate-900 dark:text-white">
-                    {user?.last_login ? new Date(user.last_login * 1000).toLocaleDateString('ru-RU', {
+                    {user?.created_at ? new Date(user.created_at * 1000).toLocaleDateString('ru-RU', {
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric'
@@ -2275,6 +2301,26 @@ function AppContent() {
           onClose={() => setIsSupportSuccessModalOpen(false)}
           darkMode={darkMode}
         />
+      )}
+      {/* 2FA Modal */}
+      <TwoFAModal 
+        isOpen={isTwoFAModalOpen}
+        onClose={() => setIsTwoFAModalOpen(false)}
+        onSuccess={handle2FASuccess}
+        darkMode={darkMode}
+      />
+      {/* 2FA Setup Modal */}
+      <TwoFASetupModal 
+        isOpen={isTwoFASetupModalOpen}
+        onClose={() => setIsTwoFASetupModalOpen(false)}
+        onSuccess={handle2FASetupSuccess}
+        darkMode={darkMode}
+      />
+      {/* 2FA Success Message */}
+      {twoFAMessage && (
+        <div className="fixed top-4 right-4 z-[200] bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-lg animate-pulse">
+          {twoFAMessage}
+        </div>
       )}
     </div>
   );

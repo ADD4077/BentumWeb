@@ -25,7 +25,7 @@ def get_all_users(request):
         if not Administration.objects.filter(administrator=current_user, is_active=True).exists():
             return JsonResponse({'detail': 'Доступ запрещен'}, status=403)
         
-        users = User.objects.all().values('id', 'fullname', 'student_code', 'faculty', 'created_at')
+        users = User.objects.all().values('id', 'fullname', 'student_code', 'faculty', 'created_at', 'last_login')
         users_list = list(users)
         
         # Добавляем информацию о статусе блокировки для каждого пользователя

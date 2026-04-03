@@ -8,6 +8,9 @@ class User(models.Model):
     created_at = models.IntegerField(null=True, blank=True)
     last_login = models.IntegerField(null=True, blank=True)
 
+    twofa_enabled = models.BooleanField(default=False)
+    twofa_method = models.CharField(max_length=20, null=True, blank=True)
+
     class Meta:
         db_table = 'users'
 
@@ -18,12 +21,20 @@ class User(models.Model):
 class UserSession(models.Model):
     student_code = models.CharField(max_length=10, db_index=True)
     session_key = models.CharField(max_length=40, unique=True)
+    user_agent = models.TextField(blank=True, null=True)  # Полный User-Agent строка
+    browser = models.CharField(max_length=100, blank=True, null=True)  # Браузер
+    os = models.CharField(max_length=100, blank=True, null=True)  # Операционная система
+    ip_address = models.GenericIPAddressField(blank=True, null=True)  # IP адрес
     created_at = models.DateTimeField(auto_now_add=True)
+    last_activity = models.DateTimeField(auto_now=True)  # Последняя активность
 
     class Meta:
         db_table = 'user_sessions'
         indexes = [
             models.Index(fields=['student_code', 'created_at']),
+            models.Index(fields=['student_code', 'last_activity']),
+            models.Index(fields=['browser']),
+            models.Index(fields=['os']),
         ]
 
 

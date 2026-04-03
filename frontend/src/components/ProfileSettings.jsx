@@ -1,8 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { API_ENDPOINTS } from '../config/api.js';
-import { Save, Upload, Camera, User, AlertTriangle, ArrowLeft, Shield, Bell, Palette, HelpCircle, LogOut, Settings2, Key, Smartphone, Mail, Globe, Trash2, Download, Eye, EyeOff, Edit3, Lock, UserCheck, CreditCard, MapPin, Calendar, BookOpen, Award, ChevronRight, Send, Link } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext.jsx';
 import { buildMediaUrl } from '../utils/media.js';
+import { showSuccess, showError } from '../utils/notifications.js';
+import { 
+  User, 
+  Settings, 
+  Settings2,
+  Camera, 
+  Upload, 
+  Lock, 
+  Eye, 
+  EyeOff,
+  Shield,
+  AlertTriangle,
+  CheckCircle,
+  X,
+  Image,
+  Loader2,
+  HelpCircle,
+  Calendar,
+  Clock,
+  UserCheck,
+  Bell,
+  ArrowLeft,
+  Save,
+  Send,
+  Link,
+  Smartphone,
+  ChevronRight,
+  Globe,
+  Mail,
+  Download,
+  Trash2,
+  LogOut
+} from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext.jsx';
 
 const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, onForceRefresh }) => {
   const { isAuthenticated, logout } = useAuth();
@@ -45,6 +77,10 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
     showStudentCode: false,
     allowMessages: true
   });
+
+  // Активные сессии
+  const [sessions, setSessions] = useState([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
 
   // Состояние привязки Telegram
   const [telegramBinding, setTelegramBinding] = useState(null);
@@ -94,6 +130,58 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
     }
   }, [user, isAuthenticated]);
 
+  // Загрузка активных сессий
+  useEffect(() => {
+    const fetchSessions = async () => {
+      if (!user || !isAuthenticated) return;
+      
+      setLoadingSessions(true);
+      try {
+        const response = await fetch(API_ENDPOINTS.SESSIONS, {
+          method: 'GET',
+          credentials: 'include',
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setSessions(data.sessions || []);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching sessions:', error);
+      } finally {
+        setLoadingSessions(false);
+      }
+    };
+
+    fetchSessions();
+  }, [user, isAuthenticated]);
+
+  // Функция для обновления сессий
+  const refreshSessions = async () => {
+    if (!user || !isAuthenticated) return;
+    
+    setLoadingSessions(true);
+    try {
+      const response = await fetch(API_ENDPOINTS.SESSIONS, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setSessions(data.sessions || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing sessions:', error);
+    } finally {
+      setLoadingSessions(false);
+    }
+  };
+
   useEffect(() => {
     if (updatedMediaData) {
       onForceRefresh?.(updatedMediaData);
@@ -109,6 +197,7 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
     try {
       if (!avatarFile && !bannerFile) {
         setErrors({ general: 'Выберите хотя бы один файл для загрузки' });
+        showError('⚠️ Выберите хотя бы один файл для загрузки');
         setLoading(false);
         return;
       }
@@ -121,6 +210,7 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
           updatedData.avatar_url = avatarResult.url;
         } else {
           setErrors({ general: 'Ошибка загрузки аватара' });
+          showError('❌ Не удалось загрузить аватар');
           setLoading(false);
           return;
         }
@@ -132,6 +222,7 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
           updatedData.banner_url = bannerResult.url;
         } else {
           setErrors({ general: 'Ошибка загрузки баннера' });
+          showError('❌ Не удалось загрузить баннер');
           setLoading(false);
           return;
         }
@@ -156,6 +247,9 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
           banner_placeholder: userMedia?.banner_placeholder
         });
         
+        // Показываем уведомление об успехе
+        showSuccess('✅ Настройки профиля успешно применены!');
+        
         try {
           const profileResponse = await fetch(API_ENDPOINTS.PROFILE_UPDATE, {
             method: 'GET',
@@ -179,9 +273,11 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
         }
       } else {
         setErrors({ general: result.detail || 'Ошибка сохранения профиля' });
+        showError('❌ Не удалось применить настройки профиля');
       }
     } catch (error) {
       setErrors({ general: 'Ошибка при сохранении профиля' });
+      showError('❌ Произошла ошибка при сохранении профиля');
     } finally {
       setLoading(false);
     }
@@ -189,33 +285,25 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
-    console.log('🔵 handlePasswordChange started');
     setLoading(true);
     setErrors({});
     setSuccessMessage('');
 
-    // Проверяем что пользователь все еще авторизован
-    if (!isAuthenticated) {
-      console.log('🔴 User not authenticated');
-      setErrors({ password: 'Сессия истекла. Пожалуйста, войдите снова.' });
-      setLoading(false);
-      return;
-    }
-
     if (newPassword !== confirmPassword) {
       setErrors({ password: 'Пароли не совпадают' });
+      showError('❌ Пароли не совпадают');
       setLoading(false);
       return;
     }
 
-    if (newPassword.length < 8) {
-      setErrors({ password: 'Пароль должен содержать минимум 8 символов' });
+    if (newPassword.length < 7) {
+      setErrors({ password: 'Пароль должен содержать минимум 7 символов' });
+      showError('❌ Пароль должен содержать минимум 7 символов');
       setLoading(false);
       return;
     }
 
     try {
-      console.log('🔵 Sending password change request');
       const response = await fetch(API_ENDPOINTS.CHANGE_PASSWORD, {
         method: 'POST',
         headers: {
@@ -229,9 +317,7 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
         credentials: 'include',
       });
 
-      console.log('🔵 Password change response status:', response.status);
       const data = await response.json();
-      console.log('🔵 Password change response data:', data);
 
       if (data.success) {
         setShowPasswordForm(false);
@@ -239,22 +325,20 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
         setNewPassword('');
         setConfirmPassword('');
         setSuccessMessage('Пароль успешно изменен');
+        // Показываем уведомление об успехе
+        showSuccess('✅ Пароль успешно изменен!');
         // Скрыть сообщение об успехе через 3 секунды
         setTimeout(() => {
           setSuccessMessage('');
         }, 3000);
       } else {
         setErrors({ password: data.detail || 'Ошибка смены пароля' });
-        // Если ошибка "Неверный пароль", не разлогиниваем пользователя
-        if (data.detail && data.detail.includes('Неверный пароль')) {
-          console.log('🟡 Неверный текущий пароль, но сессия сохранена');
-        }
+        showError('❌ Не удалось изменить пароль');
       }
     } catch (error) {
-      console.log('🔴 Password change error:', error);
       setErrors({ password: 'Ошибка сети при смене пароля' });
+      showError('❌ Произошла ошибка сети при смене пароля');
     } finally {
-      console.log('🔵 handlePasswordChange finished');
       setLoading(false);
     }
   };
@@ -432,6 +516,38 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
     { id: 'privacy', label: 'Приватность', icon: Eye },
     { id: 'advanced', label: 'Дополнительно', icon: Settings2 },
   ];
+
+  // Функция форматирования даты и времени
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'Неизвестно';
+    
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      
+      if (diffMins < 1) {
+        return 'Только что';
+      } else if (diffMins < 60) {
+        return `${diffMins} мин. назад`;
+      } else if (diffHours < 24) {
+        return `${diffHours} ч. назад`;
+      } else if (diffDays < 7) {
+        return `${diffDays} д. назад`;
+      } else {
+        return date.toLocaleDateString('ru-RU', {
+          day: 'numeric',
+          month: 'short',
+          year: date.getFullYear() !== now.getFullYear() ? undefined : undefined
+        });
+      }
+    } catch (error) {
+      return 'Некорректная дата';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -659,21 +775,45 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                       </p>
                       
                       {/* User Stats */}
-                      <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div className="grid grid-cols-2 gap-4 mb-6">
                         <div className="text-center p-4 bg-white/70 dark:bg-slate-800/70 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
-                          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">1</div>
+                          <div className="text-lg font-bold text-slate-900 dark:text-white">1</div>
                           <div className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wider">Курс</div>
                         </div>
                         <div className="text-center p-4 bg-white/70 dark:bg-slate-800/70 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
-                          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">ИПФ</div>
+                          <div className="text-lg font-bold text-slate-900 dark:text-white">
+                            {user?.faculty || '---'}
+                          </div>
                           <div className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wider">Факультет</div>
                         </div>
+                      </div>
+
+                      {/* Additional Info */}
+                      <div className="grid grid-cols-2 gap-4 mb-6">
                         <div className="text-center p-4 bg-white/70 dark:bg-slate-800/70 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
-                          <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                            {user?.faculty?.slice(0, 3) || '---'}
+                          <div className="text-lg font-bold text-slate-900 dark:text-white truncate">
+                            {user?.student_code || '---'}
                           </div>
                           <div className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wider">Группа</div>
                         </div>
+                        <div className="text-center p-4 bg-white/70 dark:bg-slate-800/70 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
+                          <div className="text-lg font-bold text-slate-900 dark:text-white truncate">
+                            {user?.email || 'Не указана'}
+                          </div>
+                          <div className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wider">Почта</div>
+                        </div>
+                      </div>
+
+                      {/* Registration Date */}
+                      <div className="text-center p-4 bg-white/70 dark:bg-slate-800/70 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 mb-6">
+                        <div className="text-lg font-bold text-slate-900 dark:text-white">
+                          {user?.created_at ? new Date(user.created_at * 1000).toLocaleDateString('ru-RU', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          }) : 'Не указана'}
+                        </div>
+                        <div className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wider">Дата регистрации</div>
                       </div>
                     </div>
                   </div>
@@ -912,18 +1052,39 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
 
                     {/* Telegram Binding */}
                     <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-800">
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-2xl flex items-center justify-center">
-                          <Send className="w-6 h-6 text-white" />
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-2xl flex items-center justify-center">
+                            <Send className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Привязка Telegram</h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Связать аккаунт с Telegram ботом для уведомлений</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-bold text-slate-900 dark:text-white text-lg">Привязка Telegram</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Связать аккаунт с Telegram ботом для уведомлений</p>
-                        </div>
+                        {!telegramBinding?.is_linked && (
+                          <button
+                            onClick={generateTelegramLink}
+                            disabled={loadingTelegram}
+                            className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 flex items-center gap-2"
+                          >
+                            {loadingTelegram ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                Генерация...
+                              </>
+                            ) : (
+                              <>
+                                <Link className="w-4 h-4" />
+                                Привязать
+                              </>
+                            )}
+                          </button>
+                        )}
                       </div>
                       
                       {telegramBinding?.is_linked ? (
-                        <div className="space-y-4">
+                        <div className="mt-4 space-y-4">
                           <div className="flex items-center justify-between p-4 bg-white/70 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-xl flex items-center justify-center">
@@ -972,31 +1133,7 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                                 </p>
                               </div>
                             </div>
-                          ) : (
-                            <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                              <p className="text-sm text-slate-600 dark:text-slate-400 text-center">
-                                Нажмите "Привязать Telegram" - ссылка откроется автоматически
-                              </p>
-                            </div>
-                          )}
-                          
-                          <button
-                            onClick={generateTelegramLink}
-                            disabled={loadingTelegram}
-                            className="w-full px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 flex items-center justify-center gap-2"
-                          >
-                            {loadingTelegram ? (
-                              <>
-                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                Генерация ссылки...
-                              </>
-                            ) : (
-                              <>
-                                <Link className="w-4 h-4" />
-                                Привязать Telegram
-                              </>
-                            )}
-                          </button>
+                          ) : null}
                         </div>
                       )}
                       
@@ -1028,31 +1165,62 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
 
                     {/* Active Sessions */}
                     <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl p-6 border border-purple-200 dark:border-purple-800">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center">
-                          <Globe className="w-6 h-6 text-white" />
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center">
+                            <Globe className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Активные сессии</h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Управление активными входами в аккаунт</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-bold text-slate-900 dark:text-white text-lg">Активные сессии</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Управление активными входами в аккаунт</p>
-                        </div>
+                        <button 
+                          onClick={refreshSessions}
+                          disabled={loadingSessions}
+                          className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white rounded-lg transition-all duration-300 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transform hover:scale-[1.02] flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                        >
+                          <Loader2 className={`w-3 h-3 ${loadingSessions ? 'animate-spin' : ''}`} />
+                          Обновить
+                        </button>
                       </div>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between p-4 bg-white/70 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center">
-                              <span className="text-sm font-bold text-white">Тек</span>
-                            </div>
-                            <div>
-                              <div className="text-sm font-semibold text-slate-900 dark:text-white">Это устройство</div>
-                              <div className="text-xs text-slate-600 dark:text-slate-400">Chrome • Windows</div>
-                            </div>
+                      <div className="mt-4 space-y-3">
+                        {loadingSessions ? (
+                          <div className="flex items-center justify-center p-8">
+                            <Loader2 className="w-6 h-6 animate-spin text-purple-500" />
+                            <span className="ml-2 text-sm text-slate-600 dark:text-slate-400">Загрузка сессий...</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Активно</span>
+                        ) : sessions.length === 0 ? (
+                          <div className="text-center p-8">
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Нет активных сессий</p>
                           </div>
-                        </div>
+                        ) : (
+                          sessions.map((session) => (
+                            <div key={session.id} className={`flex items-center justify-between p-4 ${session.is_current ? 'bg-white/70 dark:bg-slate-800/70 border-2 border-emerald-200 dark:border-emerald-800' : 'bg-white/70 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60'} rounded-xl`}>
+                              <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 ${session.is_current ? 'bg-gradient-to-br from-emerald-400 to-teal-500' : 'bg-gradient-to-br from-slate-400 to-slate-500'} rounded-xl flex items-center justify-center`}>
+                                  <span className="text-sm font-bold text-white">
+                                    {session.is_current ? 'Тек' : session.browser?.split(' ')[0]?.substring(0, 3) || 'Web'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                                    {session.is_current ? 'Это устройство' : `${session.browser} • ${session.os}`}
+                                  </div>
+                                  <div className="text-xs text-slate-600 dark:text-slate-400">
+                                    {session.ip_address} • {formatDateTime(session.last_activity)}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 ${session.is_current ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'} rounded-full`}></div>
+                                <span className={`text-xs font-medium ${session.is_current ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                                  {session.is_current ? 'Активно' : 'Неактивно'}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1306,49 +1474,11 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                   </div>
                   
                   <div className="space-y-6">
-                    {/* Data Export */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-800">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center">
-                            <Download className="w-6 h-6 text-white" />
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Экспорт данных</h3>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">Скачать все ваши данные</p>
-                          </div>
-                        </div>
-                        <button className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transform hover:scale-[1.02] flex items-center gap-2">
-                          Экспортировать
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Account Deletion */}
+                    {/* Logout */}
                     <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-2xl p-6 border border-red-200 dark:border-red-800">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 bg-gradient-to-br from-red-400 to-orange-500 rounded-2xl flex items-center justify-center">
-                            <Trash2 className="w-6 h-6 text-white" />
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Удалить аккаунт</h3>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">Полностью удалить все данные</p>
-                          </div>
-                        </div>
-                        <button className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-red-500/25 hover:shadow-red-500/40 transform hover:scale-[1.02] flex items-center gap-2">
-                          Удалить
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Logout */}
-                    <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-800/50 dark:to-slate-800/50 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-gray-400 to-slate-500 rounded-2xl flex items-center justify-center">
                             <LogOut className="w-6 h-6 text-white" />
                           </div>
                           <div>
@@ -1358,7 +1488,7 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                         </div>
                         <button 
                           onClick={handleLogout}
-                          className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-gray-500 to-slate-600 hover:from-gray-600 hover:to-slate-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-gray-500/25 hover:shadow-gray-500/40 transform hover:scale-[1.02] flex items-center gap-2"
+                          className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-red-500/25 hover:shadow-red-500/40 transform hover:scale-[1.02] flex items-center gap-2"
                         >
                           Выйти
                           <ChevronRight className="w-4 h-4" />

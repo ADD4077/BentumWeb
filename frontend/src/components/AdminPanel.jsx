@@ -113,8 +113,36 @@ function AdminPanel({ darkMode }) {
       const data = await response.json();
       
       if (data.success) {
-        setUsers(data.users);
-        localStorage.setItem('admin_users', JSON.stringify(data.users));
+        // Загружаем медиа для каждого пользователя
+        const usersWithMedia = await Promise.all(
+          data.users.map(async (user) => {
+            try {
+              const mediaResponse = await fetch(`${API_ENDPOINTS.USER_MEDIA}?user_id=${user.id}`, {
+                credentials: 'include'
+              });
+              
+              if (mediaResponse.ok) {
+                const mediaData = await mediaResponse.json();
+                if (mediaData.success) {
+                  return {
+                    ...user,
+                    avatar_url: mediaData.avatar_url
+                  };
+                }
+              }
+            } catch (error) {
+              // Если ошибка загрузки медиа, оставляем пользователя без медиа
+            }
+            
+            return {
+              ...user,
+              avatar_url: null
+            };
+          })
+        );
+        
+        setUsers(usersWithMedia);
+        localStorage.setItem('admin_users', JSON.stringify(usersWithMedia));
       } else {
         // Если API недоступен, используем localStorage
         const storedUsers = localStorage.getItem('admin_users');
@@ -528,7 +556,7 @@ function AdminPanel({ darkMode }) {
                     Статус
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                    Последний вход
+                    Дата регистрации
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     Действия
@@ -538,7 +566,7 @@ function AdminPanel({ darkMode }) {
               <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
                 {loading ? (
                   <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center">
+                    <td colSpan="4" className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center">
                         <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
                         <span className="text-slate-500 dark:text-slate-400">Загрузка пользователей...</span>
@@ -547,7 +575,7 @@ function AdminPanel({ darkMode }) {
                   </tr>
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center">
+                    <td colSpan="4" className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center">
                         <Users className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-4" />
                         <span className="text-slate-500 dark:text-slate-400">Пользователи не найдены</span>
@@ -575,7 +603,7 @@ function AdminPanel({ darkMode }) {
                           ) : (
                             <div className="w-10 h-10 bg-gray-200 dark:bg-slate-600 rounded-full flex items-center justify-center mr-3">
                               <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                                {user.fullname.charAt(0).toUpperCase()}
+                                {user.fullname?.charAt(0)?.toUpperCase() || 'U'}
                               </span>
                             </div>
                           )}
@@ -607,14 +635,14 @@ function AdminPanel({ darkMode }) {
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-slate-900 dark:text-white">
-                          {user.last_login ? 
-                            new Date(user.last_login * 1000).toLocaleString('ru-RU', {
+                          {user.created_at ? 
+                            new Date(user.created_at * 1000).toLocaleString('ru-RU', {
                               day: '2-digit',
                               month: '2-digit', 
                               year: 'numeric',
                               hour: '2-digit',
                               minute: '2-digit'
-                            }) : '—'
+                            }) : 'Не указана'
                           }
                         </div>
                       </td>
@@ -698,7 +726,7 @@ function AdminPanel({ darkMode }) {
                       ) : (
                         <div className="w-10 h-10 bg-gray-200 dark:bg-slate-600 rounded-full flex items-center justify-center">
                           <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                            {user.fullname.charAt(0).toUpperCase()}
+                            {user.fullname?.charAt(0)?.toUpperCase() || 'U'}
                           </span>
                         </div>
                       )}
@@ -726,8 +754,16 @@ function AdminPanel({ darkMode }) {
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-slate-500 dark:text-slate-400">Последний вход:</span>
                       <span className="text-sm text-slate-900 dark:text-white">
-                        {user.last_login ? 
-                          new Date(user.last_login * 1000).toLocaleDateString('ru-RU') : '—'
+                        {user.last_login && user.last_login > 0 ? 
+                          new Date(user.last_login * 1000).toLocaleDateString('ru-RU') : 'Не входил'
+                        }
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Дата регистрации:</span>
+                      <span className="text-sm text-slate-900 dark:text-white">
+                        {user.created_at ? 
+                          new Date(user.created_at * 1000).toLocaleDateString('ru-RU') : 'Не указана'
                         }
                       </span>
                     </div>
@@ -941,19 +977,21 @@ function AdminPanel({ darkMode }) {
                   <div className="flex justify-between">
                     <span className="font-medium">Дата регистрации:</span>
                     <span>
-                      {new Date(selectedUser.registration_date * 1000).toLocaleString('ru-RU', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                      {selectedUser.created_at ? 
+                        new Date(selectedUser.created_at * 1000).toLocaleString('ru-RU', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : 'Не указана'
+                      }
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Последний вход:</span>
                     <span>
-                      {selectedUser.last_login ? 
+                      {selectedUser.last_login && selectedUser.last_login > 0 ? 
                         new Date(selectedUser.last_login * 1000).toLocaleString('ru-RU', {
                           day: '2-digit',
                           month: '2-digit',

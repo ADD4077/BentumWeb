@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://bentum.ru/sitemap.xml
+
+# Allow search engines to crawl the site
+# Block access to admin areas and sensitive files
+Disallow: /admin/
+Disallow: /api/
+Disallow: /*.json$
+Disallow: /*?*$
+Disallow: /src/
+Disallow: /assets/
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1
+
+# Host directive for Yandex
+Host: https://bentum.ru

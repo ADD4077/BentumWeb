@@ -31,7 +31,13 @@ export const API_ENDPOINTS = {
   TELEGRAM_GENERATE_LINK: `${API_BASE_URL}/api/telegram/generate-link`,
   TELEGRAM_BINDING_STATUS: `${API_BASE_URL}/api/telegram/binding-status`,
   TELEGRAM_UNLINK: `${API_BASE_URL}/api/telegram/unlink`,
-  TELEGRAM_BIND: `${API_BASE_URL}/api/telegram/bind`
+  TELEGRAM_BIND: `${API_BASE_URL}/api/telegram/bind`,
+  // Sessions endpoints
+  SESSIONS: `${API_BASE_URL}/api/sessions`,
+  // 2FA endpoints
+  TWO_FA_CONFIG: `${API_BASE_URL}/api/2fa/config`,
+  TWO_FA_VERIFY: `${API_BASE_URL}/api/2fa/verify`,
+  TWO_FA_RESEND: `${API_BASE_URL}/api/2fa/resend`
 };
 
 // Вспомогательная функция для построения URL с API базой

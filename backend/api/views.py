@@ -3,6 +3,7 @@ import os
 import re
 import sqlite3
 from datetime import datetime
+from django.utils import timezone
 from django.conf import settings
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -46,14 +47,43 @@ def _clear_login_attempts(student_code: str):
     cache.delete(f"login_attempts_user:{student_code}")
 
 
-def _enforce_session_limits(student_code: str, current_session_key: str) -> None:
+def _enforce_session_limits(student_code: str, current_session_key: str, request=None) -> None:
     if not student_code or not current_session_key:
         return
 
-    UserSession.objects.get_or_create(
+    # Собираем информацию о браузере и ОС
+    browser_info = {}
+    ip_address = None
+    
+    if request:
+        # Получаем IP адрес
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip_address = x_forwarded_for.split(',')[0].strip()
+        else:
+            ip_address = request.META.get('REMOTE_ADDR')
+        
+        # Парсим User-Agent
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        from .user_agent_parser import UserAgentParser
+        browser_info = UserAgentParser.parse(user_agent)
+
+    # Создаем или обновляем сессию с расширенной информацией
+    session, created = UserSession.objects.get_or_create(
         session_key=current_session_key,
-        defaults={"student_code": student_code},
+        defaults={
+            "student_code": student_code,
+            "user_agent": request.META.get('HTTP_USER_AGENT', '') if request else '',
+            "browser": browser_info.get("browser"),
+            "os": browser_info.get("os"),
+            "ip_address": ip_address,
+        }
     )
+    
+    # Если сессия уже существует, обновляем информацию о последней активности
+    if not created:
+        session.last_activity = timezone.now()
+        session.save()
 
     sessions = list(
         UserSession.objects.filter(student_code=student_code).order_by('-created_at')
@@ -135,7 +165,7 @@ def save_data(request):
             
             request.session.save()
 
-            _enforce_session_limits(existing_user.student_code, request.session.session_key)
+            _enforce_session_limits(existing_user.student_code, request.session.session_key, request)
             
             # Проверяем статус бана через BanService
             ban_status = BanService.check_ban_status(existing_user.student_code)
@@ -144,6 +174,43 @@ def save_data(request):
             from .models import Administration
             admin_check = Administration.objects.filter(administrator=existing_user, is_active=True).exists()
             
+            # Проверяем 2FA
+            from .twofa_service import twofa_service
+            if twofa_service.is_2fa_required(existing_user):
+                # Генерируем и отправляем 2FA код
+                code = twofa_service.generate_6fa_code()
+                twofa_service.store_2fa_code(existing_user.student_code, code)
+                
+                # Отправляем код в Telegram
+                if existing_user.twofa_method == 'telegram':
+                    success, message = twofa_service.send_2fa_code_telegram_sync(existing_user, code)
+                    if not success:
+                        return JsonResponse({
+                            "success": False,
+                            "detail": f"Ошибка отправки 2FA кода: {message}"
+                        }, status=500)
+                
+                # Помечаем сессию как ожидающую 2FA
+                request.session['twofa_pending'] = True
+                request.session['twofa_verified'] = False
+                request.session.save()
+                
+                return JsonResponse({
+                    "success": True,
+                    "message": "Вход выполнен, требуется подтверждение 2FA",
+                    "requires_2fa": True,
+                    "user": {
+                        "id": existing_user.id,
+                        "fullname": existing_user.fullname,
+                        "student_code": existing_user.student_code,
+                        "faculty": existing_user.faculty,
+                        "is_banned": ban_status['is_banned'],
+                        "is_admin": admin_check,
+                        "created_at": existing_user.created_at
+                    }
+                }, status=200)
+            
+            # Если 2FA не требуется, завершаем вход
             return JsonResponse({
                 "success": True,
                 "message": "Вход выполнен успешно",
@@ -153,7 +220,8 @@ def save_data(request):
                     "student_code": existing_user.student_code,
                     "faculty": existing_user.faculty,
                     "is_banned": ban_status['is_banned'],
-                    "is_admin": admin_check
+                    "is_admin": admin_check,
+                    "created_at": existing_user.created_at
                 }
             }, status=200)
 
@@ -175,7 +243,8 @@ def save_data(request):
             faculty=faculty,
             student_code=student_code,
             bilet_code=red_code,
-            created_at=get_unix_timestamp()
+            created_at=get_unix_timestamp(),
+            last_login=get_unix_timestamp()
         )
         
         # Сбрасываем счетчики попыток после успешной регистрации
@@ -204,18 +273,17 @@ def save_data(request):
         
         request.session.save()
 
-        _enforce_session_limits(user.student_code, request.session.session_key)
+        _enforce_session_limits(user.student_code, request.session.session_key, request)
         
         
         response_data = {
             "success": True,
             "message": "Регистрация прошла успешно",
-            "redirect": f"/api/dashboard?student_code={user.student_code}",
             "user": {
                 "id": user.id,
                 "fullname": user.fullname,
-                "faculty": user.faculty,
                 "student_code": user.student_code,
+                "faculty": user.faculty,
                 "created_at": user.created_at
             }
         }
@@ -356,7 +424,8 @@ def auth_check(request):
                 "student_code": user.student_code,
                 "faculty": user.faculty,
                 "is_banned": ban_status['is_banned'],
-                "is_admin": admin_check
+                "is_admin": admin_check,
+                "created_at": user.created_at
             }
         }, status=200)
     
@@ -962,20 +1031,11 @@ def get_user_by_code(request, student_code):
         user = User.objects.filter(student_code=student_code).first()
         
         if not user:
-            # Логируем для отладки
-            print(f"Пользователь с кодом {student_code} не найден")
-            # Выведем всех пользователей для отладки
-            all_users = User.objects.all()
-            print(f"Все пользователи в системе ({all_users.count()}):")
-            for u in all_users[:5]:  # первые 5 пользователей
-                print(f"  - {u.fullname} ({u.student_code})")
-            if all_users.count() > 5:
-                print(f"  ... и еще {all_users.count() - 5} пользователей")
-            
+            # Для карусели и других компонентов возвращаем пустые данные вместо 404
             return JsonResponse({
-                'success': False,
-                'detail': 'Пользователь не найден'
-            }, status=404)
+                'success': True,
+                'user': None
+            })
         
         # Проверяем статус бана
         ban_status = BanService.check_ban_status(student_code)
@@ -1085,4 +1145,57 @@ def get_public_stats(request):
         return JsonResponse({
             "success": False,
             "detail": f"Ошибка загрузки статистики: {str(e)}"
+        }, status=500)
+
+
+@csrf_exempt
+@api_view(["GET"])
+def get_user_sessions(request):
+    """Получение активных сессий пользователя"""
+    
+    try:
+        # Проверяем авторизацию
+        if not request.session.get('is_authenticated'):
+            return JsonResponse({
+                "success": False,
+                "detail": "Требуется авторизация"
+            }, status=401)
+        
+        student_code = request.session.get('student_code')
+        current_session_key = request.session.session_key
+        
+        # Получаем все сессии пользователя
+        sessions = UserSession.objects.filter(
+            student_code=student_code
+        ).order_by('-last_activity')
+        
+        sessions_data = []
+        for session in sessions:
+            # Определяем текущую сессию
+            is_current = session.session_key == current_session_key
+            
+            # Форматируем данные
+            session_data = {
+                'id': session.id,
+                'session_key': session.session_key,
+                'browser': session.browser or 'Unknown Browser',
+                'os': session.os or 'Unknown OS',
+                'ip_address': session.ip_address or 'Unknown IP',
+                'created_at': session.created_at.isoformat() if session.created_at else None,
+                'last_activity': session.last_activity.isoformat() if session.last_activity else None,
+                'is_current': is_current,
+                'status': 'active' if is_current else 'inactive'
+            }
+            sessions_data.append(session_data)
+        
+        return JsonResponse({
+            "success": True,
+            "sessions": sessions_data,
+            "total_count": len(sessions_data)
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "detail": f"Ошибка загрузки сессий: {str(e)}"
         }, status=500)
