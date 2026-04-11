@@ -7,6 +7,7 @@ class User(models.Model):
     bilet_code = models.CharField(max_length=30)
     created_at = models.IntegerField(null=True, blank=True)
     last_login = models.IntegerField(null=True, blank=True)
+    email = models.EmailField(max_length=255, null=True, blank=True)
 
     twofa_enabled = models.BooleanField(default=False)
     twofa_method = models.CharField(max_length=20, null=True, blank=True)

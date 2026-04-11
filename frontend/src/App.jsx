@@ -120,7 +120,8 @@ const TagsContainer = React.memo(({ tags, onTagClick }) => {
 });
 
 function AppContent() {
-  const { loading, isAuthenticated, user, logout, requires2FA, verify2FA } = useAuth();
+  const { loading, isAuthenticated, user, logout, requires2FA, verify2FA, checkAuth, remainingTime } = useAuth();
+  const { setRequires2FA } = useAuth();
   
   const [darkMode, setDarkMode] = useState(() => {
     return getCachedItem('darkMode', true, 300000); // Кэш на 5 минут
@@ -262,6 +263,13 @@ function AppContent() {
     }
   }, [isAuthenticated, user]);
 
+  // Автоматически открываем 2FA модальное окно если требуется
+  useEffect(() => {
+    if (requires2FA) {
+      setIsTwoFAModalOpen(true);
+    }
+  }, [requires2FA]);
+
   // Читаем данные из URL параметров при первой загрузке
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -314,10 +322,19 @@ function AppContent() {
   const [isTwoFAModalOpen, setIsTwoFAModalOpen] = useState(false);
   const [isTwoFASetupModalOpen, setIsTwoFASetupModalOpen] = useState(false);
   const [twoFAMessage, setTwoFAMessage] = useState('');
+  const [twoFARemainingTime, setTwoFARemainingTime] = useState(300);
   
   // Обработчик успешной 2FA
   const handle2FASuccess = (message) => {
     setTwoFAMessage(message || 'Двухфакторная аутентификация успешно пройдена');
+    // Обновляем статус авторизации после успешной 2FA
+    checkAuth();
+  };
+
+  // Обработчик закрытия 2FA модального окна
+  const handle2FAModalClose = () => {
+    setIsTwoFAModalOpen(false);
+    setRequires2FA(false);
   };
 
   // Обработчик успешной настройки 2FA
@@ -440,8 +457,18 @@ function AppContent() {
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
+      // Update theme-color for mobile browsers
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', '#0f172a');
+      }
     } else {
       document.documentElement.classList.remove('dark');
+      // Update theme-color for mobile browsers
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', '#10b981');
+      }
     }
   }, [darkMode]);
   useEffect(() => {
@@ -502,9 +529,12 @@ function AppContent() {
     } finally {
       setScheduleLoading(false);
     }
-  };
-  const getScheduleForDay = (day) => {
+};
+
+const getScheduleForDay = (day) => {
     if (!userSchedule) return [];
+    // Sunday always has no classes
+    if (day === 'Вс') return [];
     const dayMapping = {
       'Пн': 'Понедельник',
       'Вт': 'Вторник', 
@@ -512,7 +542,6 @@ function AppContent() {
       'Чт': 'Четверг',
       'Пт': 'Пятница',
       'Сб': 'Суббота',
-      'Вс': 'Воскресенье'
     };
     const fullDayName = dayMapping[day];
     const weekTypeKey = weekType;
@@ -528,41 +557,49 @@ function AppContent() {
       classroom: item.classroom,
       type: getLessonType(item.subject)
     }));
-  };
-  const getLessonType = (subject) => {
+};
+
+const getLessonType = (subject) => {
     if (subject.includes('(Лекц.)') || subject.includes('Лекция')) return 'Лекция';
     if (subject.includes('(Лаб.)') || subject.includes('Лабораторная')) return 'Лабораторная';
     if (subject.includes('(Практ.)') || subject.includes('Практика')) return 'Практика';
     return 'Лекция';
-  };
-  const getMoscowTime = useCallback(() => {
+};
+
+const getMoscowTime = useCallback(() => {
     const now = new Date();
     const moscowTime = new Date(now.getTime() + (3 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60 * 1000));
     return moscowTime;
-  }, []);
-  const getTodayDay = useCallback(() => {
+}, []);
+
+const getTodayDay = useCallback(() => {
     const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
     const moscowTime = getMoscowTime();
     const today = moscowTime.getDay();
     if (today === 0) return null;
     return days[today - 1];
-  }, [getMoscowTime]);
-  const getTomorrowDay = useCallback(() => {
-    const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+}, [getMoscowTime]);
+
+const getTomorrowDay = useCallback(() => {
+    const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
     const moscowTime = getMoscowTime();
     const today = moscowTime.getDay();
     const tomorrow = (today + 1) % 7;
-    if (tomorrow === 0) return null;
-    return days[tomorrow - 1];
-  }, [getMoscowTime]);
-  const getWeekType = useCallback(() => {
+    // tomorrow: 0=Вс, 1=Пн, 2=Вт, 3=Ср, 4=Чт, 5=Пт, 6=Сб
+    // days index: 0=Пн, 1=Вт, 2=Ср, 3=Чт, 4=Пт, 5=Сб, 6=Вс
+    if (tomorrow === 0) return 'Вс'; // Sunday
+    return days[tomorrow - 1]; // Mon-Sat
+}, [getMoscowTime]);
+
+const getWeekType = useCallback(() => {
     const moscowTime = getMoscowTime();
     const startDate = new Date('2025-09-01T00:00:00');
     const diffTime = moscowTime.getTime() - startDate.getTime();
     const diffWeeks = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000));
     return diffWeeks % 2 === 0 ? 'lower' : 'upper';
-  }, [getMoscowTime]);
-  const handleQuickDaySelect = useCallback((dayType) => {
+}, [getMoscowTime]);
+
+const handleQuickDaySelect = useCallback((dayType) => {
     if (dayType === 'today') {
       const todayDay = getTodayDay();
       if (todayDay) {
@@ -576,9 +613,11 @@ function AppContent() {
         setWeekType(getWeekType());
       }
     }
-  }, []);
-  const currentSchedule = getScheduleForDay(selectedDay);
-  const categories = [
+}, []);
+
+const currentSchedule = getScheduleForDay(selectedDay);
+
+const categories = [
     { id: 'all', name: 'Все' },
     { id: 'Автомобили', name: 'Автомобили' },
     { id: 'Гидропневмоавтоматика и гидропневмопривод', name: 'Гидропневматика' },
@@ -620,17 +659,19 @@ function AppContent() {
     { id: 'Электротехника и электроника', name: 'Электротехника' },
     { id: 'Высшая математика', name: 'Высшая математика' },
     { id: 'Программное обеспечение информационных систем и технологий', name: 'Программное обеспечение' }
-  ];
-  const [literatureItems, setLiteratureItems] = useState([]);
-  const [literatureTotal, setLiteratureTotal] = useState(0);
-  const [literaturePage, setLiteraturePage] = useState(1);
-  const literaturePageSize = 6;
-  const literatureMaxPage = Math.max(1, Math.ceil(literatureTotal / literaturePageSize));
-  const [literatureLoading, setLiteratureLoading] = useState(false);
-  const [categorySearchQuery, setCategorySearchQuery] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState(['all']);
-  const [sortBy, setSortBy] = useState('default');
-  const fetchLiterature = async (page = 1) => {
+];
+
+const [literatureItems, setLiteratureItems] = useState([]);
+const [literatureTotal, setLiteratureTotal] = useState(0);
+const [literaturePage, setLiteraturePage] = useState(1);
+const literaturePageSize = 6;
+const literatureMaxPage = Math.max(1, Math.ceil(literatureTotal / literaturePageSize));
+const [literatureLoading, setLiteratureLoading] = useState(false);
+const [categorySearchQuery, setCategorySearchQuery] = useState('');
+const [selectedCategories, setSelectedCategories] = useState(['all']);
+const [sortBy, setSortBy] = useState('default');
+
+const fetchLiterature = async (page = 1) => {
     setLiteratureLoading(true);
     try {
       const params = new URLSearchParams();
@@ -656,30 +697,33 @@ function AppContent() {
     } finally {
       setLiteratureLoading(false);
     }
-  };
-  useEffect(() => {
+};
+
+useEffect(() => {
     if (activeTab === 'literature') {
       fetchLiterature(literaturePage);
     }
-  }, [activeTab, literaturePage, selectedCategories, sortBy]);
-  useEffect(() => {
+}, [activeTab, literaturePage, selectedCategories, sortBy]);
+
+useEffect(() => {
     if (activeTab === 'literature') {
       setLiteraturePage(1);
       fetchLiterature(1);
     }
-  }, [searchQuery, selectedCategory]);
-  const [newsData, setNewsData] = useState([]);
-  const [newsLoading, setNewsLoading] = useState(false);
-  const [newsSearchQuery, setNewsSearchQuery] = useState('');
-  const [newsSortBy, setNewsSortBy] = useState('date_desc');
-  const [isNewsSortModalOpen, setIsNewsSortModalOpen] = useState(false);
-  const [newsPage, setNewsPage] = useState(1);
-  const [newsTotal, setNewsTotal] = useState(0);
-  const newsPageSize = 6;
-  const newsMaxPage = Math.max(1, Math.ceil(newsTotal / newsPageSize));
+}, [searchQuery, selectedCategory]);
 
-  // Обновляем медиа при открытии модального окна профиля
-  useEffect(() => {
+const [newsData, setNewsData] = useState([]);
+const [newsLoading, setNewsLoading] = useState(false);
+const [newsSearchQuery, setNewsSearchQuery] = useState('');
+const [newsSortBy, setNewsSortBy] = useState('date_desc');
+const [isNewsSortModalOpen, setIsNewsSortModalOpen] = useState(false);
+const [newsPage, setNewsPage] = useState(1);
+const [newsTotal, setNewsTotal] = useState(0);
+const newsPageSize = 6;
+const newsMaxPage = Math.max(1, Math.ceil(newsTotal / newsPageSize));
+
+// Обновляем медиа при открытии модального окна профиля
+useEffect(() => {
     if (isProfileModalOpen && isAuthenticated) {
       const fetchUserMedia = async () => {
         try {
@@ -706,8 +750,9 @@ function AppContent() {
       
       fetchUserMedia();
     }
-  }, [isProfileModalOpen, isAuthenticated]);
-  const loadNews = async (page = 1, search = '', sortBy = 'date_desc', category = 'all') => {
+}, [isProfileModalOpen, isAuthenticated]);
+
+const loadNews = async (page = 1, search = '', sortBy = 'date_desc', category = 'all') => {
     setNewsLoading(true);
     try {
       const params = new URLSearchParams();
@@ -729,31 +774,36 @@ function AppContent() {
     } finally {
       setNewsLoading(false);
     }
-  };
-  useEffect(() => {
+};
+
+useEffect(() => {
     if (activeTab === 'news') {
       loadNews(newsPage, newsSearchQuery, newsSortBy, selectedNewsCategory);
     }
-  }, [activeTab, newsPage, newsSearchQuery, newsSortBy, selectedNewsCategory]);
-  useEffect(() => {
+}, [activeTab, newsPage, newsSearchQuery, newsSortBy, selectedNewsCategory]);
+
+useEffect(() => {
     if (activeTab === 'news') {
       setNewsPage(1);
       loadNews(1, newsSearchQuery, newsSortBy, selectedNewsCategory);
     }
-  }, [newsSearchQuery, newsSortBy, selectedNewsCategory]);
-  const newsCategories = [
+}, [newsSearchQuery, newsSortBy, selectedNewsCategory]);
+
+const newsCategories = [
     { id: 'all', name: 'Все' },
     { id: 'academic', name: 'Университет' },
     { id: 'achievements', name: 'Достижения' },
     { id: 'education', name: 'Студенты' },
     { id: 'events', name: 'Ректорат' },
     { id: 'sports', name: 'Спорт' }
-  ];
-  const filteredNews = newsData; // Убираем фильтрацию, так как она делается на бэкенде
-  const filteredGames = gamesData.filter(item => {
+];
+
+const filteredNews = newsData; // Убираем фильтрацию, так как она делается на бэкенде
+const filteredGames = gamesData.filter(item => {
     return selectedGameCategory === 'all' || item.category === selectedGameCategory;
-  });
-  const formatDate = (timestamp) => {
+});
+
+const formatDate = (timestamp) => {
     const date = new Date(timestamp * 1000);
     const options = { 
       day: 'numeric', 
@@ -764,18 +814,19 @@ function AppContent() {
     };
     let formatted = date.toLocaleDateString('ru-RU', options);
     return formatted.replace(' г. в', '');
-  };
-  // Обработчик клика по тегам в новостях
-  const handleNewsTagClick = (tag) => {
+};
+
+// Обработчик клика по тегам в новостях
+const handleNewsTagClick = (tag) => {
     // Устанавливаем поисковый запрос в тег
     setSearchQuery(tag);
     // Переключаемся на вкладку новостей если не там
     if (activeTab !== 'news') {
       setActiveTab('news');
     }
-  };
+};
 
-  const renderTags = (tags = [], onTagClick) => {
+const renderTags = (tags = [], onTagClick) => {
     if (!tags || tags.length === 0) return null;
     const cleanTags = tags.map(tag => {
       if (typeof tag === 'string') {
@@ -784,8 +835,9 @@ function AppContent() {
       return tag;
     });
     return <TagsContainer tags={cleanTags} onTagClick={onTagClick} />;
-  };
-  return (
+};
+
+return (
     <div className={`${darkMode ? 'dark' : ''} min-h-screen flex flex-col font-sans selection:bg-emerald-500 selection:text-white`}>
       <div className="flex-1 bg-gray-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 transition-colors duration-500 relative flex flex-col">
         {/* Если пользователь заблокирован, показываем страницу бана */}
@@ -805,7 +857,7 @@ function AppContent() {
                 userMedia={userMedia}
                 onProfileUpdate={handleProfileUpdate}
                 onForceRefresh={(updatedData) => {
-                  // Принудительное обновление медиа в профиле
+                  // Prinuditel'noe obnovlenie media v profile
                   if (updatedData) {
                     setUserMedia({
                       avatar_url: updatedData.avatar_url,
@@ -814,7 +866,7 @@ function AppContent() {
                       banner_placeholder: updatedData.banner_placeholder
                     });
                   } else {
-                    // Если обновленных данных нет, используем текущие данные пользователя
+                    // Esli obnovlennyh dannyh net, ispol'zuem tekushie dannye pol'zovatelya
                     if (user) {
                       setUserMedia({
                         avatar_url: user.avatar_url,
@@ -1011,13 +1063,13 @@ function AppContent() {
                   ))
                 ) : (
                   <div className="flex flex-col items-center justify-center py-24 text-center">
-                    <div className="text-6xl mb-6">☀️</div>
+                    <div className="text-6xl mb-6">{selectedDay === 'Вс' ? '😴' : '☀️'}</div>
                     <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
-                      {userSchedule ? 'Свободный день' : 'Расписание не загружено'}
+                      {userSchedule ? (selectedDay === 'Вс' ? 'Воскресенье' : 'Свободный день') : 'Расписание не загружено'}
                     </h3>
                     <p className="text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
                       {userSchedule 
-                        ? 'Пар нет. Отличное время для саморазвития или отдыха.'
+                        ? (selectedDay === 'Вс' ? 'Пар нет. Отличное время для саморазвития или отдыха.' : 'Пар нет. Отличное время для саморазвития или отдыха.')
                         : 'Попробуйте обновить страницу или войти заново.'
                       }
                     </p>
@@ -2305,9 +2357,10 @@ function AppContent() {
       {/* 2FA Modal */}
       <TwoFAModal 
         isOpen={isTwoFAModalOpen}
-        onClose={() => setIsTwoFAModalOpen(false)}
+        onClose={handle2FAModalClose}
         onSuccess={handle2FASuccess}
         darkMode={darkMode}
+        remainingTime={remainingTime}
       />
       {/* 2FA Setup Modal */}
       <TwoFASetupModal 
@@ -2316,12 +2369,6 @@ function AppContent() {
         onSuccess={handle2FASetupSuccess}
         darkMode={darkMode}
       />
-      {/* 2FA Success Message */}
-      {twoFAMessage && (
-        <div className="fixed top-4 right-4 z-[200] bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-lg animate-pulse">
-          {twoFAMessage}
-        </div>
-      )}
     </div>
   );
 }

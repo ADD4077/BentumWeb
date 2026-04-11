@@ -2,28 +2,34 @@ import React, { useState, useEffect } from 'react';
 import { X, Shield, Smartphone, Mail, RefreshCw } from 'lucide-react';
 import { api } from '../services/api.js';
 
-const TwoFAModal = ({ isOpen, onClose, onSuccess, darkMode }) => {
-  const [code, setCode] = useState(['', '', '', '', '', '', '', '']);
+const TwoFAModal = ({ isOpen, onClose, onSuccess, darkMode, remainingTime = 300 }) => {
+  const [code, setCode] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [timeLeft, setTimeLeft] = useState(300); // 5 минут в секундах
+  const [timeLeft, setTimeLeft] = useState(remainingTime);
   const [canResend, setCanResend] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
       // Сбрасываем состояние при закрытии модального окна
-      setCode(['', '', '', '', '', '', '', '']);
+      setCode(['', '', '', '', '', '']);
       setError('');
       setTimeLeft(300);
       setCanResend(false);
       return;
     }
+    // Сбрасываем состояние при открытии модального окна
+    setCode(['', '', '', '', '', '']);
+    setError('');
+    setTimeLeft(remainingTime);
+    setCanResend(false);
+  }, [isOpen, remainingTime]);
 
-    // Таймер обратного отсчета
+  // Таймер обратного отсчета
+  useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          clearInterval(timer);
           setCanResend(true);
           return 0;
         }
@@ -32,7 +38,7 @@ const TwoFAModal = ({ isOpen, onClose, onSuccess, darkMode }) => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isOpen]);
+  }, []);
 
   const handleInputChange = (index, value) => {
     if (value.length <= 1 && /^\d*$/.test(value)) {
@@ -103,7 +109,7 @@ const TwoFAModal = ({ isOpen, onClose, onSuccess, darkMode }) => {
       } else {
         setError(response.detail || 'Неверный код');
         // Очищаем поля при ошибке
-        setCode(['', '', '', '', '', '', '']);
+        setCode(['', '', '', '', '', '']);
         // Фокус на первое поле
         setTimeout(() => {
           const firstInput = document.getElementById('code-0');
@@ -113,7 +119,8 @@ const TwoFAModal = ({ isOpen, onClose, onSuccess, darkMode }) => {
         }, 0);
       }
     } catch (error) {
-      setError('Ошибка соединения с сервером');
+      console.error('ERROR in handleSubmit:', error);
+      setError(`Ошибка соединения с сервером: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -129,7 +136,7 @@ const TwoFAModal = ({ isOpen, onClose, onSuccess, darkMode }) => {
       if (response.ok && response.success) {
         setTimeLeft(300);
         setCanResend(false);
-        setCode(['', '', '', '', '', '', '']);
+        setCode(['', '', '', '', '', '']);
         // Фокус на первое поле
         setTimeout(() => {
           const firstInput = document.getElementById('code-0');

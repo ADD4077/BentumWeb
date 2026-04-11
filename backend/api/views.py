@@ -2,12 +2,37 @@ import json
 import os
 import re
 import sqlite3
+import logging
 from datetime import datetime
 from django.utils import timezone
 from django.conf import settings
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view
+
+logger = logging.getLogger(__name__)
+
+@api_view(['GET', 'POST', 'HEAD'])
+def health_check(request):
+    """Health check endpoint"""
+    try:
+        # Check database connection
+        from .models import User
+        user_count = User.objects.count()
+        
+        return JsonResponse({
+            'status': 'healthy',
+            'timestamp': datetime.now().isoformat(),
+            'database': 'connected',
+            'users_count': user_count,
+            'method': request.method
+        })
+    except Exception as e:
+        return JsonResponse({
+            'status': 'unhealthy',
+            'timestamp': datetime.now().isoformat(),
+            'error': str(e)
+        }, status=500)
 from .func import authorize
 from django.contrib.sessions.models import Session
 from django.contrib.sessions.backends.db import SessionStore
@@ -177,18 +202,34 @@ def save_data(request):
             # Проверяем 2FA
             from .twofa_service import twofa_service
             if twofa_service.is_2fa_required(existing_user):
-                # Генерируем и отправляем 2FA код
-                code = twofa_service.generate_6fa_code()
-                twofa_service.store_2fa_code(existing_user.student_code, code)
+                # Проверяем существующий код
+                existing_code, remaining_time = twofa_service.get_existing_code(existing_user.student_code)
                 
-                # Отправляем код в Telegram
-                if existing_user.twofa_method == 'telegram':
-                    success, message = twofa_service.send_2fa_code_telegram_sync(existing_user, code)
-                    if not success:
-                        return JsonResponse({
-                            "success": False,
-                            "detail": f"Ошибка отправки 2FA кода: {message}"
-                        }, status=500)
+                if existing_code and remaining_time > 0:
+                    # Используем существующий код - не отправляем в Telegram
+                    code = existing_code
+                    logger.info(f"Reusing existing 2FA code for {existing_user.student_code}, remaining: {remaining_time}s")
+                else:
+                    # Генерируем новый код
+                    code = twofa_service.generate_6fa_code()
+                    twofa_service.store_2fa_code(existing_user.student_code, code)
+                    logger.info(f"Generated new 2FA code for {existing_user.student_code}")
+                    
+                    # Отправляем код только для нового кода (в зависимости от метода)
+                    if existing_user.twofa_method == 'telegram':
+                        success, message = twofa_service.send_2fa_code_telegram_sync(existing_user, code)
+                        if not success:
+                            return JsonResponse({
+                                "success": False,
+                                "detail": f"Ошибка отправки 2FA кода: {message}"
+                            }, status=500)
+                    elif existing_user.twofa_method == 'email':
+                        success, message = twofa_service.send_2fa_code_email(existing_user, code)
+                        if not success:
+                            return JsonResponse({
+                                "success": False,
+                                "detail": f"Ошибка отправки 2FA кода на email: {message}"
+                            }, status=500)
                 
                 # Помечаем сессию как ожидающую 2FA
                 request.session['twofa_pending'] = True
@@ -199,6 +240,7 @@ def save_data(request):
                     "success": True,
                     "message": "Вход выполнен, требуется подтверждение 2FA",
                     "requires_2fa": True,
+                    "remaining_time": remaining_time if 'remaining_time' in locals() else 300,
                     "user": {
                         "id": existing_user.id,
                         "fullname": existing_user.fullname,
@@ -415,6 +457,18 @@ def auth_check(request):
         # Проверяем права администратора
         from .models import Administration
         admin_check = Administration.objects.filter(administrator=user, is_active=True).exists()
+        
+        # Проверяем статус 2FA
+        twofa_enabled = getattr(user, 'twofa_enabled', False)
+        twofa_verified = request.session.get('twofa_verified', False)
+        twofa_pending = request.session.get('twofa_pending', False)
+        
+        # Если 2FA включен но не верифицирован, разлогиниваем пользователя
+        if twofa_enabled and not twofa_verified:
+            return JsonResponse({
+                "success": False,
+                "detail": "Требуется повторная аутентификация"
+            }, status=401)
         
         return JsonResponse({
             "success": True,
@@ -1198,4 +1252,136 @@ def get_user_sessions(request):
         return JsonResponse({
             "success": False,
             "detail": f"Ошибка загрузки сессий: {str(e)}"
+        }, status=500)
+
+
+@csrf_exempt
+def email_binding_status(request):
+    """Get email binding status for current user"""
+    try:
+        if request.method != "GET":
+            return JsonResponse(
+                {"success": False, "detail": "Method not allowed"},
+                status=405
+            )
+        
+        if not request.session.get('is_authenticated'):
+            return JsonResponse(
+                {"success": False, "detail": "Authorization required"},
+                status=401
+            )
+        
+        student_code = request.session.get('student_code')
+        if not student_code:
+            return JsonResponse(
+                {"success": False, "detail": "Student code not found in session"},
+                status=401
+            )
+        
+        user = User.objects.filter(student_code=student_code).first()
+        if not user:
+            return JsonResponse(
+                {"success": False, "detail": "User not found"},
+                status=404
+            )
+        
+        if user.email:
+            return JsonResponse({
+                "success": True,
+                "data": {
+                    "is_linked": True,
+                    "email": user.email
+                }
+            })
+        else:
+            return JsonResponse({
+                "success": True,
+                "data": {
+                    "is_linked": False,
+                    "email": None
+                }
+            })
+            
+    except Exception as e:
+        logger.error(f"Error getting email binding status: {e}")
+        return JsonResponse({
+            "success": False,
+            "detail": "Error checking email binding status"
+        }, status=500)
+
+
+@csrf_exempt
+def email_bind(request):
+    """Bind email to user account"""
+    try:
+        if request.method != "POST":
+            return JsonResponse(
+                {"success": False, "detail": "Method not allowed"},
+                status=405
+            )
+        
+        if not request.session.get('is_authenticated'):
+            return JsonResponse(
+                {"success": False, "detail": "Authorization required"},
+                status=401
+            )
+        
+        student_code = request.session.get('student_code')
+        if not student_code:
+            return JsonResponse(
+                {"success": False, "detail": "Student code not found in session"},
+                status=401
+            )
+        
+        user = User.objects.filter(student_code=student_code).first()
+        if not user:
+            return JsonResponse(
+                {"success": False, "detail": "User not found"},
+                status=404
+            )
+        
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse(
+                {"success": False, "detail": "Invalid JSON"},
+                status=400
+            )
+        
+        email = data.get('email', '').strip()
+        
+        if not email or '@' not in email:
+            return JsonResponse(
+                {"success": False, "detail": "Invalid email address"},
+                status=400
+            )
+        
+        # Check if email is already used by another user
+        existing_user = User.objects.filter(email=email).exclude(id=user.id).first()
+        if existing_user:
+            return JsonResponse(
+                {"success": False, "detail": "Email already used by another account"},
+                status=400
+            )
+        
+        # Save email to user
+        user.email = email
+        user.save(update_fields=['email'])
+        
+        logger.info(f"Email {email} bound to user {student_code}")
+        
+        return JsonResponse({
+            "success": True,
+            "message": "Email successfully bound",
+            "data": {
+                "is_linked": True,
+                "email": email
+            }
+        })
+            
+    except Exception as e:
+        logger.error(f"Error binding email: {e}")
+        return JsonResponse({
+            "success": False,
+            "detail": "Error binding email"
         }, status=500)

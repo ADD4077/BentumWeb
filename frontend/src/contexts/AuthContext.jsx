@@ -8,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [checked, setChecked] = useState(false);
   const [requires2FA, setRequires2FA] = useState(false);
+  const [remainingTime, setRemainingTime] = useState(300);
   
   useEffect(() => {
     if (!checked) {
@@ -75,13 +76,15 @@ export const AuthProvider = ({ children }) => {
           setIsAuthenticated(false);
           setUser(data.user);
           setRequires2FA(true);
+          setRemainingTime(data.remaining_time || 300);
           safeSetUserData(data.user);
-          return { success: true, requires_2fa: true };
+          return { success: true, requires_2fa: true, remaining_time: data.remaining_time || 300 };
         } else {
           // Вход выполнен полностью
           setIsAuthenticated(true);
           setUser(data.user);
           setRequires2FA(false);
+          setRemainingTime(300);
           safeSetUserData(data.user);
           return { success: true };
         }
@@ -141,12 +144,14 @@ export const AuthProvider = ({ children }) => {
       isAuthenticated,
       user,
       loading,
-      requires2FA,
       login,
       verify2FA,
       logout,
       saveTheme,
       checkAuth,
+      requires2FA,
+      setRequires2FA,
+      remainingTime,
     }}>
       {children}
     </AuthContext.Provider>

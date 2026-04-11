@@ -165,14 +165,18 @@ class TelegramBot:
             logger.error(f"Error starting bot: {e}")
 
 def setup_django():
-    """Настройка Django"""
+    """Setup Django without system checks"""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
     
-    # Добавляем путь к Django проекту
+    # Disable Django system checks to avoid duplication with server
+    os.environ.setdefault('DJANGO_CHECKS', '[]')
+    
+    # Add Django project path
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     
     try:
         import django
+        # Disable system checks to avoid duplication with server
         django.setup()
     except Exception as e:
         logger.error(f"Error setting up Django: {e}")

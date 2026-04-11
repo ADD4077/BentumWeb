@@ -250,8 +250,8 @@ function AdminPanel({ darkMode }) {
 
   const handleBanUser = (userId) => {
     const userToBan = users.find(u => u.id === userId);
-    if (userToBan && (userToBan.id === 1 || userToBan.fullname?.includes('Admin'))) {
-      showWarning('❌ Нельзя забанить администратора!');
+    if (userToBan && userToBan.is_admin) {
+      showWarning('❌ Нельзя заблокировать администратора!');
       return;
     }
     
@@ -658,7 +658,7 @@ function AdminPanel({ darkMode }) {
                           
                           {user.status === 'active' ? (
                             <>
-                              {(user.id === 1 || user.fullname?.includes('Admin')) ? (
+                              {user.is_admin ? (
                                 <div className="p-2 text-gray-400 cursor-not-allowed rounded-lg" title="🛡️ Администратор не может быть забанен">
                                   <Shield className="w-4 h-4" />
                                 </div>
@@ -787,7 +787,7 @@ function AdminPanel({ darkMode }) {
                     </button>
                     
                     {user.status === 'active' ? (
-                      (user.id === 1 || user.fullname?.includes('Admin')) ? (
+                      user.is_admin ? (
                         <div className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-gray-100 dark:bg-slate-600 text-gray-500 dark:text-gray-400 rounded-lg cursor-not-allowed text-sm">
                           <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>

@@ -1,38 +1,146 @@
 #!/usr/bin/env python3
 """
-Скрипт для запуска Telegram бота
+Clean Telegram bot without Django dependencies
 """
-import os
-import sys
 import asyncio
 import logging
+import os
+import sys
+from typing import Optional
 
-# Добавляем путь к Django проекту
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Add current directory to path
+sys.path.append('/app')
 
-# Настройка логирования
+# Import ONLY aiogram components
+try:
+    from aiogram import Bot, Dispatcher, types
+    from aiogram.filters import CommandStart
+    from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+except ImportError as e:
+    print(f"Error importing aiogram: {e}")
+    sys.exit(1)
+
+try:
+    import aiohttp
+except ImportError as e:
+    print(f"Error importing aiohttp: {e}")
+    sys.exit(1)
+
+# Setup logging without ANY Django configuration
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-def main():
-    """Главная функция"""
-    try:
-        # Импортируем после настройки пути
-        from api.telegram_bot import main as bot_main
+class CleanBot:
+    def __init__(self):
+        self.bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+        self.backend_base_url = os.environ.get('BACKEND_BASE_URL', 'http://server:1337')
         
-        logger.info("🚀 Запуск Telegram бота...")
+        if not self.bot_token:
+            logger.error("TELEGRAM_BOT_TOKEN not configured")
+            return
         
-        # Запускаем бота
-        asyncio.run(bot_main())
+        self.bot = Bot(token=self.bot_token)
+        self.dp = Dispatcher()
+        self._setup_handlers()
+
+    async def _bind_token(self, token: str, telegram_user: types.User) -> tuple[bool, str]:
+        url = f"{self.backend_base_url}/api/telegram/bind"
+        payload = {
+            "token": token,
+            "telegram": {
+                "id": telegram_user.id,
+                "username": telegram_user.username,
+                "first_name": telegram_user.first_name,
+                "last_name": telegram_user.last_name,
+            }
+        }
+
+        timeout = aiohttp.ClientTimeout(total=15)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(url, json=payload) as resp:
+                try:
+                    data = await resp.json()
+                except Exception:
+                    text = await resp.text()
+                    return False, f"Backend returned non-JSON ({resp.status}): {text[:200]}"
+
+                if resp.status == 200 and data.get('success'):
+                    msg = (data.get('data') or {}).get('message') or 'Linked'
+                    return True, msg
+
+                detail = data.get('detail') or str(data)
+                return False, f"{resp.status}: {detail}"
+    
+    def _setup_handlers(self):
+        """Setup command handlers"""
         
-    except KeyboardInterrupt:
-        logger.info("⏹️  Бот остановлен пользователем")
-    except Exception as e:
-        logger.error(f"❌ Ошибка запуска бота: {e}")
-        sys.exit(1)
+        @self.dp.message(CommandStart())
+        async def handle_start(message: Message):
+            """Handle /start command"""
+            token: Optional[str] = None
+            parts = (message.text or '').split(maxsplit=1)
+            if len(parts) == 2:
+                token = parts[1].strip()
+
+            if token:
+                ok, result_message = await self._bind_token(token, message.from_user)
+                if ok:
+                    await message.answer(
+                        "✅ Telegram аккаунт привязан. Можно возвращаться на сайт.\n\n"
+                        f"{result_message}"
+                    )
+                else:
+                    await message.answer(
+                        "❌ Не удалось привязать Telegram аккаунт.\n\n"
+                        f"{result_message}"
+                    )
+                return
+
+            await message.answer(
+                "🤖 Бот привязки Telegram.\n\n"
+                "Чтобы привязать аккаунт, открой ссылку из сайта (кнопка 'Привязать').",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="Открыть сайт", url="https://bentum.edu.by")]
+                ])
+            )
+        
+        @self.dp.message()
+        async def handle_message(message: Message):
+            """Handle any message"""
+            await message.answer("🤖 Clean bot response - no Django involved!")
+    
+    async def start(self):
+        """Start the bot"""
+        if not self.bot_token:
+            logger.error("Bot token not configured")
+            return
+        
+        try:
+            # Get bot info
+            bot_info = await self.bot.get_me()
+            logger.info(f"CLEAN bot started: @{bot_info.username}")
+            
+            # Start polling
+            await self.dp.start_polling(self.bot)
+            
+        except Exception as e:
+            logger.error(f"Error starting clean bot: {e}")
+
+async def main():
+    """Main function"""
+    logger.info("Starting CLEAN Telegram bot - NO Django!")
+    
+    # Create and start bot
+    bot = CleanBot()
+    await bot.start()
 
 if __name__ == '__main__':
-    main()
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Clean bot stopped by user")
+    except Exception as e:
+        logger.error(f"Clean bot crashed: {e}")

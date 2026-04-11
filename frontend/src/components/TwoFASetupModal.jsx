@@ -8,6 +8,9 @@ const TwoFASetupModal = ({ isOpen, onClose, darkMode, onSuccess }) => {
   const [error, setError] = useState('');
   const [currentConfig, setCurrentConfig] = useState(null);
   const [telegramBinding, setTelegramBinding] = useState(null);
+  const [emailBinding, setEmailBinding] = useState(null);
+  const [showEmailInput, setShowEmailInput] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -34,6 +37,17 @@ const TwoFASetupModal = ({ isOpen, onClose, darkMode, onSuccess }) => {
           setTelegramBinding(telegramData.data);
         }
       }
+
+      // Загружаем статус привязки Email
+      const emailResponse = await fetch('/api/email/binding-status', {
+        credentials: 'include',
+      });
+      if (emailResponse.ok) {
+        const emailData = await emailResponse.json();
+        if (emailData.success) {
+          setEmailBinding(emailData.data);
+        }
+      }
     } catch (error) {
       console.error('Error loading 2FA config:', error);
     }
@@ -42,6 +56,41 @@ const TwoFASetupModal = ({ isOpen, onClose, darkMode, onSuccess }) => {
   const handleMethodSelect = (method) => {
     setSelectedMethod(method);
     setError('');
+    if (method === 'email' && (!emailBinding || !emailBinding.is_linked)) {
+      setShowEmailInput(true);
+    } else {
+      setShowEmailInput(false);
+    }
+  };
+
+  const handleEmailBind = async () => {
+    if (!emailInput || !emailInput.includes('@')) {
+      setError('Введите корректный email');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/email/bind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email: emailInput }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setEmailBinding({ is_linked: true, email: emailInput });
+        setShowEmailInput(false);
+        setError('');
+      } else {
+        setError(data.detail || 'Ошибка привязки email');
+      }
+    } catch (error) {
+      setError('Ошибка соединения с сервером');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -52,6 +101,11 @@ const TwoFASetupModal = ({ isOpen, onClose, darkMode, onSuccess }) => {
 
     if (selectedMethod === 'telegram' && (!telegramBinding || !telegramBinding.is_linked)) {
       setError('Сначала привяжите Telegram аккаунт');
+      return;
+    }
+
+    if (selectedMethod === 'email' && (!emailBinding || !emailBinding.is_linked)) {
+      setError('Сначала привяжите Email');
       return;
     }
 
@@ -203,23 +257,27 @@ const TwoFASetupModal = ({ isOpen, onClose, darkMode, onSuccess }) => {
               )}
             </button>
 
-            {/* Email Method (Disabled) */}
+            {/* Email Method */}
             <button
-              disabled
-              className={`w-full p-4 rounded-xl border-2 opacity-50 cursor-not-allowed ${
-                darkMode 
-                  ? 'border-slate-600 bg-slate-800'
-                  : 'border-slate-300 bg-white'
-              }`}
+              onClick={() => handleMethodSelect('email')}
+              className={`w-full p-4 rounded-xl border-2 transition-all ${
+                selectedMethod === 'email'
+                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
+                  : darkMode 
+                    ? 'border-slate-600 bg-slate-800 hover:border-slate-500'
+                    : 'border-slate-300 bg-white hover:border-slate-400'
+              } cursor-pointer`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    darkMode
-                      ? 'bg-slate-600'
-                      : 'bg-slate-200'
+                    selectedMethod === 'email'
+                      ? 'bg-emerald-500'
+                      : darkMode
+                        ? 'bg-slate-600'
+                        : 'bg-slate-200'
                   }`}>
-                    <Mail className={`w-5 h-5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`} />
+                    <Mail className={`w-5 h-5 ${selectedMethod === 'email' ? 'text-white' : darkMode ? 'text-slate-300' : 'text-slate-600'}`} />
                   </div>
                   <div className="text-left">
                     <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -231,13 +289,48 @@ const TwoFASetupModal = ({ isOpen, onClose, darkMode, onSuccess }) => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-slate-400" />
+                  {emailBinding?.is_linked ? (
+                    <Check className="w-5 h-5 text-emerald-500" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-slate-400" />
+                  )}
                 </div>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                В разработке
-              </p>
+              {!emailBinding?.is_linked && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                  Нажмите чтобы привязать Email
+                </p>
+              )}
             </button>
+
+            {/* Email Input Form */}
+            {showEmailInput && (
+              <div className={`p-4 rounded-xl border-2 ${darkMode ? 'border-slate-600 bg-slate-800' : 'border-slate-300 bg-white'}`}>
+                <p className={`text-sm mb-3 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Введите ваш email для привязки:
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    placeholder="your@email.com"
+                    className={`flex-1 px-3 py-2 rounded-lg border ${darkMode ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-500'} focus:outline-none focus:ring-2 focus:ring-emerald-500`}
+                  />
+                  <button
+                    onClick={handleEmailBind}
+                    disabled={loading}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      loading
+                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                        : 'bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-100'
+                    }`}
+                  >
+                    {loading ? '...' : 'Привязать'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

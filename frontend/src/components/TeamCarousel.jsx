@@ -193,7 +193,9 @@ function TeamCarousel({ teamMembers, darkMode }) {
                           className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:contrast-105"
                           onError={(e) => {
                             e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
+                            if (e.target.nextSibling) {
+                              e.target.nextSibling.style.display = 'flex';
+                            }
                           }}
                         />
                       ) : null}

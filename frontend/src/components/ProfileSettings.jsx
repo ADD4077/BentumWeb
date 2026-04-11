@@ -35,13 +35,15 @@ import {
   LogOut
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import TwoFARecoveryModal from './TwoFARecoveryModal.jsx';
 
-const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, onForceRefresh }) => {
+const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, onForceRefresh, on2FASetupOpen }) => {
   const { isAuthenticated, logout } = useAuth();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
   const [avatarPreview, setAvatarPreview] = useState(null);
+  const [isTwoFARecoveryModalOpen, setIsTwoFARecoveryModalOpen] = useState(false);
   const [bannerPreview, setBannerPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
   const [bannerFile, setBannerFile] = useState(null);
@@ -407,6 +409,14 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
 
   const generateTelegramLink = async () => {
     setLoadingTelegram(true);
+    const popup = window.open('about:blank', '_blank');
+    if (!popup) {
+      setErrors({ telegram: 'Браузер заблокировал всплывающее окно. Разреши popups для этого сайта и попробуй снова.' });
+      setLoadingTelegram(false);
+      return;
+    }
+    popup.document.title = 'Подготовка привязки Telegram...';
+    popup.document.body.innerHTML = '<p>Подготавливаем ссылку для привязки Telegram...</p>';
     try {
       const response = await fetch(API_ENDPOINTS.TELEGRAM_GENERATE_LINK, {
         method: 'POST',
@@ -416,15 +426,23 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
       const data = await response.json();
       
       if (data.success) {
-        setTelegramLink(data.data.link);
+        const link = data.data?.binding_link;
+        if (!link) {
+          popup.close();
+          setErrors({ telegram: 'Некорректный ответ сервера: нет ссылки привязки' });
+          return;
+        }
+
+        setTelegramLink(link);
         // Копируем ссылку в буфер обмена
-        navigator.clipboard.writeText(data.data.link);
-        // Автоматически открываем ссылку в новой вкладке
-        window.open(data.data.link, '_blank');
+        navigator.clipboard.writeText(link);
+        popup.location.href = link;
       } else {
+        popup.close();
         setErrors({ telegram: data.detail });
       }
     } catch (error) {
+      popup.close();
       setErrors({ telegram: 'Ошибка при генерации ссылки' });
     } finally {
       setLoadingTelegram(false);
@@ -1156,7 +1174,11 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                             <p className="text-sm text-slate-600 dark:text-slate-400">Дополнительный уровень безопасности</p>
                           </div>
                         </div>
-                        <button className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transform hover:scale-[1.02] flex items-center gap-2">
+                        <button 
+                          onClick={on2FASetupOpen}
+                          className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transform hover:scale-[1.02] flex items-center gap-2"
+                        >
+                          <Lock className="w-4 h-4" />
                           Настроить
                           <ChevronRight className="w-4 h-4" />
                         </button>
@@ -1539,6 +1561,13 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
           </div>
         </div>
       )}
+      
+      {/* 2FA Recovery Modal */}
+      <TwoFARecoveryModal 
+        isOpen={isTwoFARecoveryModalOpen}
+        onClose={() => setIsTwoFARecoveryModalOpen(false)}
+        darkMode={darkMode}
+      />
     </div>
   );
 };

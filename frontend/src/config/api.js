@@ -1,6 +1,5 @@
 // Конфигурация API endpoints
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
-                   (window.location.hostname === 'localhost' ? 'http://localhost:8000' : '');
+let API_BASE_URL = 'http://localhost:1337';
 
 export const API_ENDPOINTS = {
   BASE_URL: API_BASE_URL,

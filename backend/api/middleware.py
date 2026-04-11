@@ -1,6 +1,18 @@
 import time
 from django.utils import timezone
+from django.middleware.csrf import get_token
+from django.utils.deprecation import MiddlewareMixin
 from .models import User
+
+class DisableCSRFMiddleware(MiddlewareMixin):
+    """
+    Middleware to disable CSRF for all API requests
+    """
+    
+    def process_request(self, request):
+        # Disable CSRF for all API requests
+        if request.path.startswith('/api/'):
+            setattr(request, '_dont_enforce_csrf_checks', True)
 
 class UpdateLastLoginMiddleware:
     """

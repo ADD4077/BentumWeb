@@ -3,9 +3,15 @@ from django.contrib import admin as admin_django
 from django.conf import settings
 from django.conf.urls.static import static
 
-from .views import save_data, dashboard, logout, theme, get_schedule, get_literature, get_news, get_public_stats, get_user_by_code, auth_check, get_user_sessions
+from .views import (
+    health_check, auth_check, save_data, dashboard, theme,
+    get_schedule, get_literature, get_public_stats, get_news,
+    logout, get_user_by_code, email_binding_status, email_bind,
+    get_user_sessions
+)
+from .ban_views import get_ban_info
 from .telegram_binding_views import generate_telegram_link, get_telegram_binding_status, unlink_telegram_account, process_telegram_callback
-from .twofa_views import get_2fa_config, set_2fa_config, verify_2fa, resend_2fa_code
+from .twofa_views import get_2fa_config, verify_2fa, resend_2fa_code, test_2fa
 
 from .profile_views import update_profile, update_avatar, update_banner, change_password
 
@@ -22,6 +28,8 @@ from . import media_views
 
 
 urlpatterns = [
+
+    path("api/health", health_check),
 
     path("api/save_data", save_data),
 
@@ -59,11 +67,15 @@ urlpatterns = [
     path("api/telegram/unlink", unlink_telegram_account),
     path("api/telegram/bind", process_telegram_callback),
 
+    # Email binding endpoints
+    path("api/email/binding-status", email_binding_status),
+    path("api/email/bind", email_bind),
+
     # 2FA endpoints
     path("api/2fa/config", get_2fa_config),
-    path("api/2fa/config", set_2fa_config),
     path("api/2fa/verify", verify_2fa),
     path("api/2fa/resend", resend_2fa_code),
+    path("api/2fa/test", test_2fa),
 
     # Sessions endpoints
     path("api/sessions", get_user_sessions),

@@ -28,11 +28,13 @@ def get_all_users(request):
         users = User.objects.all().values('id', 'fullname', 'student_code', 'faculty', 'created_at', 'last_login')
         users_list = list(users)
         
-        # Добавляем информацию о статусе блокировки для каждого пользователя
+        # Добавляем информацию о статусе блокировки и админке для каждого пользователя
         from .ban_service import BanService
+        from .models import Administration
         for user in users_list:
             ban_status = BanService.check_ban_status(user['student_code'])
             user['status'] = 'banned' if ban_status['is_banned'] else 'active'
+            user['is_admin'] = Administration.objects.filter(administrator_id=user['id'], is_active=True).exists()
         
         return JsonResponse({
             'success': True,
@@ -198,6 +200,13 @@ def ban_user(request):
                 'success': False,
                 'detail': 'Пользователь не найден'
             }, status=404)
+        
+        # Проверяем что целевой пользователь не является администратором
+        if Administration.objects.filter(administrator=user_to_ban, is_active=True).exists():
+            return JsonResponse({
+                'success': False,
+                'detail': 'Нельзя заблокировать администратора'
+            }, status=403)
         
         duration_seconds = duration_days * 24 * 60 * 60
         
