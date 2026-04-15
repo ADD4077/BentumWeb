@@ -37,7 +37,7 @@ import {
 import { useAuth } from '../contexts/AuthContext.jsx';
 import TwoFARecoveryModal from './TwoFARecoveryModal.jsx';
 
-const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, onForceRefresh, on2FASetupOpen }) => {
+const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, onForceRefresh, on2FASetupOpen, onLogout }) => {
   const { isAuthenticated, logout } = useAuth();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -385,7 +385,11 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
   };
 
   const handleLogout = () => {
-    logout();
+    if (onLogout) {
+      onLogout();
+    } else {
+      logout();
+    }
   };
 
   // Функции для работы с Telegram
@@ -621,31 +625,10 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                       }`} />
                     </div>
                     <span className="text-sm font-medium">{tab.label}</span>
-                    {activeTab === tab.id && (
-                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
-                    )}
                   </button>
                 );
               })}
               </nav>
-            </div>
-            
-            {/* Quick Stats */}
-            <div className="mt-6 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 backdrop-blur-xl border border-emerald-200/60 dark:border-emerald-800/60 rounded-3xl p-4">
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Статистика профиля</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-slate-600 dark:text-slate-400">Заполненность профиля</span>
-                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">85%</span>
-                </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
-                  <div className="bg-gradient-to-r from-emerald-500 to-teal-500 h-1.5 rounded-full" style={{width: '85%'}}></div>
-                </div>
-                <div className="flex justify-between items-center pt-2">
-                  <span className="text-xs text-slate-600 dark:text-slate-400">Последнее обновление</span>
-                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Сегодня</span>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -655,19 +638,19 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
               <div className="space-y-6">
                 <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-lg">
                   <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center">
-                      <User className="w-6 h-6 text-white" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                      <User className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <div>
-                      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Информация профиля</h2>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">Управление внешним видом и данными</p>
+                    <div className="min-w-0">
+                      <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 dark:text-white">Информация профиля</h2>
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Управление внешним видом и данными</p>
                     </div>
                   </div>
                   
                   {/* Profile Preview */}
-                  <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-900/50 rounded-3xl p-6 mb-6 border border-slate-200/60 dark:border-slate-700/60">
+                  <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-900/50 rounded-3xl p-4 sm:p-6 mb-6 border border-slate-200/60 dark:border-slate-700/60">
                     {/* Banner Container */}
-                    <div className="relative h-40 bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 rounded-2xl mb-20">
+                    <div className="relative h-32 sm:h-40 bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 rounded-2xl mb-16 sm:mb-20">
                       {/* Banner */}
                       <div className="absolute inset-0 rounded-2xl overflow-hidden">
                         {bannerPreview ? (
@@ -693,8 +676,8 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                       
                       {/* Banner upload button */}
                       {!banInfo && (
-                        <label className="absolute top-4 right-4 w-12 h-12 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-2xl flex items-center justify-center text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:scale-105 transition-all cursor-pointer shadow-lg">
-                          <Upload className="w-6 h-6" />
+                        <label className="absolute top-3 right-3 sm:top-4 sm:right-4 w-10 h-10 sm:w-12 sm:h-12 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-2xl flex items-center justify-center text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:scale-105 transition-all cursor-pointer shadow-lg">
+                          <Upload className="w-5 h-5 sm:w-6 sm:h-6" />
                           <input
                             type="file"
                             accept="image/*"
@@ -709,19 +692,19 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                         <button
                           onClick={handleDeleteBanner}
                           disabled={deletingBanner}
-                          className="absolute top-4 right-20 w-12 h-12 bg-red-500/90 dark:bg-red-600/90 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white hover:bg-red-600 dark:hover:bg-red-700 hover:scale-105 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                          className="absolute top-3 right-16 sm:top-4 sm:right-20 w-10 h-10 sm:w-12 sm:h-12 bg-red-500/90 dark:bg-red-600/90 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white hover:bg-red-600 dark:hover:bg-red-700 hover:scale-105 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                           title="Удалить баннер"
                         >
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
                       )}
 
                       {/* Avatar */}
-                      <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 z-20">
+                      <div className="absolute -bottom-12 sm:-bottom-16 left-1/2 transform -translate-x-1/2 z-20">
                         <div className="relative group">
-                          <div className="w-32 h-32 rounded-3xl overflow-hidden bg-white dark:bg-slate-800 border-4 border-white dark:border-slate-800 shadow-2xl">
+                          <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-3xl overflow-hidden bg-white dark:bg-slate-800 border-4 border-white dark:border-slate-800 shadow-2xl">
                             {avatarPreview ? (
                               <img 
                                 src={avatarPreview} 
@@ -772,10 +755,10 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                             <button
                               onClick={handleDeleteAvatar}
                               disabled={deletingAvatar}
-                              className="absolute top-2 right-2 w-8 h-8 bg-red-500/90 dark:bg-red-600/90 backdrop-blur-sm rounded-xl flex items-center justify-center text-white hover:bg-red-600 dark:hover:bg-red-700 hover:scale-105 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                              className="absolute -top-1 -right-1 sm:top-2 sm:right-2 w-7 h-7 sm:w-8 sm:h-8 bg-red-500/90 dark:bg-red-600/90 backdrop-blur-sm rounded-xl flex items-center justify-center text-white hover:bg-red-600 dark:hover:bg-red-700 hover:scale-105 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                               title="Удалить аватар"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>
                             </button>
@@ -870,12 +853,12 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                       
                       <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Upload Instructions */}
-                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-6">
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4 sm:p-6">
                           <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 bg-blue-500/20 dark:bg-blue-600/20 rounded-2xl flex items-center justify-center">
-                              <HelpCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500/20 dark:bg-blue-600/20 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0">
+                              <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
                             </div>
-                            <h3 className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                            <h3 className="text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-300">
                               Инструкция по загрузке
                             </h3>
                           </div>
@@ -930,31 +913,31 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
               <div className="space-y-6">
                 <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-lg">
                   <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 bg-gradient-to-br from-red-400 to-orange-500 rounded-2xl flex items-center justify-center">
-                      <Shield className="w-6 h-6 text-white" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-red-400 to-orange-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                      <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <div>
-                      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Безопасность</h2>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">Защита вашего аккаунта</p>
+                    <div className="min-w-0">
+                      <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 dark:text-white">Безопасность</h2>
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Защита вашего аккаунта</p>
                     </div>
                   </div>
                   
                   <div className="space-y-6">
                     {/* Password */}
-                    <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-900/50 rounded-2xl p-6 border border-slate-200/60 dark:border-slate-700/60">
-                      <div className="flex items-center justify-between mb-4">
+                    <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-900/50 rounded-2xl p-4 sm:p-6 border border-slate-200/60 dark:border-slate-700/60">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center">
-                            <Lock className="w-6 h-6 text-white" />
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                            <Lock className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                           </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Пароль</h3>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">Измените пароль для повышения безопасности</p>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg">Пароль</h3>
+                            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Измените пароль для повышения безопасности</p>
                           </div>
                         </div>
                         <button
                           onClick={() => setShowPasswordForm(!showPasswordForm)}
-                          className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transform hover:scale-[1.02]"
+                          className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transform hover:scale-[1.02] w-full sm:w-auto"
                         >
                           {showPasswordForm ? 'Отмена' : 'Изменить'}
                         </button>
@@ -1069,15 +1052,15 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                     </div>
 
                     {/* Telegram Binding */}
-                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-800">
-                      <div className="flex items-center justify-between">
+                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-2xl p-4 sm:p-6 border border-blue-200 dark:border-blue-800">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-2xl flex items-center justify-center">
-                            <Send className="w-6 h-6 text-white" />
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                            <Send className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                           </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Привязка Telegram</h3>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">Связать аккаунт с Telegram ботом для уведомлений</p>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg">Telegram</h3>
+                            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Привязка Telegram для уведомлений и входа</p>
                           </div>
                         </div>
                         {!telegramBinding?.is_linked && (
@@ -1103,20 +1086,18 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                       
                       {telegramBinding?.is_linked ? (
                         <div className="mt-4 space-y-4">
-                          <div className="flex items-center justify-between p-4 bg-white/70 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 bg-white/70 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-xl flex items-center justify-center">
+                              <div className="w-10 h-10 flex-shrink-0 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-xl flex items-center justify-center">
                                 <span className="text-lg font-bold text-white">
-                                  {telegramBinding.telegram_username ? telegramBinding.telegram_username[0].toUpperCase() : 'T'}
+                                  {telegramBinding.telegram_username?.charAt(0).toUpperCase() || 'T'}
                                 </span>
                               </div>
-                              <div>
-                                <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                                  @{telegramBinding.telegram_username || telegramBinding.telegram_id}
-                                </div>
-                                <div className="text-xs text-slate-600 dark:text-slate-400">
-                                  Привязан {new Date(telegramBinding.linked_at).toLocaleDateString('ru-RU')}
-                                </div>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-slate-900 dark:text-white text-sm truncate">
+                                  {telegramBinding.telegram_username ? `@${telegramBinding.telegram_username}` : 'Привязан'}
+                                </p>
+                                <p className="text-xs text-slate-600 dark:text-slate-400">Telegram аккаунт</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -1163,20 +1144,20 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                     </div>
 
                     {/* 2FA */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-800">
-                      <div className="flex items-center justify-between">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-4 sm:p-6 border border-blue-200 dark:border-blue-800">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center">
-                            <Smartphone className="w-6 h-6 text-white" />
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                            <Smartphone className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                           </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Двухфакторная аутентификация</h3>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">Дополнительный уровень безопасности</p>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg">Двухфакторная аутентификация</h3>
+                            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Дополнительный уровень безопасности</p>
                           </div>
                         </div>
                         <button 
                           onClick={on2FASetupOpen}
-                          className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transform hover:scale-[1.02] flex items-center gap-2"
+                          className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transform hover:scale-[1.02] flex items-center justify-center gap-2 w-full sm:w-auto"
                         >
                           <Lock className="w-4 h-4" />
                           Настроить
@@ -1186,23 +1167,23 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                     </div>
 
                     {/* Active Sessions */}
-                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl p-6 border border-purple-200 dark:border-purple-800">
-                      <div className="flex items-center justify-between">
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl p-4 sm:p-6 border border-purple-200 dark:border-purple-800">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center">
-                            <Globe className="w-6 h-6 text-white" />
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                            <Globe className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                           </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Активные сессии</h3>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">Управление активными входами в аккаунт</p>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg">Активные сессии</h3>
+                            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Управление активными входами в аккаунт</p>
                           </div>
                         </div>
                         <button 
                           onClick={refreshSessions}
                           disabled={loadingSessions}
-                          className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white rounded-lg transition-all duration-300 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transform hover:scale-[1.02] flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                          className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transform hover:scale-[1.02] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 w-full sm:w-auto"
                         >
-                          <Loader2 className={`w-3 h-3 ${loadingSessions ? 'animate-spin' : ''}`} />
+                          <Loader2 className={`w-4 h-4 ${loadingSessions ? 'animate-spin' : ''}`} />
                           Обновить
                         </button>
                       </div>
@@ -1218,23 +1199,23 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                           </div>
                         ) : (
                           sessions.map((session) => (
-                            <div key={session.id} className={`flex items-center justify-between p-4 ${session.is_current ? 'bg-white/70 dark:bg-slate-800/70 border-2 border-emerald-200 dark:border-emerald-800' : 'bg-white/70 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60'} rounded-xl`}>
-                              <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 ${session.is_current ? 'bg-gradient-to-br from-emerald-400 to-teal-500' : 'bg-gradient-to-br from-slate-400 to-slate-500'} rounded-xl flex items-center justify-center`}>
+                            <div key={session.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 ${session.is_current ? 'bg-white/70 dark:bg-slate-800/70 border-2 border-emerald-200 dark:border-emerald-800' : 'bg-white/70 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60'} rounded-xl`}>
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className={`w-10 h-10 flex-shrink-0 ${session.is_current ? 'bg-gradient-to-br from-emerald-400 to-teal-500' : 'bg-gradient-to-br from-slate-400 to-slate-500'} rounded-xl flex items-center justify-center`}>
                                   <span className="text-sm font-bold text-white">
                                     {session.is_current ? 'Тек' : session.browser?.split(' ')[0]?.substring(0, 3) || 'Web'}
                                   </span>
                                 </div>
-                                <div>
-                                  <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                                <div className="min-w-0">
+                                  <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                                     {session.is_current ? 'Это устройство' : `${session.browser} • ${session.os}`}
                                   </div>
-                                  <div className="text-xs text-slate-600 dark:text-slate-400">
+                                  <div className="text-xs text-slate-600 dark:text-slate-400 truncate">
                                     {session.ip_address} • {formatDateTime(session.last_activity)}
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 sm:justify-end">
                                 <div className={`w-2 h-2 ${session.is_current ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'} rounded-full`}></div>
                                 <span className={`text-xs font-medium ${session.is_current ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400'}`}>
                                   {session.is_current ? 'Активно' : 'Неактивно'}
@@ -1254,28 +1235,28 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
               <div className="space-y-6">
                 <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-lg">
                   <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center">
-                      <Bell className="w-6 h-6 text-white" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                      <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <div>
-                      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Уведомления</h2>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">Настройте способ оповещений</p>
+                    <div className="min-w-0">
+                      <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 dark:text-white">Уведомления</h2>
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Настройте способ оповещений</p>
                     </div>
                   </div>
                   
                   <div className="space-y-4">
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-800">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center">
-                            <Mail className="w-6 h-6 text-white" />
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-4 sm:p-6 border border-blue-200 dark:border-blue-800">
+                      <div className="flex flex-row items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                            <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                           </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Email уведомления</h3>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">Получать уведомления на почту</p>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg">Email уведомления</h3>
+                            <p className="hidden sm:block text-xs sm:text-sm text-slate-600 dark:text-slate-400">Получать уведомления на email</p>
                           </div>
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
+                        <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                           <input
                             type="checkbox"
                             checked={notifications.email}
@@ -1287,18 +1268,18 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                       </div>
                     </div>
 
-                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl p-6 border border-emerald-200 dark:border-emerald-800">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center">
-                            <Bell className="w-6 h-6 text-white" />
+                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl p-4 sm:p-6 border border-emerald-200 dark:border-emerald-800">
+                      <div className="flex flex-row items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                            <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                           </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Push уведомления</h3>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">Уведомления в браузере</p>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg">Push уведомления</h3>
+                            <p className="hidden sm:block text-xs sm:text-sm text-slate-600 dark:text-slate-400">Включить push уведомления в браузере</p>
                           </div>
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
+                        <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                           <input
                             type="checkbox"
                             checked={notifications.push}
@@ -1310,18 +1291,18 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                       </div>
                     </div>
 
-                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl p-6 border border-purple-200 dark:border-purple-800">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center">
-                            <span className="text-2xl">📰</span>
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl p-4 sm:p-6 border border-purple-200 dark:border-purple-800">
+                      <div className="flex flex-row items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                            <span className="text-xl sm:text-2xl">📰</span>
                           </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Новости и обновления</h3>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">Информация о новостях платформы</p>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg">Новости платформы</h3>
+                            <p className="hidden sm:block text-xs sm:text-sm text-slate-600 dark:text-slate-400">Получать обновления о новых функциях</p>
                           </div>
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
+                        <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                           <input
                             type="checkbox"
                             checked={notifications.news}
@@ -1333,18 +1314,18 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                       </div>
                     </div>
 
-                    <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-2xl p-6 border border-red-200 dark:border-red-800">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-red-400 to-orange-500 rounded-2xl flex items-center justify-center">
-                            <Shield className="w-6 h-6 text-white" />
+                    <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-2xl p-4 sm:p-6 border border-red-200 dark:border-red-800">
+                      <div className="flex flex-row items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-red-400 to-orange-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                            <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                           </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Безопасность</h3>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">Уведомления о безопасности аккаунта</p>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg">Безопасность</h3>
+                            <p className="hidden sm:block text-xs sm:text-sm text-slate-600 dark:text-slate-400">Уведомления о безопасности аккаунта</p>
                           </div>
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
+                        <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                           <input
                             type="checkbox"
                             checked={notifications.security}
@@ -1370,28 +1351,28 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
               <div className="space-y-6">
                 <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-lg">
                   <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-2xl flex items-center justify-center">
-                      <Eye className="w-6 h-6 text-white" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                      <Eye className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <div>
-                      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Приватность</h2>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">Управление видимостью профиля</p>
+                    <div className="min-w-0">
+                      <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 dark:text-white">Приватность</h2>
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Управление видимостью профиля</p>
                     </div>
                   </div>
                   
                   <div className="space-y-4">
-                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl p-6 border border-indigo-200 dark:border-indigo-800">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-2xl flex items-center justify-center">
-                            <Eye className="w-6 h-6 text-white" />
+                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl p-4 sm:p-6 border border-indigo-200 dark:border-indigo-800">
+                      <div className="flex flex-row items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                            <Eye className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                           </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Видимость профиля</h3>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">Показывать профиль другим пользователям</p>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg">Видимость профиля</h3>
+                            <p className="hidden sm:block text-xs sm:text-sm text-slate-600 dark:text-slate-400">Показывать профиль другим пользователям</p>
                           </div>
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
+                        <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                           <input
                             type="checkbox"
                             checked={privacy.profileVisible}
@@ -1403,18 +1384,18 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                       </div>
                     </div>
 
-                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-800">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-2xl flex items-center justify-center">
-                            <Mail className="w-6 h-6 text-white" />
+                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-2xl p-4 sm:p-6 border border-blue-200 dark:border-blue-800">
+                      <div className="flex flex-row items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                            <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                           </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Показывать email</h3>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">Отображать email в профиле</p>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg">Показывать email</h3>
+                            <p className="hidden sm:block text-xs sm:text-sm text-slate-600 dark:text-slate-400">Отображать email в профиле</p>
                           </div>
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
+                        <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                           <input
                             type="checkbox"
                             checked={privacy.showEmail}
@@ -1426,18 +1407,18 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                       </div>
                     </div>
 
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl p-6 border border-green-200 dark:border-green-800">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center">
-                            <span className="text-2xl">🎓</span>
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl p-4 sm:p-6 border border-green-200 dark:border-green-800">
+                      <div className="flex flex-row items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                            <span className="text-xl sm:text-2xl">🎓</span>
                           </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Показывать код студента</h3>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">Отображать номер студенческого билета</p>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg">Показывать код студента</h3>
+                            <p className="hidden sm:block text-xs sm:text-sm text-slate-600 dark:text-slate-400">Отображать номер студенческого билета</p>
                           </div>
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
+                        <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                           <input
                             type="checkbox"
                             checked={privacy.showStudentCode}
@@ -1449,18 +1430,18 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                       </div>
                     </div>
 
-                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl p-6 border border-emerald-200 dark:border-emerald-800">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center">
-                            <span className="text-2xl">💬</span>
+                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl p-4 sm:p-6 border border-emerald-200 dark:border-emerald-800">
+                      <div className="flex flex-row items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                            <span className="text-xl sm:text-2xl">💬</span>
                           </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Разрешить сообщения</h3>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">Другие пользователи могут отправлять сообщения</p>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg">Разрешить сообщения</h3>
+                            <p className="hidden sm:block text-xs sm:text-sm text-slate-600 dark:text-slate-400">Другие пользователи могут отправлять сообщения</p>
                           </div>
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
+                        <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                           <input
                             type="checkbox"
                             checked={privacy.allowMessages}
@@ -1486,31 +1467,31 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
               <div className="space-y-6">
                 <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-lg">
                   <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 bg-gradient-to-br from-gray-400 to-slate-500 rounded-2xl flex items-center justify-center">
-                      <Settings2 className="w-6 h-6 text-white" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-gray-400 to-slate-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                      <Settings2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <div>
-                      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Дополнительно</h2>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">Расширенные настройки аккаунта</p>
+                    <div className="min-w-0">
+                      <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 dark:text-white">Дополнительно</h2>
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Расширенные настройки аккаунта</p>
                     </div>
                   </div>
                   
                   <div className="space-y-6">
                     {/* Logout */}
-                    <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-2xl p-6 border border-red-200 dark:border-red-800">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-red-400 to-orange-500 rounded-2xl flex items-center justify-center">
-                            <LogOut className="w-6 h-6 text-white" />
+                    <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-2xl p-4 sm:p-6 border border-red-200 dark:border-red-800">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-red-400 to-orange-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                            <LogOut className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                           </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">Выйти из аккаунта</h3>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">Завершить текущую сессию</p>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg">Выйти из аккаунта</h3>
+                            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Завершить текущую сессию</p>
                           </div>
                         </div>
                         <button 
                           onClick={handleLogout}
-                          className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-red-500/25 hover:shadow-red-500/40 transform hover:scale-[1.02] flex items-center gap-2"
+                          className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-red-500/25 hover:shadow-red-500/40 transform hover:scale-[1.02] flex items-center justify-center gap-2 w-full sm:w-auto"
                         >
                           Выйти
                           <ChevronRight className="w-4 h-4" />

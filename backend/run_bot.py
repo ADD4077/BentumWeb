@@ -99,18 +99,41 @@ class CleanBot:
                     )
                 return
 
+            # URL для Web App
+            web_app_url = os.environ.get('WEB_APP_URL', 'https://bentum.ru')
+            
+            welcome_text = (
+                "👋 **Добро пожаловать в бот образовательной платформы Бентум!**\n\n"
+                "📚 **Что я могу делать:**\n"
+                "• Пересылать ваши сообщения в службу поддержки\n"
+                "• Привязывать ваш аккаунт к профилю на сайте\n"
+                "• Отправлять важные уведомления\n\n"
+                "🚀 **Быстрый доступ:**\n"
+                "Нажмите «Открыть приложение» чтобы запустить сайт прямо в Telegram!\n\n"
+                "💡 **Как привязать аккаунт:**\n"
+                "1. Зайдите в настройки профиля на сайте\n"
+                "2. Нажмите 'Привязать Telegram'\n"
+                "3. Перейдите по сгенерированной ссылке\n\n"
+                "📝 **Для связи с поддержкой** просто отправьте мне сообщение!"
+            )
+            
+            from aiogram.types import WebAppInfo
             await message.answer(
-                "🤖 Бот привязки Telegram.\n\n"
-                "Чтобы привязать аккаунт, открой ссылку из сайта (кнопка 'Привязать').",
+                welcome_text,
+                parse_mode="Markdown",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="Открыть сайт", url="https://bentum.edu.by")]
+                    [InlineKeyboardButton(
+                        text="🚀 Открыть приложение", 
+                        web_app=WebAppInfo(url=web_app_url)
+                    )],
+                    [InlineKeyboardButton(text="🌐 Перейти на сайт", url=web_app_url)],
                 ])
             )
         
         @self.dp.message()
         async def handle_message(message: Message):
-            """Handle any message"""
-            await message.answer("🤖 Clean bot response - no Django involved!")
+            """Handle any message - send to support"""
+            await message.answer("✅ Сообщение отправлено в поддержку. Ожидайте ответа.")
     
     async def start(self):
         """Start the bot"""

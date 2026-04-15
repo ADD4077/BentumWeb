@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api.js';
 import { buildMediaUrl } from '../utils/media.js';
+import { calculateCourseOrDefault } from '../utils/calculateCourse.js';
 
 export default function UserProfileModal({ isOpen, onClose, studentCode, darkMode }) {
   const [user, setUser] = useState(null);
@@ -128,22 +129,7 @@ export default function UserProfileModal({ isOpen, onClose, studentCode, darkMod
                 <div className="text-left flex items-center gap-3">
                   <Backpack className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   <p className="text-base font-medium text-slate-900 dark:text-white">
-                    {(() => {
-                      if (!user?.student_code) return 'Не указан';
-                      const groupLastTwo = user.student_code.slice(6, 8);
-                      const currentYear = new Date().getFullYear();
-                      const groupYear = parseInt(groupLastTwo) + 2000;
-                      const course = currentYear - groupYear + 1;
-                      const currentMonth = new Date().getMonth();
-                      let finalCourse;
-                      if (currentMonth < 8) {
-                        finalCourse = course - 1;
-                      } else {
-                        finalCourse = course;
-                      }
-                      if (finalCourse <= 0) finalCourse = 1;
-                      return finalCourse > 0 && finalCourse <= 5 ? `${finalCourse} курс` : 'Не указан';
-                    })()}
+                    {calculateCourseOrDefault(user?.student_code)}
                   </p>
                 </div>
                 <div className="text-left flex items-center gap-3 mb-8">

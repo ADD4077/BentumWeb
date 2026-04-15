@@ -31,6 +31,7 @@ export const AuthProvider = ({ children }) => {
       const auth = await api.authCheck();
 
       if (auth?.success && auth?.user) {
+        // Данные пользователя уже содержат медиа от AUTH_CHECK
         setIsAuthenticated(true);
         setUser(auth.user);
         safeSetUserData(auth.user);
