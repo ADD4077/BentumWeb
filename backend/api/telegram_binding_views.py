@@ -9,7 +9,7 @@ from django.utils import timezone
 from .models import User, TelegramBinding
 from .telegram_binding_service import TelegramBindingService
 
-# Create service instance
+# Создаем экземпляр сервиса
 telegram_binding_service = TelegramBindingService()
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 @csrf_exempt
 @require_http_methods(["POST"])
 def generate_telegram_link(request):
-    """Generate Telegram binding link"""
+    """Сгенерировать ссылку для привязки Telegram"""
     try:
         # Check authorization using session
         is_authenticated = request.session.get('is_authenticated')
@@ -30,7 +30,7 @@ def generate_telegram_link(request):
             }, status=401)
         
         if not student_code:
-            logger.warning("Student code not found in session")
+            logger.warning("Код студента не найден в сессии")
             return JsonResponse({
                 "success": False,
                 "detail": "Student code not found in session"
@@ -39,13 +39,13 @@ def generate_telegram_link(request):
         user = User.objects.filter(student_code=student_code).first()
         
         if not user:
-            logger.warning(f"User not found for student_code: {student_code}")
+            logger.warning(f"Пользователь не найден для student_code: {student_code}")
             return JsonResponse({
                 "success": False,
                 "detail": "User not found"
             }, status=404)
         
-        # Check if already linked
+        # Проверяем, уже ли привязан
         existing_binding = telegram_binding_service.get_user_binding(user)
         if existing_binding:
             return JsonResponse({
@@ -53,7 +53,7 @@ def generate_telegram_link(request):
                 "detail": "Telegram аккаунт уже привязан"
             }, status=400)
         
-        # Generate new link
+        # Генерируем новую ссылку
         token = telegram_binding_service.generate_binding_token(user)
         
         if token:
@@ -68,11 +68,11 @@ def generate_telegram_link(request):
         else:
             return JsonResponse({
                 "success": False,
-                "detail": "Failed to generate binding token"
+                "detail": "Не удалось сгенерировать токен привязки"
             }, status=500)
             
     except Exception as e:
-        logger.error(f"Error generating Telegram link: {str(e)}")
+        logger.error(f"Ошибка генерации ссылки Telegram: {str(e)}")
         return JsonResponse({
             "success": False,
             "detail": "Внутренняя ошибка сервера"
@@ -81,10 +81,10 @@ def generate_telegram_link(request):
 @csrf_exempt
 @require_http_methods(["GET"])
 def get_telegram_binding_status(request):
-    """Gets Telegram binding status"""
+    """Получить статус привязки Telegram"""
     
     try:
-        # Check authorization using session (like other endpoints)
+        # Проверяем авторизацию через сессию (как и другие endpoints)
         if not request.session.get('is_authenticated'):
             return JsonResponse({
                 "success": False,
@@ -128,7 +128,7 @@ def get_telegram_binding_status(request):
             })
             
     except Exception as e:
-        logger.error(f"Error getting Telegram binding status: {str(e)}")
+        logger.error(f"Ошибка получения статуса привязки Telegram: {str(e)}")
         return JsonResponse({
             "success": False,
             "detail": "Внутренняя ошибка сервера"
@@ -137,7 +137,7 @@ def get_telegram_binding_status(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def unlink_telegram_account(request):
-    """Unlink Telegram account"""
+    """Отвязать Telegram аккаунт"""
     try:
         # Check authorization using session
         if not request.session.get('is_authenticated'):
@@ -177,7 +177,7 @@ def unlink_telegram_account(request):
         }, status=400)
             
     except Exception as e:
-        logger.error(f"Error unlinking Telegram account: {str(e)}")
+        logger.error(f"Ошибка отвязки Telegram аккаунта: {str(e)}")
         return JsonResponse({
             "success": False,
             "detail": "Внутренняя ошибка сервера"
@@ -186,7 +186,7 @@ def unlink_telegram_account(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def process_telegram_callback(request):
-    """Bind Telegram account by token (called by bot)"""
+    """Привязать Telegram аккаунт по токену (вызывается ботом)"""
     try:
         try:
             payload = json.loads(request.body.decode('utf-8') or '{}')
@@ -199,13 +199,13 @@ def process_telegram_callback(request):
         if not token:
             return JsonResponse({
                 "success": False,
-                "detail": "Token not provided"
+                "detail": "Токен не предоставлен"
             }, status=400)
 
         if not isinstance(telegram_data, dict):
             return JsonResponse({
                 "success": False,
-                "detail": "Telegram data not provided"
+                "detail": "Данные Telegram не предоставлены"
             }, status=400)
 
         ok, message = telegram_binding_service.bind_telegram_account_sync(token, telegram_data)
@@ -224,7 +224,7 @@ def process_telegram_callback(request):
         }, status=400)
             
     except Exception as e:
-        logger.error(f"Error processing Telegram callback: {str(e)}")
+        logger.error(f"Ошибка обработки Telegram callback: {str(e)}")
         return JsonResponse({
             "success": False,
             "detail": "Внутренняя ошибка сервера"

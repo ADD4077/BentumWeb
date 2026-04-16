@@ -3,17 +3,17 @@ from django.utils.deprecation import MiddlewareMixin
 
 class TwoFAAuthenticationMiddleware(MiddlewareMixin):
     """
-    Middleware for handling 2FA authentication
-    Blocks access to protected endpoints if 2FA is not verified
+    Middleware для обработки 2FA аутентификации
+    Блокирует доступ к защищенным endpoint если 2FA не подтвержден
     """
     
     def process_request(self, request):
-        # Skip 2FA check for:
-        # 1. Login endpoint (users need to login first)
-        # 2. 2FA endpoints (users need to verify/enable 2FA)
-        # 3. Public endpoints (health check, etc.)
-        # 4. Static files
-        # 5. Admin panel
+        # Пропускаем проверку 2FA для:
+        # 1. Endpoint входа (пользователям нужно сначала войти)
+        # 2. Endpoint 2FA (пользователям нужно подтвердить/включить 2FA)
+        # 3. Публичные endpoint (проверка работоспособности и т.д.)
+        # 4. Статические файлы
+        # 5. Админ панель
         
         skip_paths = [
             '/api/save_data',
@@ -33,15 +33,15 @@ class TwoFAAuthenticationMiddleware(MiddlewareMixin):
             '/media/',
         ]
         
-        # Skip if path starts with any skip path
+        # Пропускаем если путь начинается с любого пути для пропуска
         if any(request.path.startswith(path) for path in skip_paths):
             return None
         
-        # Check if user is authenticated
+        # Проверяем, авторизован ли пользователь
         if not request.session.get('is_authenticated'):
             return None
         
-        # Check if 2FA is required for this user
+        # Проверяем, требуется ли 2FA для этого пользователя
         student_code = request.session.get('student_code')
         if not student_code:
             return None
@@ -52,22 +52,22 @@ class TwoFAAuthenticationMiddleware(MiddlewareMixin):
             if not user:
                 return None
             
-            # If 2FA is not enabled for this user, allow access
+            # Если 2FA не включен для этого пользователя, разрешаем доступ
             if not getattr(user, 'twofa_enabled', False):
                 return None
             
-            # If 2FA is enabled, check if it's verified
+            # Если 2FA включен, проверяем подтвержден ли он
             if not request.session.get('twofa_verified', False):
                 return JsonResponse({
                     'success': False,
-                    'detail': '2FA verification required',
+                    'detail': 'Требуется подтверждение 2FA',
                     'requires_2fa': True
                 }, status=403)
             
             return None
             
         except Exception:
-            # If there's any error, allow access (fail open)
+            # Если есть ошибка, разрешаем доступ (fail open)
             return None
     
     def process_response(self, request, response):

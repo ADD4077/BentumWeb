@@ -1,5 +1,5 @@
 """
-Schedule views
+Представления для расписания
 """
 import os
 import sqlite3

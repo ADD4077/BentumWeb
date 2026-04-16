@@ -160,13 +160,13 @@ class TelegramBindingService:
             binding = await get_binding_by_token()
             
             if not binding:
-                return False, "Invalid or expired binding token"
+                return False, "Неверный или истекший токен привязки"
             
             # Проверяем, что этот Telegram ID уже не привязан
             existing_binding = await get_existing_binding(telegram_data['id'])
             
             if existing_binding:
-                return False, "This Telegram account is already linked to another user"
+                return False, "Этот Telegram аккаунт уже привязан к другому пользователю"
             
             # Обновляем запись привязки
             await update_binding(binding, telegram_data)
@@ -175,11 +175,11 @@ class TelegramBindingService:
             user = await get_user(binding)
             
             logger.info(f"Successfully bound Telegram @{telegram_data.get('username', telegram_data['id'])} to user {user.student_code}")
-            return True, f"Telegram account successfully linked to {user.fullname}"
+            return True, f"Telegram аккаунт успешно привязан к {user.fullname}"
             
         except Exception as e:
             logger.error(f"Error binding Telegram account with token {token}: {e}")
-            return False, "Internal server error"
+            return False, "Внутренняя ошибка сервера"
     
     def bind_telegram_account_sync(self, token: str, telegram_data: Dict[str, Any]) -> Tuple[bool, str]:
         """Синхронная обертка для привязки аккаунта"""
@@ -219,7 +219,7 @@ class TelegramBindingService:
             binding = TelegramBinding.objects.filter(user=user, is_active=True).first()
             
             if not binding:
-                return False, "No linked Telegram account found"
+                return False, "Привязанный Telegram аккаунт не найден"
             
             # Деактивируем привязку
             binding.is_active = False
@@ -227,11 +227,11 @@ class TelegramBindingService:
             binding.save()
             
             logger.info(f"Unlinked Telegram account from user {user.student_code}")
-            return True, "Telegram account successfully unlinked"
+            return True, "Telegram аккаунт успешно отвязан"
             
         except Exception as e:
             logger.error(f"Error unlinking Telegram account for user {user.student_code}: {e}")
-            return False, "Internal server error"
+            return False, "Внутренняя ошибка сервера"
     
     async def unlink_telegram_account_async(self, user: User) -> Tuple[bool, str]:
         """Асинхронная версия отвязки аккаунта"""
@@ -251,17 +251,17 @@ class TelegramBindingService:
             binding = await get_binding()
             
             if not binding:
-                return False, "No linked Telegram account found"
+                return False, "Привязанный Telegram аккаунт не найден"
             
             # Деактивируем привязку
             await update_binding(binding)
             
             logger.info(f"Unlinked Telegram account from user {user.student_code}")
-            return True, "Telegram account successfully unlinked"
+            return True, "Telegram аккаунт успешно отвязан"
             
         except Exception as e:
             logger.error(f"Error unlinking Telegram account for user {user.student_code}: {e}")
-            return False, "Internal server error"
+            return False, "Внутренняя ошибка сервера"
     
     def get_user_by_telegram_id(self, telegram_id: int) -> Optional[User]:
         """Получает пользователя по Telegram ID"""

@@ -14,59 +14,59 @@ from .models import User, TelegramBinding
 from .twofa_service import TwoFAService
 
 
-# Create service instance
+# Создаем экземпляр сервиса
 twofa_service = TwoFAService()
 
 @csrf_exempt
 @api_view(['GET', 'POST'])
 def get_2fa_config(request):
-    """Get current 2FA configuration"""
+    """Получить текущую конфигурацию 2FA"""
     try:
         if not request.session.get('is_authenticated'):
-            return JsonResponse({'success': False, 'detail': 'Unauthorized'}, status=401)
+            return JsonResponse({'success': False, 'detail': 'Не авторизован'}, status=401)
 
         student_code = request.session.get('student_code')
         if not student_code:
-            return JsonResponse({'success': False, 'detail': 'No session found'}, status=401)
+            return JsonResponse({'success': False, 'detail': 'Сессия не найдена'}, status=401)
 
         user = User.objects.filter(student_code=student_code).first()
         if not user:
-            return JsonResponse({'success': False, 'detail': 'User not found'}, status=404)
+            return JsonResponse({'success': False, 'detail': 'Пользователь не найден'}, status=404)
 
         binding = TelegramBinding.objects.filter(user=user, is_active=True).select_related('user').first()
 
-        # Handle POST request for setting 2FA config
+        # Обработка POST запроса для установки конфигурации 2FA
         if request.method == 'POST':
             try:
                 data = json.loads(request.body)
             except:
-                return JsonResponse({'success': False, 'detail': 'Invalid JSON'}, status=400)
+                return JsonResponse({'success': False, 'detail': 'Неверный формат JSON'}, status=400)
             
             enabled = bool(data.get('enabled', False))
             method = data.get('method')
             
             if enabled:
                 if method not in ['telegram', 'email']:
-                    return JsonResponse({'success': False, 'detail': 'Invalid method'}, status=400)
+                    return JsonResponse({'success': False, 'detail': 'Неверный метод'}, status=400)
 
                 if method == 'telegram':
                     binding = TelegramBinding.objects.filter(user=user, is_active=True).select_related('user').first()
                     if not binding or not binding.telegram_id or binding.telegram_id == 0:
-                        return JsonResponse({'success': False, 'detail': 'Telegram account is not linked'}, status=400)
+                        return JsonResponse({'success': False, 'detail': 'Telegram аккаунт не привязан'}, status=400)
 
                 user.twofa_enabled = True
                 user.twofa_method = method
                 user.save(update_fields=['twofa_enabled', 'twofa_method'])
 
-                return JsonResponse({'success': True, 'message': f'2FA enabled with {method} method'})
+                return JsonResponse({'success': True, 'message': f'2FA включен с методом {method}'})
 
             user.twofa_enabled = False
             user.twofa_method = None
             user.save(update_fields=['twofa_enabled', 'twofa_method'])
 
-            return JsonResponse({'success': True, 'message': '2FA disabled'})
+            return JsonResponse({'success': True, 'message': '2FA отключен'})
         
-        # Handle GET request for getting 2FA config
+        # Обработка GET запроса для получения конфигурации 2FA
         return JsonResponse({
             'success': True,
             'data': {
@@ -81,25 +81,25 @@ def get_2fa_config(request):
 @csrf_exempt
 @api_view(['GET', 'POST'])
 def test_2fa(request):
-    """Test 2FA endpoint"""
-    return JsonResponse({'success': True, 'message': '2FA test endpoint works', 'method': request.method})
+    """Тестовый endpoint 2FA"""
+    return JsonResponse({'success': True, 'message': 'Тестовый endpoint 2FA работает', 'method': request.method})
 
 @csrf_exempt
 @api_view(['POST'])
 def verify_2fa(request):
-    """Verify 2FA code"""
+    """Проверить код 2FA"""
     try:
         if not request.session.get('is_authenticated'):
-            return JsonResponse({'success': False, 'detail': 'Unauthorized'}, status=401)
+            return JsonResponse({'success': False, 'detail': 'Не авторизован'}, status=401)
 
         if not request.session.get('twofa_pending'):
-            return JsonResponse({'success': False, 'detail': '2FA is not pending'}, status=400)
+            return JsonResponse({'success': False, 'detail': '2FA не ожидается'}, status=400)
 
         student_code = request.session.get('student_code')
         if not student_code:
-            return JsonResponse({'success': False, 'detail': 'No session found'}, status=401)
+            return JsonResponse({'success': False, 'detail': 'Сессия не найдена'}, status=401)
         
-        # Parse request data
+        # Разбираем данные запроса
         try:
             data = json.loads(request.body)
         except:
@@ -108,13 +108,13 @@ def verify_2fa(request):
         code = data.get('code')
         
         if not code:
-            return JsonResponse({'success': False, 'detail': 'Code is required'}, status=400)
+            return JsonResponse({'success': False, 'detail': 'Код обязателен'}, status=400)
         
         if len(code) != 6 or not code.isdigit():
-            return JsonResponse({'success': False, 'detail': 'Invalid code format'}, status=400)
+            return JsonResponse({'success': False, 'detail': 'Неверный формат кода'}, status=400)
 
         if not twofa_service.verify_2fa_code(student_code, code, request):
-            return JsonResponse({'success': False, 'detail': 'Invalid code'}, status=400)
+            return JsonResponse({'success': False, 'detail': 'Неверный код'}, status=400)
 
         # Сохраняем сессию с проверкой на ошибки
         try:
@@ -128,7 +128,7 @@ def verify_2fa(request):
             except:
                 pass
 
-        return JsonResponse({'success': True, 'message': '2FA verification successful'})
+        return JsonResponse({'success': True, 'message': 'Проверка 2FA успешна'})
             
     except Exception as e:
         return JsonResponse({'success': False, 'detail': str(e)}, status=500)
@@ -136,29 +136,29 @@ def verify_2fa(request):
 @csrf_exempt
 @api_view(['POST'])
 def resend_2fa_code(request):
-    """Resend 2FA code"""
+    """Повторная отправка кода 2FA"""
     try:
         if not request.session.get('is_authenticated'):
-            return JsonResponse({'success': False, 'detail': 'Unauthorized'}, status=401)
+            return JsonResponse({'success': False, 'detail': 'Не авторизован'}, status=401)
 
         if not request.session.get('twofa_pending'):
-            return JsonResponse({'success': False, 'detail': '2FA is not pending'}, status=400)
+            return JsonResponse({'success': False, 'detail': '2FA не ожидается'}, status=400)
 
         student_code = request.session.get('student_code')
         if not student_code:
-            return JsonResponse({'success': False, 'detail': 'No session found'}, status=401)
+            return JsonResponse({'success': False, 'detail': 'Сессия не найдена'}, status=401)
 
         user = User.objects.filter(student_code=student_code).first()
         if not user:
-            return JsonResponse({'success': False, 'detail': 'User not found'}, status=404)
+            return JsonResponse({'success': False, 'detail': 'Пользователь не найден'}, status=404)
 
         if not twofa_service.is_2fa_required(user):
-            return JsonResponse({'success': False, 'detail': '2FA is not enabled'}, status=400)
+            return JsonResponse({'success': False, 'detail': '2FA не включен'}, status=400)
 
-        # Check for existing valid code
+        # Проверяем существующий действительный код
         existing_code, remaining_time = twofa_service.get_existing_code(student_code)
         
-        # Rate limiting: only resend if less than 2 minutes remaining
+        # Ограничение частоты: отправляем повторно только если осталось менее 2 минут
         if existing_code and remaining_time > 120:
             return JsonResponse({
                 'success': False,
@@ -166,7 +166,7 @@ def resend_2fa_code(request):
                 'remaining_time': remaining_time
             }, status=429)
         
-        # Generate new code if existing is expired or doesn't exist
+        # Генерируем новый код, если существующий истек или не существует
         code = twofa_service.generate_6fa_code()
         twofa_service.store_2fa_code(student_code, code, request)
 
@@ -179,7 +179,7 @@ def resend_2fa_code(request):
             if not ok:
                 return JsonResponse({'success': False, 'detail': message}, status=500)
 
-        return JsonResponse({'success': True, 'message': '2FA code resent successfully'})
+        return JsonResponse({'success': True, 'message': 'Код 2FA успешно отправлен повторно'})
         
     except Exception as e:
         return JsonResponse({'success': False, 'detail': str(e)}, status=500)

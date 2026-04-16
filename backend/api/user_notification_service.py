@@ -116,7 +116,7 @@ class UserNotificationService:
         if not self.bot_token or not self.chat_id:
             return {
                 'success': False,
-                'error': 'Bot token or chat ID not configured',
+                'error': 'Токен бота или chat ID не настроены',
                 'topic_id': self.new_users_topic_id
             }
         
@@ -143,14 +143,14 @@ class UserNotificationService:
             if response.status_code == 200:
                 return {
                     'success': True,
-                    'message': 'Test notification sent successfully',
+                    'message': 'Тестовое уведомление успешно отправлено',
                     'topic_id': self.new_users_topic_id,
                     'response': response.json()
                 }
             else:
                 return {
                     'success': False,
-                    'error': f'Failed to send test: {response.status_code} - {response.text}',
+                    'error': f'Не удалось отправить тест: {response.status_code} - {response.text}',
                     'topic_id': self.new_users_topic_id
                 }
                 

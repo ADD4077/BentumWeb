@@ -137,7 +137,7 @@ def test_new_user_notification(request):
     from django.conf import settings
     
     if not settings.DEBUG:
-        return JsonResponse({'error': 'Available only in DEBUG mode'}, status=403)
+        return JsonResponse({'error': 'Доступно только в режиме DEBUG'}, status=403)
     
     try:
         notification_service = UserNotificationService()
@@ -177,18 +177,18 @@ def send_new_user_notification(request):
         if success:
             return JsonResponse({
                 'success': True,
-                'message': 'New user notification sent successfully'
+                'message': 'Уведомление о новом пользователе успешно отправлено'
             })
         else:
             return JsonResponse({
                 'success': False,
-                'error': 'Failed to send new user notification'
+                'error': 'Не удалось отправить уведомление о новом пользователе'
             }, status=500)
             
     except json.JSONDecodeError:
         return JsonResponse({
             'success': False,
-            'error': 'Invalid JSON data'
+            'error': 'Неверный формат JSON данных'
         }, status=400)
     except Exception as e:
         logger.error(f"Error sending new user notification: {str(e)}")

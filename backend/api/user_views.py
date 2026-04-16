@@ -34,7 +34,7 @@ def get_all_users(request):
         users = User.objects.all().select_related('administration').values('id', 'fullname', 'student_code', 'faculty', 'created_at', 'last_login')
         users_list = list(users)
         
-        # Batch check ban status for all users to avoid N+1 queries
+        # Пакетная проверка статуса бана для всех пользователей чтобы избежать N+1 запросов
         student_codes = [user['student_code'] for user in users_list]
         ban_statuses = {code: BanService.check_ban_status(code) for code in student_codes}
         
@@ -349,7 +349,7 @@ def get_public_stats(request):
         unique_faculties = User.objects.values_list('faculty', flat=True).distinct()
         faculties_count = len([f for f in unique_faculties if f])
         
-        # Batch check ban status for all users to avoid N+1 queries
+        # Пакетная проверка статуса бана для всех пользователей чтобы избежать N+1 запросов
         all_users = User.objects.all()
         student_codes = [user.student_code for user in all_users]
         ban_statuses = {code: BanService.check_ban_status(code) for code in student_codes}

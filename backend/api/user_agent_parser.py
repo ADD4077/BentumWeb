@@ -92,7 +92,7 @@ class UserAgentParser:
             elif "safari" in user_agent:
                 return "Mobile Safari"
         
-        return "Unknown Browser"
+        return "Неизвестный браузер"
     
     @staticmethod
     def _detect_os(user_agent: str) -> Optional[str]:
@@ -161,4 +161,4 @@ class UserAgentParser:
         elif "bsd" in user_agent:
             return "BSD"
         
-        return "Unknown OS"
+        return "Неизвестная ОС"

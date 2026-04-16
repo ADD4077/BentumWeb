@@ -1,4 +1,4 @@
-"""Two Factor Authentication Service"""
+"""Сервис двухфакторной аутентификации"""
 import random
 import string
 import logging
@@ -13,10 +13,10 @@ from .models import TelegramBinding
 logger = logging.getLogger(__name__)
 
 class TwoFAService:
-    """Service for handling Two Factor Authentication"""
+    """Сервис для обработки двухфакторной аутентификации"""
     
     def is_2fa_required(self, user):
-        """Check if 2FA is required for user"""
+        """Проверить, требуется ли 2FA для пользователя"""
         if not user:
             return False
 
@@ -26,11 +26,11 @@ class TwoFAService:
         return user.twofa_method in ['telegram', 'email']
     
     def generate_6fa_code(self):
-        """Generate 6-digit 2FA code"""
+        """Сгенерировать 6-значный код 2FA"""
         return ''.join(random.choices(string.digits, k=6))
     
     def get_existing_code(self, student_code):
-        """Get existing valid code if any - uses cache with fallback to verify via request session"""
+        """Получить существующий действительный код если есть - использует кэш с запасным вариантом проверки через сессию запроса"""
         cache_key_code = f'2fa_code_{student_code}'
         cache_key_time = f'2fa_time_{student_code}'
         
@@ -45,44 +45,44 @@ class TwoFAService:
         return None, 0
     
     def store_2fa_code(self, student_code, code, request=None):
-        """Store 2FA code in cache with timestamp - also stores in session if request provided"""
+        """Сохранить код 2FA в кэш с меткой времени - также сохраняет в сессии если запрос предоставлен"""
         cache_key_code = f'2fa_code_{student_code}'
         cache_key_time = f'2fa_time_{student_code}'
         
         import time
         timestamp = int(time.time())
         
-        # Store in cache (for backward compatibility)
+        # Сохраняем в кэш (для обратной совместимости)
         cache.set(cache_key_code, code, timeout=300)  # 5 minutes
         cache.set(cache_key_time, timestamp, timeout=300)
         
-        # Also store in session if request provided (avoids cross-process cache issues)
+        # Также сохраняем в сессии если запрос предоставлен (избегает проблем с межпроцессным кэшем)
         if request and hasattr(request, 'session'):
             request.session['2fa_code'] = code
             request.session['2fa_timestamp'] = timestamp
-            request.session['2fa_session_key'] = request.session.session_key  # Bind to session
+            request.session['2fa_session_key'] = request.session.session_key  # Привязываем к сессии
             request.session.save()
         
-        # Verify it was stored
+        # Проверяем, что сохранено
         stored = cache.get(cache_key_code)
         stored_time = cache.get(cache_key_time)
         logger.info(f"Stored 2FA code for {student_code}: code={code}, stored={stored}, time={stored_time}")
     
     def verify_2fa_code(self, student_code: str, code: str, request=None) -> bool:
-        """Verify 2FA code - checks cache and session"""
+        """Проверить код 2FA - проверяет кэш и сессию"""
         cache_key_code = f"2fa_code_{student_code}"
         cache_key_time = f"2fa_time_{student_code}"
         
-        # Try cache first
+        # Сначала пробуем кэш
         stored_code = cache.get(cache_key_code)
         
-        # Fallback to session if available (avoids cross-process cache issues)
+        # Запасной вариант в сессию если доступно (избегает проблем с межпроцессным кэшем)
         if stored_code is None and request and hasattr(request, 'session'):
             stored_code = request.session.get('2fa_code')
             stored_time = request.session.get('2fa_timestamp')
             stored_session_key = request.session.get('2fa_session_key')
             
-            # Verify code belongs to current session (prevents session fixation attacks)
+            # Проверяем, что код принадлежит текущей сессии (предотвращает атаки фиксации сессии)
             if stored_code and stored_time:
                 if stored_session_key and stored_session_key != request.session.session_key:
                     stored_code = None  # Code from different session
@@ -90,15 +90,15 @@ class TwoFAService:
                     import time
                     remaining = 300 - (int(time.time()) - stored_time)
                     if remaining <= 0:
-                        stored_code = None  # Expired
+                        stored_code = None  # Истек
         
         logger.info(f"Verifying 2FA for {student_code}: provided={code}, stored={stored_code}")
         
         if stored_code and stored_code == code:
-            # Clear from cache
+            # Очищаем из кэша
             cache.delete(cache_key_code)
             cache.delete(cache_key_time)
-            # Clear from session
+            # Очищаем из сессии
             if request and hasattr(request, 'session'):
                 request.session.pop('2fa_code', None)
                 request.session.pop('2fa_timestamp', None)
@@ -109,15 +109,15 @@ class TwoFAService:
         return False
     
     def send_2fa_code_telegram_sync(self, user, code):
-        """Send 2FA code via Telegram (synchronous version)"""
+        """Отправить код 2FA через Telegram (синхронная версия)"""
         try:
             bot_token = getattr(settings, 'TELEGRAM_BOT_TOKEN', None)
             if not bot_token:
-                return False, "TELEGRAM_BOT_TOKEN is not configured"
+                return False, "TELEGRAM_BOT_TOKEN не настроен"
 
             binding = TelegramBinding.objects.filter(user=user, is_active=True).select_related('user').first()
             if not binding or not binding.telegram_id or binding.telegram_id == 0:
-                return False, "Telegram account is not linked"
+                return False, "Telegram аккаунт не привязан"
 
             chat_id = binding.telegram_id
             text = (
@@ -139,20 +139,20 @@ class TwoFAService:
                     return False, f"Telegram API returned {resp.status}: {body[:200]}"
 
             logger.info(f"Sent 2FA code to Telegram for user {user.student_code} (chat_id={chat_id})")
-            return True, "2FA code sent successfully"
+            return True, "Код 2FA успешно отправлен"
         except Exception as e:
             logger.error(f"Error sending 2FA code via Telegram: {e}")
             return False, str(e)
     
     def send_2fa_code_email(self, user, code):
-        """Send 2FA code via email"""
+        """Отправить код 2FA через email"""
         try:
-            # Get email from user - check multiple possible fields
+            # Получаем email от пользователя - проверяем несколько возможных полей
             email = getattr(user, 'email', None) or getattr(user, 'student_code', None)
             if not email:
-                return False, "User does not have an email address"
+                return False, "У пользователя нет email адреса"
             
-            # Ensure email format (if student_code is used, append domain)
+            # Обеспечиваем формат email (если используется student_code, добавляем домен)
             if '@' not in str(email):
                 email = f"{email}@student.bntu.by"
             
@@ -174,10 +174,10 @@ class TwoFAService:
             )
             
             logger.info(f"Sent 2FA code to email for user {user.student_code}")
-            return True, "2FA code sent successfully"
+            return True, "Код 2FA успешно отправлен"
         except Exception as e:
             logger.error(f"Error sending 2FA code via email: {e}")
             return False, str(e)
 
-# Create singleton instance
+# Создаем единственный экземпляр
 twofa_service = TwoFAService()

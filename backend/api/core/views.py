@@ -1,5 +1,5 @@
 """
-Authentication and session management views
+Представления для аутентификации и управления сессиями
 """
 import json
 import logging
@@ -492,9 +492,9 @@ def get_user_sessions(request):
             session_data = {
                 'id': session.id,
                 'session_key': session.session_key,
-                'browser': session.browser or 'Unknown Browser',
-                'os': session.os or 'Unknown OS',
-                'ip_address': session.ip_address or 'Unknown IP',
+                'browser': session.browser or 'Неизвестный браузер',
+                'os': session.os or 'Неизвестная ОС',
+                'ip_address': session.ip_address or 'Неизвестный IP',
                 'created_at': session.created_at.isoformat() if session.created_at else None,
                 'last_activity': session.last_activity.isoformat() if session.last_activity else None,
                 'is_current': is_current,
