@@ -25,6 +25,9 @@ class TwoFAAuthenticationMiddleware(MiddlewareMixin):
             '/api/auth/check',
             '/api/user/by-code/',
             '/api/logout',
+            '/api/news',
+            '/api/literature',
+            '/api/schedule',
             '/admin/',
             '/static/',
             '/media/',
@@ -44,7 +47,7 @@ class TwoFAAuthenticationMiddleware(MiddlewareMixin):
             return None
         
         try:
-            from .models import User
+            from ...models import User
             user = User.objects.filter(student_code=student_code).first()
             if not user:
                 return None

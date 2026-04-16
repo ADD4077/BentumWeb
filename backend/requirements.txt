@@ -11,3 +11,7 @@ gunicorn
 aiogram
 python-dotenv
 asgiref
+pydantic
+pytest
+pytest-django
+drf-spectacular

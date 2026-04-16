@@ -18,7 +18,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_ROOT = BASE_DIR / "static"
 STATIC_URL = '/static/'
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", 'django-insecure-change-this-in-production')
+if SECRET_KEY == 'django-insecure-change-this-in-production':
+    import warnings
+    warnings.warn('Using default SECRET_KEY. Set DJANGO_SECRET_KEY environment variable in production!')
 
 DEBUG = bool(os.environ.get("DEBUG", default=0))
 
@@ -41,6 +44,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'corsheaders',
+    'drf_spectacular',
+    'rest_framework',
     'api',
 ]
 
@@ -64,12 +69,12 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'api.middleware.DisableCSRFMiddleware',  # Disable CSRF for API requests
+    'api.common.middleware.DisableCSRFMiddleware',  # Disable CSRF for API requests
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'api.middleware.UpdateLastLoginMiddleware',
-    'api.twofa_middleware.TwoFAAuthenticationMiddleware',
+    'api.common.middleware.UpdateLastLoginMiddleware',
+    'api.security.twofa.middleware.TwoFAAuthenticationMiddleware',
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -99,11 +104,11 @@ DATABASES = {
          'ENGINE': 'django.db.backends.{}'.format(
              os.getenv('DATABASE_ENGINE', 'mysql')
          ),
-         'NAME': os.getenv('DATABASE_NAME'),
-         'USER': os.getenv('DATABASE_USERNAME'),
-         'PASSWORD': os.getenv('DATABASE_PASSWORD'),
-         'HOST': os.getenv('DATABASE_HOST'),
-         'PORT': os.getenv('DATABASE_PORT'),
+         'NAME': os.getenv('DATABASE_NAME', 'dockerdjango'),
+         'USER': os.getenv('DATABASE_USERNAME', 'root'),
+         'PASSWORD': os.getenv('DATABASE_PASSWORD', 'root'),
+         'HOST': os.getenv('DATABASE_HOST', 'localhost'),
+         'PORT': os.getenv('DATABASE_PORT', '3306'),
      }
 }
 
@@ -136,7 +141,6 @@ USE_TZ = True
 
 
 
-STATIC_URL = 'static/'
 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -144,8 +148,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Cache settings for rate limiting
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-        'LOCATION': 'django_cache',
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'bentum-cache',
     }
 }
 
@@ -153,11 +157,25 @@ CACHES = {
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# REST Framework settings
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# drf-spectacular settings
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Bentum API',
+    'DESCRIPTION': 'API для образовательной платформы Бентум',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
+
 # Telegram Bot settings
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-TELEGRAM_TOPIC_ID = 9                   # ID темы для заявок поддержки
-TELEGRAM_NEW_USERS_TOPIC_ID = 3  # ID темы для уведомлений о новых пользователях
+TELEGRAM_TOPIC_ID = 9
+TELEGRAM_NEW_USERS_TOPIC_ID = 3
+WEB_APP_URL = os.getenv('WEB_APP_URL', 'https://bentum.ru')
 
 # Email settings for 2FA
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')

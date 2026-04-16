@@ -32,9 +32,9 @@ def get_2fa_config(request):
         user = User.objects.filter(student_code=student_code).first()
         if not user:
             return JsonResponse({'success': False, 'detail': 'User not found'}, status=404)
-        
-        binding = TelegramBinding.objects.filter(user=user, is_active=True).first()
-        
+
+        binding = TelegramBinding.objects.filter(user=user, is_active=True).select_related('user').first()
+
         # Handle POST request for setting 2FA config
         if request.method == 'POST':
             try:
@@ -50,7 +50,7 @@ def get_2fa_config(request):
                     return JsonResponse({'success': False, 'detail': 'Invalid method'}, status=400)
 
                 if method == 'telegram':
-                    binding = TelegramBinding.objects.filter(user=user, is_active=True).first()
+                    binding = TelegramBinding.objects.filter(user=user, is_active=True).select_related('user').first()
                     if not binding or not binding.telegram_id or binding.telegram_id == 0:
                         return JsonResponse({'success': False, 'detail': 'Telegram account is not linked'}, status=400)
 
@@ -113,7 +113,7 @@ def verify_2fa(request):
         if len(code) != 6 or not code.isdigit():
             return JsonResponse({'success': False, 'detail': 'Invalid code format'}, status=400)
 
-        if not twofa_service.verify_2fa_code(student_code, code):
+        if not twofa_service.verify_2fa_code(student_code, code, request):
             return JsonResponse({'success': False, 'detail': 'Invalid code'}, status=400)
 
         # Сохраняем сессию с проверкой на ошибки
@@ -168,7 +168,7 @@ def resend_2fa_code(request):
         
         # Generate new code if existing is expired or doesn't exist
         code = twofa_service.generate_6fa_code()
-        twofa_service.store_2fa_code(student_code, code)
+        twofa_service.store_2fa_code(student_code, code, request)
 
         if user.twofa_method == 'telegram':
             ok, message = twofa_service.send_2fa_code_telegram_sync(user, code)

@@ -2,14 +2,10 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.utils.decorators import method_decorator
-from django.views import View
 from django.db import transaction
 from django.core.paginator import Paginator
-from datetime import datetime
 
 from .models import User, Administration
-from .func import authorize
 from .ban_service import BanService
 
 @csrf_exempt
@@ -168,10 +164,13 @@ def get_administrators(request):
         paginator = Paginator(admin_records, per_page)
         page_obj = paginator.get_page(page)
         
+        # Batch check ban status for all administrators to avoid N+1 queries
+        admin_student_codes = [record.administrator.student_code for record in page_obj]
+        ban_statuses = {code: BanService.check_ban_status(code) for code in admin_student_codes}
+        
         administrators = []
         for record in page_obj:
-            # Проверяем статус бана через BanService
-            ban_status = BanService.check_ban_status(record.administrator.student_code)
+            ban_status = ban_statuses[record.administrator.student_code]
             
             administrators.append({
                 "id": record.id,

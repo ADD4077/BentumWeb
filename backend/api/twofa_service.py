@@ -30,7 +30,7 @@ class TwoFAService:
         return ''.join(random.choices(string.digits, k=6))
     
     def get_existing_code(self, student_code):
-        """Get existing valid code if any"""
+        """Get existing valid code if any - uses cache with fallback to verify via request session"""
         cache_key_code = f'2fa_code_{student_code}'
         cache_key_time = f'2fa_time_{student_code}'
         
@@ -44,33 +44,65 @@ class TwoFAService:
                 return code, remaining
         return None, 0
     
-    def store_2fa_code(self, student_code, code):
-        """Store 2FA code in cache with timestamp"""
+    def store_2fa_code(self, student_code, code, request=None):
+        """Store 2FA code in cache with timestamp - also stores in session if request provided"""
         cache_key_code = f'2fa_code_{student_code}'
         cache_key_time = f'2fa_time_{student_code}'
         
         import time
         timestamp = int(time.time())
         
+        # Store in cache (for backward compatibility)
         cache.set(cache_key_code, code, timeout=300)  # 5 minutes
         cache.set(cache_key_time, timestamp, timeout=300)
+        
+        # Also store in session if request provided (avoids cross-process cache issues)
+        if request and hasattr(request, 'session'):
+            request.session['2fa_code'] = code
+            request.session['2fa_timestamp'] = timestamp
+            request.session['2fa_session_key'] = request.session.session_key  # Bind to session
+            request.session.save()
         
         # Verify it was stored
         stored = cache.get(cache_key_code)
         stored_time = cache.get(cache_key_time)
         logger.info(f"Stored 2FA code for {student_code}: code={code}, stored={stored}, time={stored_time}")
     
-    def verify_2fa_code(self, student_code: str, code: str) -> bool:
-        """Verify 2FA code"""
+    def verify_2fa_code(self, student_code: str, code: str, request=None) -> bool:
+        """Verify 2FA code - checks cache and session"""
         cache_key_code = f"2fa_code_{student_code}"
         cache_key_time = f"2fa_time_{student_code}"
         
+        # Try cache first
         stored_code = cache.get(cache_key_code)
+        
+        # Fallback to session if available (avoids cross-process cache issues)
+        if stored_code is None and request and hasattr(request, 'session'):
+            stored_code = request.session.get('2fa_code')
+            stored_time = request.session.get('2fa_timestamp')
+            stored_session_key = request.session.get('2fa_session_key')
+            
+            # Verify code belongs to current session (prevents session fixation attacks)
+            if stored_code and stored_time:
+                if stored_session_key and stored_session_key != request.session.session_key:
+                    stored_code = None  # Code from different session
+                else:
+                    import time
+                    remaining = 300 - (int(time.time()) - stored_time)
+                    if remaining <= 0:
+                        stored_code = None  # Expired
+        
         logger.info(f"Verifying 2FA for {student_code}: provided={code}, stored={stored_code}")
         
         if stored_code and stored_code == code:
+            # Clear from cache
             cache.delete(cache_key_code)
             cache.delete(cache_key_time)
+            # Clear from session
+            if request and hasattr(request, 'session'):
+                request.session.pop('2fa_code', None)
+                request.session.pop('2fa_timestamp', None)
+                request.session.pop('2fa_session_key', None)
             logger.info(f"2FA verified successfully for {student_code}")
             return True
         logger.warning(f"2FA verification failed for {student_code}: provided={code}, stored={stored_code}")
@@ -83,7 +115,7 @@ class TwoFAService:
             if not bot_token:
                 return False, "TELEGRAM_BOT_TOKEN is not configured"
 
-            binding = TelegramBinding.objects.filter(user=user, is_active=True).first()
+            binding = TelegramBinding.objects.filter(user=user, is_active=True).select_related('user').first()
             if not binding or not binding.telegram_id or binding.telegram_id == 0:
                 return False, "Telegram account is not linked"
 

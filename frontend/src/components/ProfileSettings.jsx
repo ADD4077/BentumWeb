@@ -531,6 +531,15 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
     }
   };
 
+  const confirmDelete = async () => {
+    if (deleteModal.type === 'avatar') {
+      await performDeleteAvatar();
+    } else if (deleteModal.type === 'banner') {
+      await performDeleteBanner();
+    }
+    setDeleteModal({ isOpen: false, type: null });
+  };
+
   const tabs = [
     { id: 'profile', label: 'Профиль', icon: User },
     { id: 'security', label: 'Безопасность', icon: Shield },
@@ -1110,22 +1119,6 @@ const ProfileSettings = ({ darkMode, onBack, user, userMedia, onProfileUpdate, o
                         <div className="space-y-4">
                           {telegramLink ? (
                             <div className="space-y-3">
-                              <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl">
-                                <div className="flex items-start gap-3">
-                                  <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                                    <Link className="w-4 h-4 text-white" />
-                                  </div>
-                                  <div className="flex-1">
-                                    <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200 mb-1">
-                                      Ссылка для привязки открыта в новой вкладке
-                                    </p>
-                                    <p className="text-xs text-emerald-600 dark:text-emerald-400">
-                                      Перейдите в Telegram и нажмите /start для завершения привязки
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                              
                               <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-lg">
                                 <p className="text-xs text-slate-600 dark:text-slate-400 break-all font-mono">
                                   {telegramLink}

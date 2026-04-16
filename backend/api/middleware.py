@@ -2,6 +2,7 @@ import time
 from django.utils import timezone
 from django.middleware.csrf import get_token
 from django.utils.deprecation import MiddlewareMixin
+from django.core.cache import cache
 from .models import User
 
 class DisableCSRFMiddleware(MiddlewareMixin):
@@ -21,9 +22,6 @@ class UpdateLastLoginMiddleware:
     
     def __init__(self, get_response):
         self.get_response = get_response
-        
-        # Кэш для предотвращения слишком частых обновлений
-        self.last_update_cache = {}
         self.MIN_UPDATE_INTERVAL = 300  # 5 минут в секундах
     
     def __call__(self, request):
@@ -50,10 +48,11 @@ class UpdateLastLoginMiddleware:
         if not student_code:
             return False
         
-        # Проверяем, не обновляли ли мы недавно (для производительности)
-        current_time = time.time()
-        last_update = self.last_update_cache.get(student_code, 0)
+        # Проверяем, не обновляли ли мы недавно (используем Django cache)
+        cache_key = f'last_login_update_{student_code}'
+        last_update = cache.get(cache_key, 0)
         
+        current_time = time.time()
         if current_time - last_update < self.MIN_UPDATE_INTERVAL:
             return False
         
@@ -75,8 +74,9 @@ class UpdateLastLoginMiddleware:
             )
             
             if updated > 0:
-                # Обновляем кэш
-                self.last_update_cache[student_code] = time.time()
+                # Обновляем кэш (Django cache)
+                cache_key = f'last_login_update_{student_code}'
+                cache.set(cache_key, time.time(), self.MIN_UPDATE_INTERVAL)
                 
                 # Обновляем в сессии тоже для консистентности
                 request.session['last_login'] = int(timezone.now().timestamp())

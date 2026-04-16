@@ -12,9 +12,17 @@ from api.models import (
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ["fullname", "student_code", "faculty", "created_at"]
-    list_filter = ["faculty", "created_at"]
-    search_fields = ["fullname", "student_code"]
+    list_display = ["id", "fullname", "student_code", "faculty", "email", "created_at", "last_login", "twofa_enabled"]
+    list_filter = ["faculty", "created_at", "twofa_enabled", "twofa_method"]
+    search_fields = ["fullname", "student_code", "email", "id"]
+    ordering = ['-created_at']
+    
+    # Все поля доступны для редактирования
+    fields = [
+        'fullname', 'student_code', 'faculty', 'bilet_code', 
+        'email', 'created_at', 'last_login',
+        'twofa_enabled', 'twofa_method'
+    ]
     
     readonly_fields = ['related_objects_info']
     
@@ -35,19 +43,19 @@ class UserAdmin(admin.ModelAdmin):
             info.append(f"Медиа файлы: {media_count}")
         
         # Сессии
-        from .models import UserSession
+        from api.models import UserSession
         session_count = UserSession.objects.filter(student_code=obj.student_code).count()
         if session_count > 0:
             info.append(f"Сессии: {session_count}")
         
         # Баны
-        from .models import UserBan
+        from api.models import UserBan
         ban_count = UserBan.objects.filter(user_id=obj.id, is_active=True).count()
         if ban_count > 0:
             info.append(f"Активные баны: {ban_count}")
         
         # Админ права
-        from .models import Administration
+        from api.models import Administration
         admin_count = Administration.objects.filter(administrator=obj, is_active=True).count()
         if admin_count > 0:
             info.append(f"Админ права: {admin_count}")
@@ -67,15 +75,15 @@ class UserAdmin(admin.ModelAdmin):
             obj.media_files.all().delete()
             
             # Удаляем сессии
-            from .models import UserSession
+            from api.models import UserSession
             UserSession.objects.filter(student_code=obj.student_code).delete()
             
             # Удаляем бан записи
-            from .models import UserBan
+            from api.models import UserBan
             UserBan.objects.filter(user_id=obj.id).delete()
             
             # Удаляем администраторские записи
-            from .models import Administration
+            from api.models import Administration
             Administration.objects.filter(administrator=obj).delete()
             
             # Теперь удаляем пользователя
@@ -84,10 +92,39 @@ class UserAdmin(admin.ModelAdmin):
             raise Exception(f"Ошибка при удалении пользователя: {str(e)}")
 
 
-admin.site.register(UserProfileMedia)
-admin.site.register(MediaOptimization)
-admin.site.register(Administration)
-admin.site.register(UserBan)
+@admin.register(UserProfileMedia)
+class UserProfileMediaAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'media_type', 'original_filename', 'is_active', 'created_at']
+    list_filter = ['media_type', 'is_active', 'created_at']
+    search_fields = ['user__fullname', 'user__student_code', 'file_path', 'original_filename']
+    raw_id_fields = ['user']
+    fields = ['user', 'media_type', 'original_filename', 'file_path', 'file_size', 'mime_type', 'width', 'height', 'is_active', 'created_at']
+
+
+@admin.register(MediaOptimization)
+class MediaOptimizationAdmin(admin.ModelAdmin):
+    list_display = ['id', 'original_media', 'size_type', 'file_size', 'created_at']
+    list_filter = ['size_type', 'created_at']
+    search_fields = ['original_media__user__student_code']
+    raw_id_fields = ['original_media']
+    fields = ['original_media', 'size_type', 'file_path', 'file_size', 'width', 'height', 'created_at']
+
+
+@admin.register(Administration)
+class AdministrationAdmin(admin.ModelAdmin):
+    list_display = ['id', 'administrator', 'appointed_by', 'is_active', 'appointed_at', 'notes']
+    list_filter = ['is_active', 'appointed_at']
+    search_fields = ['administrator__fullname', 'administrator__student_code', 'notes']
+    raw_id_fields = ['administrator', 'appointed_by']
+    fields = ['administrator', 'appointed_by', 'is_active', 'appointed_at', 'notes']
+
+
+@admin.register(UserBan)
+class UserBanAdmin(admin.ModelAdmin):
+    list_display = ['id', 'student_code', 'user_id', 'is_active', 'created_at', 'ban_date', 'banned_by_id']
+    list_filter = ['is_active', 'created_at', 'ban_date']
+    search_fields = ['student_code', 'ban_reason', 'banned_by_id']
+    fields = ['student_code', 'user_id', 'banned_by_id', 'ban_reason', 'is_active', 'created_at', 'ban_date', 'ban_duration_seconds']
 
 
 @admin.register(UserSession)

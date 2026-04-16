@@ -41,7 +41,7 @@ function AppContent() {
     isProfileModalOpen, setIsProfileModalOpen,
     isProfileEditModalOpen, setIsProfileEditModalOpen,
     isProfileSettingsOpen, setIsProfileSettingsOpen,
-    is2FAModalOpen,
+    is2FAModalOpen, setIs2FAModalOpen,
     is2FASetupModalOpen,
     setIs2FASetupModalOpen,
     isCategoryModalOpen,

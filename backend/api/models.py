@@ -22,10 +22,10 @@ class User(models.Model):
 class UserSession(models.Model):
     student_code = models.CharField(max_length=10, db_index=True)
     session_key = models.CharField(max_length=40, unique=True)
-    user_agent = models.TextField(blank=True, null=True)  # Полный User-Agent строка
+    user_agent = models.TextField(blank=True, null=True)  # Полная строка User-Agent
     browser = models.CharField(max_length=100, blank=True, null=True)  # Браузер
     os = models.CharField(max_length=100, blank=True, null=True)  # Операционная система
-    ip_address = models.GenericIPAddressField(blank=True, null=True)  # IP адрес
+    ip_address = models.GenericIPAddressField(blank=True, null=True)  # IP-адрес
     created_at = models.DateTimeField(auto_now_add=True)
     last_activity = models.DateTimeField(auto_now=True)  # Последняя активность
 
@@ -49,11 +49,11 @@ class UserProfileMedia(models.Model):
     ])
     original_filename = models.CharField(max_length=255)
     file_path = models.CharField(max_length=500)
-    file_size = models.IntegerField()  # в байтах
+    file_size = models.IntegerField()  # Размер в байтах
     mime_type = models.CharField(max_length=100)
     width = models.IntegerField(null=True, blank=True)
     height = models.IntegerField(null=True, blank=True)
-    is_active = models.BooleanField(default=False)  # Текущий активный медиа
+    is_active = models.BooleanField(default=False)  # Текущее активное медиа
     created_at = models.IntegerField(null=True, blank=True)
     
     class Meta:
@@ -104,7 +104,7 @@ class Administration(models.Model):
         ]
     
     def __str__(self):
-        return f"Admin: {self.administrator.student_code} (назначен {self.appointed_at})"
+        return f"Админ: {self.administrator.student_code} (назначен {self.appointed_at})"
 
 
 class UserBan(models.Model):
@@ -113,7 +113,7 @@ class UserBan(models.Model):
     user_id = models.IntegerField(db_index=True)
     banned_by_id = models.IntegerField(null=True, blank=True)  # ID администратора
     ban_date = models.DateTimeField(auto_now_add=True)
-    ban_duration_seconds = models.IntegerField()  # Длительность в Unix секундах
+    ban_duration_seconds = models.IntegerField()  # Длительность в Unix-секундах
     ban_reason = models.TextField()
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -129,7 +129,7 @@ class UserBan(models.Model):
         ]
     
     def __str__(self):
-        return f"Ban: {self.student_code} (до {self.ban_date})"
+        return f"Бан: {self.student_code} (до {self.ban_date})"
 
 
 class TelegramBinding(models.Model):
@@ -154,4 +154,4 @@ class TelegramBinding(models.Model):
         ]
     
     def __str__(self):
-        return f"Telegram binding: {self.user.student_code} -> @{self.telegram_username or self.telegram_id}"
+        return f"Привязка Telegram: {self.user.student_code} -> @{self.telegram_username or self.telegram_id}"

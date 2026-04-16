@@ -4,27 +4,30 @@ from typing import Union
 
 def authorize(login: str, password: str) -> Union[bool, tuple[str, str]]:
     """
-    Checks if user is student or not
-    If student return fullname and faculty
-    Otherwise return False
+    Проверяет, является ли пользователь студентом
+    Если студент - возвращает fullname и faculty
+    Иначе возвращает False
     """
     try:
-        print(f"[AUTH] Attempting authorize with login={login}")
+        print(f"[AUTH] Попытка авторизации с login={login}")
         
         session = requests.Session()
-        response = session.get("https://bntu.by/user/login", verify=False)
-        print(f"[AUTH] Login page status: {response.status_code}")
+        session.verify = True  # Включить проверку SSL для безопасности
+        session.timeout = 30  # Таймаут 30 секунд
+        
+        response = session.get("https://bntu.by/user/login", timeout=30)
+        print(f"[AUTH] Статус страницы входа: {response.status_code}")
         content = response.text
         cookies = response.cookies
         
         soup = bs4.BeautifulSoup(content, "html.parser")
         token_element = soup.form.find("input", attrs={"name": "_token"})
         if not token_element:
-            print("[AUTH] ERROR: Could not find CSRF token")
+            print("[AUTH] ОШИБКА: Не удалось найти CSRF токен")
             return False
             
         token = token_element["value"]
-        print(f"[AUTH] Token extracted: {token[:20]}...")
+        print(f"[AUTH] Токен извлечен: {token[:20]}...")
         
         headers = {
             "cookie": f"XSRF-TOKEN={cookies.get('XSRF-TOKEN', '')}; laravel_session={cookies.get('laravel_session', '')}"
@@ -33,23 +36,23 @@ def authorize(login: str, password: str) -> Union[bool, tuple[str, str]]:
         data = {"_token": token, "username": login, "password": password}
         
         response = session.post(
-            "https://bntu.by/user/auth", headers=headers, data=data, verify=False
+            "https://bntu.by/user/auth", headers=headers, data=data, timeout=30
         )
         content = response.text
-        print(f"[AUTH] Auth response status: {response.status_code}")
-        print(f"[AUTH] Auth response URL: {response.url}")
+        print(f"[AUTH] Статус ответа авторизации: {response.status_code}")
+        print(f"[AUTH] URL ответа авторизации: {response.url}")
         
         if "pay" in str(response.url):
             soup = bs4.BeautifulSoup(content, "html.parser")
             fullname_element = soup.find("h1", class_="newsName")
             if not fullname_element:
-                print("[AUTH] ERROR: Could not find fullname element")
+                print("[AUTH] ОШИБКА: Не удалось найти элемент fullname")
                 return False
                 
             fullname = fullname_element.next_sibling.next_sibling.text.split(",")[1][1:-22]
             info_div = soup.find("div", class_="dashboardInfo")
             if not info_div:
-                print("[AUTH] ERROR: Could not find dashboardInfo div")
+                print("[AUTH] ОШИБКА: Не удалось найти div dashboardInfo")
                 return False
                 
             for line in info_div.contents:
@@ -57,13 +60,13 @@ def authorize(login: str, password: str) -> Union[bool, tuple[str, str]]:
                     _, _, faculty, *_ = line.split(",")
                     break
             faculty = faculty.replace(" ", "")
-            print(f"[AUTH] Authorization success: {fullname}, {faculty}")
+            print(f"[AUTH] Авторизация успешна: {fullname}, {faculty}")
             return fullname, faculty
         else:
-            print(f"[AUTH] Authorization failed: not redirected to pay page")
-            print(f"[AUTH] Response content preview: {content[:500]}...")
+            print(f"[AUTH] Авторизация не удалась: не перенаправлен на страницу оплаты")
+            print(f"[AUTH] Предпросмотр содержимого ответа: {content[:500]}...")
             return False
             
     except Exception as e:
-        print(f"[AUTH] Authorization error: {e}")
+        print(f"[AUTH] Ошибка авторизации: {e}")
         return False
