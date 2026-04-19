@@ -6,9 +6,11 @@ import sqlite3
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from ...common.decorators import allow_unverified_2fa
 from ...common.utils import SQLiteConnection, get_sqlite_connection
 
 
+@allow_unverified_2fa
 @csrf_exempt
 def get_schedule(request):
     """Получение расписания для группы пользователя"""

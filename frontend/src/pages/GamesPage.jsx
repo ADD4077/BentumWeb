@@ -28,7 +28,7 @@ export const GamesPage = ({
             className={`px-3 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 ${
               selectedGameCategory === category.id
                 ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-gray-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:text-emerald-600 dark:hover:text-emerald-400'
+                : 'border border-gray-200/70 bg-gray-100/50 text-slate-600 shadow-lg shadow-gray-900/10 backdrop-blur-md hover:border-emerald-300 hover:text-emerald-600 dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-400 dark:shadow-black/20 dark:hover:border-emerald-600 dark:hover:text-emerald-400'
             }`}
           >
             {category.name}
@@ -44,11 +44,7 @@ export const GamesPage = ({
             {filteredGames.filter(item => item.featured).map((game) => (
               <div
                 key={game.id}
-                className={`group relative bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl overflow-hidden border hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 ${
-                  game.serverUrl
-                    ? 'border-gray-200 dark:border-slate-700'
-                    : 'border-gray-200 dark:border-slate-700'
-                }`}
+                className="group relative overflow-hidden rounded-xl border border-gray-200/70 bg-gray-100/50 shadow-lg shadow-gray-900/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20 sm:rounded-2xl"
               >
                 <div className="relative h-36 sm:h-48 overflow-hidden">
                   <img
@@ -172,7 +168,7 @@ export const GamesPage = ({
             {filteredGames.filter(item => !item.featured).map((game) => (
               <div
                 key={game.id}
-                className="group bg-white dark:bg-slate-800 rounded-lg sm:rounded-xl overflow-hidden border border-gray-200 dark:border-slate-700 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                className="group overflow-hidden rounded-lg border border-gray-200/70 bg-gray-100/50 shadow-lg shadow-gray-900/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20 sm:rounded-xl"
               >
                 <div className="relative h-28 sm:h-32 overflow-hidden">
                   <img

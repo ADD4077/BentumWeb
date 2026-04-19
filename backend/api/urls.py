@@ -2,7 +2,6 @@
 Конфигурация URL API - Модульная структура
 """
 from django.urls import path, include
-from django.contrib import admin as admin_django
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -59,5 +58,4 @@ urlpatterns = [
     path("api/admin/", include("api.admin.urls")),
     
     # Django админка
-    path("admin/", admin_django.site.urls),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

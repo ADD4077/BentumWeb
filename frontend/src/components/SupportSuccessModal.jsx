@@ -1,7 +1,7 @@
 import React from 'react';
 import { CheckCircle, X } from 'lucide-react';
 
-function SupportSuccessModal({ isOpen, onClose, darkMode }) {
+function SupportSuccessModal({ isOpen, onClose, darkMode: _darkMode }) {
   if (!isOpen) return null;
 
   return (

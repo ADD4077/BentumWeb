@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 
+from ...common.decorators import allow_unverified_2fa
 from ...models import User, TelegramBinding
 from ...telegram_binding_service import TelegramBindingService
 
@@ -15,6 +16,7 @@ telegram_binding_service = TelegramBindingService()
 logger = logging.getLogger(__name__)
 
 @csrf_exempt
+@allow_unverified_2fa
 @require_http_methods(["POST"])
 def generate_telegram_link(request):
     """Сгенерировать ссылку для привязки Telegram"""
@@ -79,6 +81,7 @@ def generate_telegram_link(request):
         }, status=500)
 
 @csrf_exempt
+@allow_unverified_2fa
 @require_http_methods(["GET"])
 def get_telegram_binding_status(request):
     """Получить статус привязки Telegram"""
@@ -135,6 +138,7 @@ def get_telegram_binding_status(request):
         }, status=500)
 
 @csrf_exempt
+@allow_unverified_2fa
 @require_http_methods(["POST"])
 def unlink_telegram_account(request):
     """Отвязать Telegram аккаунт"""
@@ -184,6 +188,7 @@ def unlink_telegram_account(request):
         }, status=500)
 
 @csrf_exempt
+@allow_unverified_2fa
 @require_http_methods(["POST"])
 def process_telegram_callback(request):
     """Привязать Telegram аккаунт по токену (вызывается ботом)"""

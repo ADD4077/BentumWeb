@@ -70,12 +70,32 @@ export const safeRemoveItem = (key) => {
  * Очищает все данные приложения из localStorage
  * @returns {boolean} успешно ли очищено
  */
-export const clearAppStorage = () => {
+export const clearAuthStorage = () => {
   const keysToRemove = [
     'token',
-    'user', 
+    'user',
     'banEndDate',
     'activeTab',
+  ];
+  
+  let success = true;
+  keysToRemove.forEach(key => {
+    if (!safeRemoveItem(key)) {
+      success = false;
+    }
+  });
+  
+  return success;
+};
+
+/**
+ * Очищает все данные приложения из localStorage
+ * @returns {boolean} успешно ли очищено
+ */
+export const clearAppStorage = () => {
+  clearAuthStorage();
+
+  const keysToRemove = [
     'openProfileModal',
     'admin_users',
     'darkMode'

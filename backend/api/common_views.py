@@ -5,10 +5,12 @@ import logging
 from datetime import datetime
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
+from .common.decorators import allow_unverified_2fa
 
 logger = logging.getLogger(__name__)
 
 
+@allow_unverified_2fa
 @api_view(['GET', 'POST', 'HEAD'])
 def health_check(request):
     """Endpoint проверки работоспособности"""

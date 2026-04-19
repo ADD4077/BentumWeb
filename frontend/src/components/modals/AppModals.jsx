@@ -27,8 +27,7 @@ export const AppModals = () => {
     isInstructionModalOpen, setIsInstructionModalOpen,
     isProfileEditModalOpen, setIsProfileEditModalOpen,
     is2FAModalOpen, setIs2FAModalOpen,
-    is2FASetupModalOpen, setIs2FASetupModalOpen,
-    closeAllModals
+    is2FASetupModalOpen, setIs2FASetupModalOpen
   } = useModal();
 
   // Обработчики 2FA

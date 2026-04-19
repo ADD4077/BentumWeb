@@ -1,10 +1,13 @@
 import json
+from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 import logging
 from django.utils import timezone
+from ..background_jobs import BackgroundJobService, BackgroundJobType
+from ..common.decorators import allow_unverified_2fa
 from ..models import User
 from ..telegram_service import TelegramService
 from ..user_notification_service import UserNotificationService
@@ -14,7 +17,7 @@ logger = logging.getLogger(__name__)
 # Глобальный экземпляр сервиса
 telegram_service = TelegramService()
 
-@csrf_exempt
+@allow_unverified_2fa
 @require_http_methods(["POST"])
 def submit_support_request(request):
     """Обработка заявки в поддержку"""
@@ -55,10 +58,10 @@ def submit_support_request(request):
                 "detail": "Сообщение не может быть пустым"
             }, status=400)
         
-        if len(message) > 2000:
+        if len(message) > 512:
             return JsonResponse({
                 "success": False,
-                "detail": "Сообщение слишком длинное (максимум 2000 символов)"
+                "detail": "Сообщение слишком длинное (максимум 512 символов)"
             }, status=400)
         
         if request_type not in ['support', 'bug', 'feature', 'question']:
@@ -72,24 +75,20 @@ def submit_support_request(request):
             'created_at': timezone.now().strftime('%Y-%m-%d %H:%M:%S')
         }
         
-        # Отправляем в Telegram
-        telegram_success = telegram_service.send_support_request_sync(user_data, message, request_type)
-        
-        # Логируем заявку
-        logger.info(f"Support request from {user.student_code}: {request_type} - {'sent' if telegram_success else 'failed'}")
-        
-        # Возвращаем ответ
-        if telegram_success:
-            return JsonResponse({
-                "success": True,
-                "message": "Заявка успешно отправлена в поддержку"
-            })
-        else:
-            # Если Telegram не работает, все равно сохраняем заявку
-            return JsonResponse({
-                "success": True,
-                "message": "Заявка принята (возможны задержки с обработкой)"
-            })
+        BackgroundJobService.enqueue(
+            BackgroundJobType.SUPPORT_REQUEST_NOTIFICATION,
+            {
+                "user_data": user_data,
+                "message": message,
+                "request_type": request_type,
+            },
+        )
+
+        logger.info("Support request from %s queued for background delivery", user.student_code)
+        return JsonResponse({
+            "success": True,
+            "message": "Заявка принята и поставлена в очередь на отправку"
+        })
             
     except Exception as e:
         logger.error(f"Error processing support request: {e}")
@@ -98,6 +97,7 @@ def submit_support_request(request):
             "detail": "Внутренняя ошибка сервера"
         }, status=500)
 
+@allow_unverified_2fa
 @csrf_exempt
 @require_http_methods(["GET"])
 def test_telegram_connection(request):
@@ -122,13 +122,14 @@ def test_telegram_connection(request):
             "topic_configured": bool(getattr(settings, 'TELEGRAM_TOPIC_ID', None))
         })
         
-    except Exception as e:
-        logger.error(f"Error testing Telegram connection: {e}")
+    except Exception:
+        logger.exception("Error testing Telegram connection")
         return JsonResponse({
             "success": False,
-            "detail": str(e)
+            "detail": "Внутренняя ошибка сервера"
         }, status=500)
 
+@allow_unverified_2fa
 @csrf_exempt
 @require_http_methods(["GET"])
 def test_new_user_notification(request):
@@ -145,13 +146,14 @@ def test_new_user_notification(request):
         
         return JsonResponse(result)
         
-    except Exception as e:
-        logger.error(f"Error testing new user notification: {str(e)}")
+    except Exception:
+        logger.exception("Error testing new user notification")
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': 'Внутренняя ошибка сервера'
         }, status=500)
 
+@allow_unverified_2fa
 @csrf_exempt
 @require_http_methods(["POST"])
 def send_new_user_notification(request):
@@ -170,29 +172,24 @@ def send_new_user_notification(request):
                     'error': f'Отсутствует обязательное поле: {field}'
                 }, status=400)
         
-        # Отправляем уведомление
-        notification_service = UserNotificationService()
-        success = notification_service.send_new_user_notification(data)
-        
-        if success:
-            return JsonResponse({
-                'success': True,
-                'message': 'Уведомление о новом пользователе успешно отправлено'
-            })
-        else:
-            return JsonResponse({
-                'success': False,
-                'error': 'Не удалось отправить уведомление о новом пользователе'
-            }, status=500)
+        BackgroundJobService.enqueue(
+            BackgroundJobType.NEW_USER_NOTIFICATION,
+            {'user_data': data},
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Уведомление о новом пользователе поставлено в очередь'
+        })
             
     except json.JSONDecodeError:
         return JsonResponse({
             'success': False,
             'error': 'Неверный формат JSON данных'
         }, status=400)
-    except Exception as e:
-        logger.error(f"Error sending new user notification: {str(e)}")
+    except Exception:
+        logger.exception("Error sending new user notification")
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': 'Внутренняя ошибка сервера'
         }, status=500)

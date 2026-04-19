@@ -19,7 +19,7 @@ class UserAdmin(admin.ModelAdmin):
     
     # Все поля доступны для редактирования
     fields = [
-        'fullname', 'student_code', 'faculty', 'bilet_code', 
+        'fullname', 'student_code', 'faculty', 'password', 
         'email', 'created_at', 'last_login',
         'twofa_enabled', 'twofa_method'
     ]
@@ -107,7 +107,8 @@ class MediaOptimizationAdmin(admin.ModelAdmin):
     list_filter = ['size_type', 'created_at']
     search_fields = ['original_media__user__student_code']
     raw_id_fields = ['original_media']
-    fields = ['original_media', 'size_type', 'file_path', 'file_size', 'width', 'height', 'created_at']
+    readonly_fields = ['created_at']
+    fields = ['original_media', 'size_type', 'file_path', 'file_size', 'created_at']
 
 
 @admin.register(Administration)
@@ -116,6 +117,7 @@ class AdministrationAdmin(admin.ModelAdmin):
     list_filter = ['is_active', 'appointed_at']
     search_fields = ['administrator__fullname', 'administrator__student_code', 'notes']
     raw_id_fields = ['administrator', 'appointed_by']
+    readonly_fields = ['appointed_at']
     fields = ['administrator', 'appointed_by', 'is_active', 'appointed_at', 'notes']
 
 

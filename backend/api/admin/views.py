@@ -1,6 +1,5 @@
 import json
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.db import transaction
 from django.core.paginator import Paginator
@@ -9,7 +8,6 @@ from ..models import User, Administration
 from ..ban_service import BanService
 from ..common.utils import get_user_full_data
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def appoint_administrator(request):
     """Назначение администратора"""
@@ -81,7 +79,6 @@ def appoint_administrator(request):
     except Exception as e:
         return JsonResponse({"success": False, "detail": f"Ошибка сервера: {str(e)}"}, status=500)
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def remove_administrator(request):
     """Снятие администратора"""
@@ -132,7 +129,6 @@ def remove_administrator(request):
     except Exception as e:
         return JsonResponse({"success": False, "detail": f"Ошибка сервера: {str(e)}"}, status=500)
 
-@csrf_exempt
 @require_http_methods(["GET"])
 def get_administrators(request):
     """Получение списка администраторов"""
@@ -167,7 +163,7 @@ def get_administrators(request):
         
         # Batch check ban status for all administrators to avoid N+1 queries
         admin_student_codes = [record.administrator.student_code for record in page_obj]
-        ban_statuses = {code: BanService.check_ban_status(code) for code in admin_student_codes}
+        ban_statuses = BanService.get_ban_statuses(admin_student_codes)
         
         administrators = []
         for record in page_obj:
@@ -209,7 +205,6 @@ def get_administrators(request):
     except Exception as e:
         return JsonResponse({"success": False, "detail": f"Ошибка сервера: {str(e)}"}, status=500)
 
-@csrf_exempt
 @require_http_methods(["GET"])
 def get_administration_history(request):
     """Получение истории назначений администраторов"""

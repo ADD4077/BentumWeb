@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, RefreshCw, ArrowRight } from 'lucide-react';
+import { Home, RefreshCw } from 'lucide-react';
 import { navigateToHome } from '../utils/navigation.js';
 
 function NotFoundPage({ setActiveTab }) {
@@ -20,15 +20,6 @@ function NotFoundPage({ setActiveTab }) {
 
   const handleRefresh = () => {
     window.location.reload();
-  };
-
-  const handleSearch = (e) => {
-    if (e.key === 'Enter') {
-      const query = e.target.value;
-      if (query.trim()) {
-        window.location.href = `/search?q=${encodeURIComponent(query)}`;
-      }
-    }
   };
 
   return (

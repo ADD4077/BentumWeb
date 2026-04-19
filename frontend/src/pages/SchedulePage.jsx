@@ -29,14 +29,14 @@ export const SchedulePage = () => {
         <div className="text-left self-start">
           <h2 className="text-4xl font-bold mb-2 text-slate-900 dark:text-white tracking-tight">Расписание</h2>
           <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-            <span className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700">
+            <span className="rounded-lg border border-gray-200/70 bg-gray-100/50 px-3 py-1 text-sm font-medium shadow-lg shadow-gray-900/10 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20">
               Группа {user?.student_code?.slice(0, 8) || groupInfo.group}
             </span>
             <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
             <span className="text-sm">{user?.faculty || groupInfo.faculty}</span>
           </div>
         </div>
-        <div className="relative bg-white dark:bg-slate-800 p-1.5 rounded-2xl flex shadow-inner border border-gray-200 dark:border-slate-700 w-full max-w-md mx-auto">
+        <div className="relative mx-auto flex w-full max-w-md rounded-2xl border border-gray-200/70 bg-gray-100/50 p-1.5 shadow-lg shadow-gray-900/10 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20">
           <div 
             className={`absolute top-1.5 bottom-1.5 rounded-xl bg-white dark:bg-slate-700 transition-all duration-300 ease-out shadow-sm`}
             style={{
@@ -72,8 +72,8 @@ export const SchedulePage = () => {
               (button.id === 'tomorrow' && getTomorrowDay() && selectedDay === getTomorrowDay() && weekType === getWeekType())
                 ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
                 : button.id === 'today' && !getTodayDay()
-                ? 'bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-slate-600'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-gray-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:text-emerald-600 dark:hover:text-emerald-400'
+                ? 'border border-gray-200/70 bg-gray-100/50 text-gray-400 shadow-lg shadow-gray-900/10 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-gray-500 dark:shadow-black/20'
+                : 'border border-gray-200/70 bg-gray-100/50 text-slate-600 shadow-lg shadow-gray-900/10 backdrop-blur-md hover:border-emerald-300 hover:text-emerald-600 dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-400 dark:shadow-black/20 dark:hover:border-emerald-600 dark:hover:text-emerald-400'
             }`}
           >
             {button.name}
@@ -88,7 +88,7 @@ export const SchedulePage = () => {
             className={`min-w-[3rem] h-12 sm:min-w-[4rem] sm:h-16 rounded-2xl flex flex-col items-center justify-center border-2 transition-all duration-300 ${
               selectedDay === day
                 ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-105'
-                : 'bg-white dark:bg-slate-800 border-transparent hover:border-emerald-200 dark:hover:border-slate-600 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                : 'border-gray-200/70 bg-gray-100/50 text-slate-500 shadow-lg shadow-gray-900/10 backdrop-blur-md hover:border-emerald-200 hover:text-slate-900 dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-400 dark:shadow-black/20 dark:hover:border-slate-600 dark:hover:text-slate-200'
             }`}
           >
             <span className={`text-xs sm:text-sm font-medium ${selectedDay === day ? 'opacity-80' : 'opacity-60'}`}>{day}</span>

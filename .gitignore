@@ -7,3 +7,6 @@
 **/logs
 **/media
 compose.yaml
+frontend/dist
+frontend/.env.local
+backend/static

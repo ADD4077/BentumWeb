@@ -1,5 +1,5 @@
 import React from 'react';
-import { GraduationCap, Book, Backpack, Calendar, Settings } from 'lucide-react';
+import { GraduationCap, Book, Backpack, Calendar, Settings, LogOut } from 'lucide-react';
 import { useModal } from '../../contexts/ModalContext.jsx';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useUserMedia } from '../../hooks/useUserMedia.js';
@@ -8,7 +8,7 @@ import { calculateCourseOrDefault } from '../../utils/calculateCourse.js';
 
 export const ProfileModal = () => {
   const { isProfileModalOpen, setIsProfileModalOpen, setIsProfileSettingsOpen } = useModal();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const userMedia = useUserMedia(isAuthenticated, user, isProfileModalOpen);
 
   if (!isProfileModalOpen) return null;
@@ -18,7 +18,7 @@ export const ProfileModal = () => {
       <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-hidden flex flex-col">
         <div className="relative h-32">
           {userMedia.banner_url ? (
-            <img 
+            <img
               src={buildMediaUrl(userMedia.banner_url)}
               alt="Profile Banner"
               className="w-full h-full object-cover"
@@ -30,18 +30,18 @@ export const ProfileModal = () => {
           )}
           <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2">
             {userMedia.avatar_url ? (
-              <img 
+              <img
                 src={buildMediaUrl(userMedia.avatar_url)}
                 alt="Profile Avatar"
                 className="w-32 h-32 rounded-2xl object-cover border-4 border-white dark:border-slate-800"
               />
             ) : userMedia.avatar_placeholder ? (
-              <div 
+              <div
                 className="w-32 h-32 rounded-2xl border-4 border-white dark:border-slate-800 flex items-center justify-center font-semibold bg-gray-200 dark:bg-slate-700"
-                style={{ 
+                style={{
                   color: 'rgb(156 163 175)',
                   fontSize: userMedia.avatar_placeholder.font_size,
-                  fontWeight: userMedia.avatar_placeholder.font_weight
+                  fontWeight: userMedia.avatar_placeholder.font_weight,
                 }}
               >
                 {userMedia.avatar_placeholder.initials}
@@ -52,14 +52,15 @@ export const ProfileModal = () => {
               </div>
             )}
           </div>
-          {/* Кнопка настроек профиля */}
-          <button
-            onClick={() => setIsProfileSettingsOpen(true)}
-            className="absolute top-4 right-16 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 border border-white/30"
-            title="Настройки профиля"
-          >
-            <Settings className="w-5 h-5" />
-          </button>
+          {!user?.is_banned ? (
+            <button
+              onClick={() => setIsProfileSettingsOpen(true)}
+              className="absolute top-4 right-16 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 border border-white/30"
+              title="Настройки профиля"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+          ) : null}
           <button
             onClick={() => setIsProfileModalOpen(false)}
             className="absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 border border-white/30"
@@ -86,7 +87,7 @@ export const ProfileModal = () => {
             <div className="text-left flex items-center gap-3">
               <Book className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <p className="text-base font-medium text-slate-900 dark:text-white">
-                {user?.student_code?.slice(0, 8) || 'Не указана'}
+                {user?.student_code?.slice(0, 8) || 'Не указано'}
               </p>
             </div>
             <div className="text-left flex items-center gap-3">
@@ -95,16 +96,28 @@ export const ProfileModal = () => {
                 {calculateCourseOrDefault(user?.student_code)}
               </p>
             </div>
-            <div className="text-left flex items-center gap-3 mb-8">
+            <div className="text-left flex items-center gap-3">
               <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <p className="text-base font-medium text-slate-900 dark:text-white">
                 {user?.created_at ? new Date(user.created_at * 1000).toLocaleDateString('ru-RU', {
                   day: 'numeric',
                   month: 'long',
-                  year: 'numeric'
+                  year: 'numeric',
                 }) : 'Не указана'}
               </p>
             </div>
+            {user?.is_banned ? (
+              <button
+                onClick={() => {
+                  setIsProfileModalOpen(false);
+                  logout();
+                }}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-red-500 to-red-600 px-5 py-3 font-semibold text-white"
+              >
+                <LogOut className="w-5 h-5" />
+                Выйти
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

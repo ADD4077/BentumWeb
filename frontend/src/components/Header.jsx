@@ -1,10 +1,18 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  GraduationCap,
+  LogOut,
+  MessageCircle,
+  Moon,
+  Shield,
+  Sun,
+  User,
+} from 'lucide-react';
+
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { buildMediaUrl } from '../utils/media.js';
-import { LogOut, GraduationCap, Sun, Moon, User, MessageCircle, Settings, Shield } from 'lucide-react';
 
-// Стили для скрытия скроллбара
-const scrollbarHideStyles = `
+const SCROLLBAR_HIDE_STYLES = `
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -13,6 +21,15 @@ const scrollbarHideStyles = `
     display: none;
   }
 `;
+
+const NAV_ITEMS = [
+  { id: 'home', label: 'Главная' },
+  { id: 'schedule', label: 'Расписание' },
+  { id: 'literature', label: 'Литература' },
+  { id: 'news', label: 'Новости' },
+  { id: 'games', label: 'Игровая' },
+];
+
 function BurgerIcon({ isOpen }) {
   const baseLineStyle = {
     position: 'absolute',
@@ -23,395 +40,346 @@ function BurgerIcon({ isOpen }) {
     backgroundColor: 'currentColor',
     transformOrigin: 'center',
     willChange: 'top, transform, opacity',
-    transition: 'top 450ms cubic-bezier(0.22,1,0.36,1), transform 450ms cubic-bezier(0.22,1,0.36,1), opacity 320ms cubic-bezier(0.22,1,0.36,1)',
+    transition:
+      'top 450ms cubic-bezier(0.22,1,0.36,1), transform 450ms cubic-bezier(0.22,1,0.36,1), opacity 320ms cubic-bezier(0.22,1,0.36,1)',
   };
-  const topClosed = 4;
-  const middle = 12;
-  const bottomClosed = 20;
-  const topStyle = {
-    ...baseLineStyle,
-    top: `${isOpen ? middle : topClosed}px`,
-    transform: isOpen ? 'rotate(45deg)' : 'rotate(0deg)',
-  };
-  const middleStyle = {
-    ...baseLineStyle,
-    top: `${middle}px`,
-    opacity: isOpen ? 0 : 1,
-    transform: isOpen ? 'scaleX(0.75)' : 'scaleX(1)',
-  };
-  const bottomStyle = {
-    ...baseLineStyle,
-    top: `${isOpen ? middle : bottomClosed}px`,
-    transform: isOpen ? 'rotate(-45deg)' : 'rotate(0deg)',
-  };
+
   return (
-    <span className="relative block w-6 h-6" aria-hidden="true">
-      <span style={topStyle} />
-      <span style={middleStyle} />
-      <span style={bottomStyle} />
+    <span className="relative block h-6 w-6" aria-hidden="true">
+      <span
+        style={{
+          ...baseLineStyle,
+          top: `${isOpen ? 12 : 4}px`,
+          transform: isOpen ? 'rotate(45deg)' : 'rotate(0deg)',
+        }}
+      />
+      <span
+        style={{
+          ...baseLineStyle,
+          top: '12px',
+          opacity: isOpen ? 0 : 1,
+          transform: isOpen ? 'scaleX(0.75)' : 'scaleX(1)',
+        }}
+      />
+      <span
+        style={{
+          ...baseLineStyle,
+          top: `${isOpen ? 12 : 20}px`,
+          transform: isOpen ? 'rotate(-45deg)' : 'rotate(0deg)',
+        }}
+      />
     </span>
   );
 }
-function Header({ activeTab, setActiveTab, darkMode, toggleTheme, setIsLoginModalOpen, setIsSupportModalOpen, isMobileMenuOpen, setIsMobileMenuOpen, isProfileModalOpen, setIsProfileModalOpen, userMedia }) {
+
+function NavButton({ active, label, onClick, admin = false, mobile = false }) {
+  if (admin) {
+    return (
+      <button
+        onClick={onClick}
+        className={`flex items-center gap-3 rounded-full px-4 py-3 text-left text-sm font-semibold transition-all duration-300 ${
+          active
+            ? 'bg-emerald-100 text-emerald-700 shadow-sm dark:bg-emerald-900/40 dark:text-emerald-300'
+            : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30'
+        } ${mobile ? 'w-full' : ''}`}
+      >
+        <Shield className="h-4 w-4" />
+        Админ
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-full px-4 py-2 text-sm font-semibold transition-all duration-300 ${
+        active
+          ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
+          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+      } ${mobile ? 'w-full py-3 text-left' : 'whitespace-nowrap'}`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function Header({
+  activeTab,
+  setActiveTab,
+  darkMode,
+  toggleTheme,
+  setIsLoginModalOpen,
+  setIsSupportModalOpen,
+  isMobileMenuOpen,
+  setIsMobileMenuOpen,
+  setIsProfileModalOpen,
+  userMedia,
+}) {
   const { isAuthenticated, user, logout } = useAuth();
   const [isHeaderPill, setIsHeaderPill] = useState(!isMobileMenuOpen);
-  const [isAdmin, setIsAdmin] = useState(false);
   const headerRef = useRef(null);
-  
-  // Проверка прав администратора
-  useEffect(() => {
-    if (!isAuthenticated || !user) return; // Выходим если пользователь не авторизован или еще не загружен
-    
-    // Проверяем права администратора по данным от сервера
-    if (user.is_admin) {
-      setIsAdmin(true);
-    } else {
-      setIsAdmin(false);
+
+  const isAdmin = Boolean(isAuthenticated && user?.is_admin);
+
+  const navItems = useMemo(() => {
+    const items = [...NAV_ITEMS];
+    if (isAdmin) {
+      items.push({ id: 'admin', label: 'Админ', admin: true });
     }
-  }, [isAuthenticated, user]);
+    return items;
+  }, [isAdmin]);
+
   useEffect(() => {
     if (isMobileMenuOpen) {
       setIsHeaderPill(false);
       return;
     }
-    const t = setTimeout(() => {
+
+    const timeout = setTimeout(() => {
       setIsHeaderPill(true);
     }, 300);
-    return () => clearTimeout(t);
+
+    return () => clearTimeout(timeout);
   }, [isMobileMenuOpen]);
+
   useEffect(() => {
-    if (!isMobileMenuOpen) return;
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape') {
+    if (!isMobileMenuOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
         setIsMobileMenuOpen(false);
       }
     };
-    const onPointerDown = (e) => {
+
+    const handlePointerDown = (event) => {
       if (window.matchMedia && window.matchMedia('(max-width: 767px)').matches) {
         return;
       }
-      if (!headerRef.current) return;
-      if (!headerRef.current.contains(e.target)) {
+
+      if (!headerRef.current?.contains(event.target)) {
         setIsMobileMenuOpen(false);
       }
     };
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('pointerdown', onPointerDown);
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('pointerdown', handlePointerDown);
     return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('pointerdown', handlePointerDown);
     };
   }, [isMobileMenuOpen, setIsMobileMenuOpen]);
 
-  // Внедряем стили для скрытия скроллбара
   useEffect(() => {
     const styleElement = document.createElement('style');
-    styleElement.textContent = scrollbarHideStyles;
+    styleElement.textContent = SCROLLBAR_HIDE_STYLES;
     document.head.appendChild(styleElement);
-    
+
     return () => {
       document.head.removeChild(styleElement);
     };
   }, []);
 
+  const handleSelectTab = (tabId) => {
+    setActiveTab(tabId);
+    setIsMobileMenuOpen(false);
+  };
+
+  const handleLogout = () => {
+    logout();
+    setActiveTab('home');
+    setIsMobileMenuOpen(false);
+  };
+
+  const renderAvatar = () => {
+    if (userMedia?.avatar_url) {
+      return (
+        <img
+          src={buildMediaUrl(userMedia.avatar_url)}
+          alt="Profile Avatar"
+          className="h-full w-full object-cover"
+        />
+      );
+    }
+
+    if (userMedia?.avatar_placeholder) {
+      return (
+        <div className="flex h-full w-full items-center justify-center bg-gray-200 font-bold text-gray-400 dark:bg-slate-700 dark:text-slate-500">
+          {userMedia.avatar_placeholder.initials}
+        </div>
+      );
+    }
+
+    if (user?.fullname?.charAt(0)) {
+      return <span className="font-bold text-gray-400 dark:text-slate-500">{user.fullname.charAt(0)}</span>;
+    }
+
+    return <User className="h-5 w-5 text-gray-400 dark:text-slate-500" />;
+  };
+
+  const themeButton = (
+    <button
+      onClick={toggleTheme}
+      className="rounded-full border border-transparent bg-gray-100 p-2.5 text-slate-600 transition-all hover:border-gray-200 hover:bg-gray-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:border-slate-700 dark:hover:bg-slate-700"
+    >
+      {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+    </button>
+  );
+
   return (
-    <>
-      <header ref={headerRef} className="sticky top-0 z-50 w-full bg-transparent">
-        <div className="container mx-auto px-6 py-4">
-          <div className={`relative bg-gray-100/50 dark:bg-slate-800/50 backdrop-blur-md border border-gray-200 dark:border-slate-700/50 shadow-lg shadow-gray-900/10 dark:shadow-black/20 max-w-4xl mx-auto ${
+    <header ref={headerRef} className="sticky top-0 z-50 w-full bg-transparent">
+      <div className="container mx-auto px-6 py-4">
+        <div
+          className={`relative mx-auto max-w-4xl border border-gray-200 bg-gray-100/50 shadow-lg shadow-gray-900/10 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20 ${
             isHeaderPill ? 'rounded-full' : 'rounded-[32px]'
-          }`}>
-            <div className="h-16 flex items-center justify-between px-4">
-          {isAuthenticated ? (
-            <>
-              <nav className="hidden md:flex items-center justify-between w-full">
-                <div 
-                  className="flex items-center justify-center w-10 h-10 cursor-pointer rounded-full bg-emerald-500 hover:bg-emerald-600 transition-all flex-shrink-0"
-                  onClick={() => setActiveTab('home')}
-                >
-                  <GraduationCap className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-                  <button 
-                    onClick={() => setActiveTab('home')}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 whitespace-nowrap flex-shrink-0 ${activeTab === 'home' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
-                  >
-                    Главная
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('schedule')}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 whitespace-nowrap flex-shrink-0 ${activeTab === 'schedule' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
-                  >
-                    Расписание
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('literature')}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 whitespace-nowrap flex-shrink-0 ${activeTab === 'literature' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
-                  >
-                    Литература
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('news')}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 whitespace-nowrap flex-shrink-0 ${activeTab === 'news' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
-                  >
-                    Новости
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('games')}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 whitespace-nowrap flex-shrink-0 ${activeTab === 'games' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
-                  >
-                    Игровая
-                  </button>
-                  {isAdmin && (
-                    <button 
-                      onClick={() => setActiveTab('admin')}
-                      className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 whitespace-nowrap flex-shrink-0 ${activeTab === 'admin' ? 'bg-purple-500 text-white shadow-sm' : 'text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300'}`}
-                    >
-                      Админка
-                    </button>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button 
-                    onClick={toggleTheme}
-                    className="p-2.5 rounded-full bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all border border-transparent hover:border-gray-200 dark:hover:border-slate-700"
-                  >
-                    {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                  </button>
-                  <button 
-                    className="p-2.5 rounded-full bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all"
-                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    aria-expanded={isMobileMenuOpen}
-                    aria-label="Меню"
-                  >
-                    <BurgerIcon isOpen={isMobileMenuOpen} />
-                  </button>
-                </div>
-              </nav>
-              <nav className="md:hidden flex items-center justify-between w-full">
-                <div 
-                  className="flex items-center justify-center w-12 h-12 cursor-pointer rounded-full bg-emerald-500 hover:bg-emerald-600 transition-all flex-shrink-0"
-                  onClick={() => setActiveTab('home')}
-                >
-                  <GraduationCap className="w-7 h-7 text-white" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={toggleTheme}
-                    className="p-3 rounded-full bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all border border-transparent hover:border-gray-200 dark:hover:border-slate-700"
-                  >
-                    {darkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
-                  </button>
-                  <button 
-                    className="p-3 rounded-full bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all"
-                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    aria-expanded={isMobileMenuOpen}
-                    aria-label="Меню"
-                  >
-                    <BurgerIcon isOpen={isMobileMenuOpen} />
-                  </button>
-                </div>
-              </nav>
-            </>
-          ) : (
-            <>
-              <nav className="hidden md:flex items-center justify-between w-full">
-                <div 
-                  className="flex items-center justify-center w-10 h-10 cursor-pointer rounded-full bg-emerald-500 hover:bg-emerald-600 transition-all flex-shrink-0"
-                  onClick={() => setActiveTab('home')}
-                >
-                  <GraduationCap className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={toggleTheme}
-                    className="p-2.5 rounded-full bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all border border-transparent hover:border-gray-200 dark:hover:border-slate-700"
-                  >
-                    {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                  </button>
-                  <button 
-                    onClick={() => setIsLoginModalOpen(true)}
-                    className="px-6 py-2.5 text-sm font-semibold text-slate-900 dark:text-white bg-slate-200 dark:bg-emerald-600 hover:bg-slate-300 dark:hover:bg-emerald-500 rounded-full transition-all shadow-lg shadow-emerald-500/20"
-                  >
-                    Войти
-                  </button>
-                </div>
-              </nav>
-              <nav className="md:hidden flex items-center justify-between w-full">
-                <div 
-                  className="flex items-center justify-center w-12 h-12 cursor-pointer rounded-full bg-emerald-500 hover:bg-emerald-600 transition-all flex-shrink-0"
-                  onClick={() => setActiveTab('home')}
-                >
-                  <GraduationCap className="w-7 h-7 text-white" />
-                </div>
-                <div className="w-[400px] flex items-center gap-2 justify-end">
-                  <button 
-                    onClick={toggleTheme}
-                    className="p-3 rounded-full bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all border border-transparent hover:border-gray-200 dark:hover:border-slate-700"
-                  >
-                    {darkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
-                  </button>
-                  <button 
-                    onClick={() => setIsLoginModalOpen(true)}
-                    className="px-4 py-2 text-sm font-semibold text-slate-900 dark:text-white bg-slate-200 dark:bg-emerald-600 hover:bg-slate-300 dark:hover:bg-emerald-500 rounded-full transition-all shadow-lg shadow-emerald-500/20"
-                  >
-                    Войти
-                  </button>
-                </div>
-              </nav>
-            </>
-          )}
+          }`}
+        >
+          <div className="flex h-16 items-center justify-between px-4">
+            <div
+              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-emerald-500 transition-all hover:bg-emerald-600"
+              onClick={() => setActiveTab('home')}
+            >
+              <GraduationCap className="h-6 w-6 text-white" />
             </div>
-            <div className={`grid overflow-hidden transition-[grid-template-rows,opacity,transform,padding] duration-300 ease-out ${
-              isMobileMenuOpen ? 'grid-rows-[1fr] opacity-100 translate-y-0 pb-4' : 'grid-rows-[0fr] opacity-0 -translate-y-2 pb-0'
-            }`}>
-              <div className="min-h-0">
-                <div className="px-4">
-            <div className="flex flex-col gap-3">
-              {isAuthenticated ? (
-                <div className="flex items-center gap-3">
-                  <div 
-                    onClick={() => {
-                      setIsProfileModalOpen(true);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="flex items-center gap-3 px-4 py-3 rounded-2xl flex-1 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all cursor-pointer"
+
+            {isAuthenticated ? (
+              <>
+                <nav className="scrollbar-hide hidden items-center gap-2 overflow-x-auto md:flex">
+                  {navItems.map((item) => (
+                    <NavButton
+                      key={item.id}
+                      active={activeTab === item.id}
+                      label={item.label}
+                      admin={item.admin}
+                      onClick={() => setActiveTab(item.id)}
+                    />
+                  ))}
+                </nav>
+
+                <div className="hidden items-center gap-2 md:flex">
+                  {themeButton}
+                  <button
+                    className="rounded-full bg-gray-100 p-2.5 text-slate-600 transition-all hover:bg-gray-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    aria-expanded={isMobileMenuOpen}
+                    aria-label="Меню"
                   >
-                    <div className="w-10 h-10 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden flex items-center justify-center">
-                    {userMedia?.avatar_url ? (
-                      <img 
-                        src={buildMediaUrl(userMedia.avatar_url)}
-                        alt="Profile Avatar"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : userMedia?.avatar_placeholder ? (
-                      <div 
-                        className="w-full h-full flex items-center justify-center font-bold bg-gray-200 dark:bg-slate-700"
-                        style={{ 
-                          color: 'rgb(156 163 175)', // gray-400
-                          fontSize: '50%'
-                        }}
-                      >
-                        {userMedia.avatar_placeholder.initials}
-                      </div>
-                    ) : user?.fullname?.charAt(0) ? (
-                      <span className="text-gray-400 dark:text-slate-500 font-bold">{user?.fullname?.charAt(0)}</span>
-                    ) : (
-                      <User className="w-5 h-5 text-gray-400 dark:text-slate-500" />
-                    )}
-                    </div>
-                    <div className="flex flex-col flex-1 min-w-0 text-left">
-                      <span className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                        {user?.fullname || 'Пользователь'}
-                      </span>
-                      <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                        {user?.faculty || 'Студент'}
-                      </span>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      logout();
-                      setActiveTab('home');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-10 h-10 flex items-center justify-center bg-[#FFB2B2] hover:bg-[#FF9696] dark:bg-[#542426] dark:hover:bg-[#4a2526] rounded-xl transition-all"
-                  >
-                    <LogOut className="w-4 h-4 text-red-600 dark:text-red-400" />
+                    <BurgerIcon isOpen={isMobileMenuOpen} />
                   </button>
                 </div>
-              ) : (
-                <button 
-                  onClick={() => {
-                    setIsLoginModalOpen(true);
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="w-full text-left px-4 py-3 text-sm font-semibold text-slate-900 dark:text-white bg-slate-200 dark:bg-emerald-600 hover:bg-slate-300 dark:hover:bg-emerald-500 rounded-2xl transition-all shadow-lg shadow-emerald-500/20"
+
+                <div className="flex items-center gap-2 md:hidden">
+                  {themeButton}
+                  <button
+                    className="rounded-full bg-gray-100 p-3 text-slate-600 transition-all hover:bg-gray-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    aria-expanded={isMobileMenuOpen}
+                    aria-label="Меню"
+                  >
+                    <BurgerIcon isOpen={isMobileMenuOpen} />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                {themeButton}
+                <button
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-900 shadow-lg shadow-emerald-500/20 transition-all hover:bg-slate-300 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-500 md:px-6 md:py-2.5"
                 >
                   Войти
                 </button>
-              )}
-            </div>
-            {isAuthenticated && (
-              <nav className="flex flex-col md:hidden gap-2 mt-4">
-                <button 
-                  onClick={() => {
-                    setActiveTab('home');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'home' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
-                >
-                  Главная
-                </button>
-                <button 
-                  onClick={() => {
-                    setActiveTab('schedule');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'schedule' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
-                >
-                  Расписание
-                </button>
-                <button 
-                  onClick={() => {
-                    setActiveTab('literature');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'literature' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
-                >
-                  Литература
-                </button>
-                <button 
-                  onClick={() => {
-                    setActiveTab('news');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'news' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
-                >
-                  Новости
-                </button>
-                <button 
-                  onClick={() => {
-                    setActiveTab('games');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'games' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
-                >
-                  Игровая
-                </button>
-                {isAdmin && (
-                  <button 
+              </div>
+            )}
+          </div>
+
+          <div
+            className={`grid overflow-hidden transition-[grid-template-rows,opacity,transform,padding] duration-300 ease-out ${
+              isMobileMenuOpen
+                ? 'grid-rows-[1fr] translate-y-0 pb-4 opacity-100'
+                : 'grid-rows-[0fr] -translate-y-2 pb-0 opacity-0'
+            }`}
+          >
+            <div className="min-h-0">
+              <div className="px-4">
+                <div className="flex flex-col gap-3">
+                  {isAuthenticated ? (
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => {
+                          setIsProfileModalOpen(true);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="flex flex-1 items-center gap-3 rounded-2xl px-4 py-3 text-left transition-all hover:bg-gray-100 dark:hover:bg-slate-700"
+                      >
+                        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-gray-200 dark:bg-slate-700">
+                          {renderAvatar()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-medium text-slate-900 dark:text-white">
+                            {user?.fullname || 'Пользователь'}
+                          </div>
+                          <div className="truncate text-xs text-slate-500 dark:text-slate-400">
+                            {user?.faculty || 'Студент'}
+                          </div>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={handleLogout}
+                        className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFB2B2] transition-all hover:bg-[#FF9696] dark:bg-[#542426] dark:hover:bg-[#4a2526]"
+                      >
+                        <LogOut className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setIsLoginModalOpen(true);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="w-full rounded-2xl bg-slate-200 px-4 py-3 text-left text-sm font-semibold text-slate-900 shadow-lg shadow-emerald-500/20 transition-all hover:bg-slate-300 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-500"
+                    >
+                      Войти
+                    </button>
+                  )}
+                </div>
+
+                {isAuthenticated ? (
+                  <nav className="mt-4 flex flex-col gap-2 md:hidden">
+                    {navItems.map((item) => (
+                      <NavButton
+                        key={item.id}
+                        active={activeTab === item.id}
+                        label={item.label}
+                        admin={item.admin}
+                        mobile
+                        onClick={() => handleSelectTab(item.id)}
+                      />
+                    ))}
+                  </nav>
+                ) : null}
+
+                <div className="mt-3 border-t border-gray-200 pt-3 dark:border-slate-700">
+                  <button
                     onClick={() => {
-                      setActiveTab('admin');
+                      setIsSupportModalOpen(true);
                       setIsMobileMenuOpen(false);
                     }}
-                    className={`w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 flex items-center gap-3 ${activeTab === 'admin' ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 shadow-sm' : ''}`}
+                    className="flex w-full items-center gap-3 rounded-full bg-emerald-50 px-4 py-3 text-left text-sm font-semibold text-emerald-600 transition-all duration-300 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30"
                   >
-                    <Shield className="w-4 h-4" />
-                    Админ-панель
+                    <MessageCircle className="h-4 w-4" />
+                    Поддержка
                   </button>
-                )}
-              </nav>
-            )}
-            <div className="border-t border-gray-200 dark:border-slate-700 pt-3 mt-3">
-              <button 
-                onClick={() => {
-                  setIsSupportModalOpen(true);
-                  setIsMobileMenuOpen(false);
-                }}
-                className="w-full text-left px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 flex items-center gap-3"
-              >
-                <MessageCircle className="w-4 h-4" />
-                Поддержка
-              </button>
-            </div>
-              </div>
                 </div>
               </div>
+            </div>
           </div>
         </div>
-      </header>
-    </>
+      </div>
+    </header>
   );
 }
+
 export default Header;

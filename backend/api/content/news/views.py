@@ -3,9 +3,11 @@
 """
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from ...common.decorators import allow_unverified_2fa
 from ...common.utils import get_sqlite_connection, parse_pagination, parse_tags
 
 
+@allow_unverified_2fa
 @csrf_exempt
 def get_news(request):
     """Возвращает список новостей с пагинацией и фильтрацией.
@@ -23,7 +25,7 @@ def get_news(request):
 
     search = (request.GET.get('search') or '').strip()
     category = (request.GET.get('category') or '').strip()
-    sort_by = (request.GET.get('sort_by') or 'date_desc').strip()
+    sort_by = (request.GET.get('sort') or request.GET.get('sort_by') or 'date_desc').strip()
 
     try:
         conn = get_sqlite_connection('news/times_news.db')

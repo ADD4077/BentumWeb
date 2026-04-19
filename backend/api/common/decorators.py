@@ -50,3 +50,12 @@ def log_request(func):
         logger.info(f"{request.method} {request.path} - {request.META.get('REMOTE_ADDR')}")
         return func(request, *args, **kwargs)
     return wrapper
+
+
+def allow_unverified_2fa(func):
+    """
+    Marks a view as accessible for authenticated sessions that have not yet
+    completed 2FA verification.
+    """
+    setattr(func, "_allow_unverified_2fa", True)
+    return func

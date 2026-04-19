@@ -3,14 +3,27 @@ import { API_ENDPOINTS } from '../config/api.js';
 
 const PAGE_SIZE = 6;
 
-export const useNews = (activeTab) => {
+const NEWS_CATEGORY_TO_BACKEND = {
+  all: 'all',
+  study: 'education',
+  science: 'academic',
+  events: 'events',
+  achievements: 'achievements',
+  career: 'academic',
+  sports: 'sports',
+};
+
+export const useNews = (activeTab, externalState = {}) => {
   const [newsData, setNewsData] = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsSearchQuery, setNewsSearchQuery] = useState('');
-  const [newsSortBy, setNewsSortBy] = useState('date_desc');
   const [newsPage, setNewsPage] = useState(1);
   const [newsTotal, setNewsTotal] = useState(0);
   const [selectedNewsCategory, setSelectedNewsCategory] = useState('all');
+  const [internalNewsSortBy, setInternalNewsSortBy] = useState('date_desc');
+
+  const newsSortBy = externalState.sortBy ?? internalNewsSortBy;
+  const setNewsSortBy = externalState.setSortBy ?? setInternalNewsSortBy;
 
   const newsMaxPage = useMemo(() =>
     Math.max(1, Math.ceil(newsTotal / PAGE_SIZE)),
@@ -20,12 +33,13 @@ export const useNews = (activeTab) => {
   const loadNews = useCallback(async (page = 1, search = '', sortBy = 'date_desc', category = 'all') => {
     setNewsLoading(true);
     try {
+      const backendCategory = NEWS_CATEGORY_TO_BACKEND[category] || 'all';
       const params = new URLSearchParams();
       params.set('page', page);
       params.set('page_size', PAGE_SIZE);
       if (search) params.set('search', search);
-      if (sortBy !== 'date_desc') params.set('sort', sortBy);
-      if (category !== 'all') params.set('category', category);
+      if (sortBy !== 'date_desc') params.set('sort_by', sortBy);
+      if (backendCategory !== 'all') params.set('category', backendCategory);
 
       const response = await fetch(`${API_ENDPOINTS.NEWS}?${params.toString()}`, {
         credentials: 'include'

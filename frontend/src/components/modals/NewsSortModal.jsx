@@ -1,10 +1,8 @@
 import React from 'react';
 import { useModal } from '../../contexts/ModalContext.jsx';
-import { useNews } from '../../hooks/useNews.js';
 
 export const NewsSortModal = () => {
-  const { isNewsSortModalOpen, setIsNewsSortModalOpen } = useModal();
-  const { newsSortBy, setNewsSortBy } = useNews('news');
+  const { isNewsSortModalOpen, setIsNewsSortModalOpen, newsSortBy, setNewsSortBy } = useModal();
 
   if (!isNewsSortModalOpen) return null;
 

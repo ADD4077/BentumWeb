@@ -1,8 +1,9 @@
-// Конфигурация API endpoints
-let API_BASE_URL = 'http://localhost:1337';
+// API endpoints configuration
+const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
 export const API_ENDPOINTS = {
   BASE_URL: API_BASE_URL,
+  CSRF: `${API_BASE_URL}/api/csrf`,
   PROFILE_UPDATE: `${API_BASE_URL}/api/profile/update`,
   MEDIA_UPLOAD: `${API_BASE_URL}/api/media/upload`,
   USER_MEDIA: `${API_BASE_URL}/api/user/media`,
@@ -26,21 +27,20 @@ export const API_ENDPOINTS = {
   AUTH_CHECK: `${API_BASE_URL}/api/auth/check`,
   PUBLIC_STATS: `${API_BASE_URL}/api/public/stats`,
   CHANGE_PASSWORD: `${API_BASE_URL}/api/change-password`,
-  // Telegram binding endpoints
   TELEGRAM_GENERATE_LINK: `${API_BASE_URL}/api/telegram/generate-link`,
   TELEGRAM_BINDING_STATUS: `${API_BASE_URL}/api/telegram/binding-status`,
   TELEGRAM_UNLINK: `${API_BASE_URL}/api/telegram/unlink`,
   TELEGRAM_BIND: `${API_BASE_URL}/api/telegram/bind`,
-  // Sessions endpoints
   SESSIONS: `${API_BASE_URL}/api/sessions`,
-  // 2FA endpoints
   TWO_FA_CONFIG: `${API_BASE_URL}/api/2fa/config`,
   TWO_FA_VERIFY: `${API_BASE_URL}/api/2fa/verify`,
-  TWO_FA_RESEND: `${API_BASE_URL}/api/2fa/resend`
+  TWO_FA_RESEND: `${API_BASE_URL}/api/2fa/resend`,
 };
 
-// Вспомогательная функция для построения URL с API базой
 export const buildApiUrl = (path) => {
+  if (!API_BASE_URL) {
+    return path;
+  }
   return `${API_BASE_URL}${path}`;
 };
 

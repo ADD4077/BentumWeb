@@ -13,8 +13,8 @@ function ScheduleItem({ item }) {
       .trim();
   };
   return (
-    <div className="flex flex-col sm:flex-row gap-3 sm:gap-5 p-4 sm:p-6 bg-white dark:bg-slate-800/80 backdrop-blur-md rounded-[1.5rem] border border-gray-100 dark:border-slate-700/50 shadow-lg hover:shadow-xl transition-all duration-300">
-      <div className="flex sm:flex-col items-center sm:items-start justify-center sm:w-28 sm:border-r border-gray-100 dark:border-slate-700/50 pr-2 sm:pr-4">
+    <div className="flex flex-col gap-3 rounded-[1.5rem] border border-gray-200/70 bg-gray-100/50 p-4 shadow-lg shadow-gray-900/10 backdrop-blur-md transition-all duration-300 hover:shadow-xl dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20 sm:flex-row sm:gap-5 sm:p-6">
+      <div className="flex items-center justify-center pr-2 sm:w-28 sm:flex-col sm:items-start sm:border-r sm:border-gray-200/70 sm:pr-4 dark:sm:border-slate-700/50">
          <div className="text-xl sm:text-2xl font-black text-slate-800 dark:text-slate-200 tracking-tight">{item.time.split(' - ')[0]}</div>
       </div>
       <div className="flex-grow pl-1 sm:pl-2 flex flex-col justify-center">
