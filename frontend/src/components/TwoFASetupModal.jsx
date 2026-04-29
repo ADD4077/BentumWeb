@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { AlertCircle, Check, Mail, Shield, Smartphone, X } from 'lucide-react';
+import { AlertCircle, Check, Shield, Smartphone, X } from 'lucide-react';
 
 import { api } from '../services/api.js';
-import { buildCsrfHeaders } from '../utils/http.js';
 
 function TwoFASetupModal({ isOpen, onClose, darkMode, onSuccess }) {
   const [selectedMethod, setSelectedMethod] = useState('');
@@ -10,9 +9,6 @@ function TwoFASetupModal({ isOpen, onClose, darkMode, onSuccess }) {
   const [error, setError] = useState('');
   const [currentConfig, setCurrentConfig] = useState(null);
   const [telegramBinding, setTelegramBinding] = useState(null);
-  const [showEmailInput, setShowEmailInput] = useState(false);
-  const [emailInput, setEmailInput] = useState('');
-  const [emailBinding, setEmailBinding] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -37,16 +33,6 @@ function TwoFASetupModal({ isOpen, onClose, darkMode, onSuccess }) {
           setTelegramBinding(telegramData.data);
         }
       }
-
-      const emailResponse = await fetch('/api/email/binding-status', {
-        credentials: 'include',
-      });
-      if (emailResponse.ok) {
-        const emailData = await emailResponse.json();
-        if (emailData.success) {
-          setEmailBinding(emailData.data);
-        }
-      }
     } catch (loadError) {
       console.error('Error loading 2FA config:', loadError);
     }
@@ -55,41 +41,6 @@ function TwoFASetupModal({ isOpen, onClose, darkMode, onSuccess }) {
   const handleMethodSelect = (method) => {
     setSelectedMethod(method);
     setError('');
-    setShowEmailInput(method === 'email' && (!emailBinding || !emailBinding.is_linked));
-  };
-
-  const handleEmailBind = async () => {
-    if (!emailInput || !emailInput.includes('@')) {
-      setError('Введите корректный email');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const headers = await buildCsrfHeaders({
-        'Content-Type': 'application/json',
-      });
-      const response = await fetch('/api/email/bind', {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify({ email: emailInput }),
-      });
-
-      const data = await response.json();
-      if (!data.success) {
-        setError(data.detail || 'Ошибка привязки email');
-        return;
-      }
-
-      setEmailBinding({ is_linked: true, email: emailInput });
-      setShowEmailInput(false);
-      setError('');
-    } catch {
-      setError('Ошибка соединения с сервером');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleSubmit = async () => {
@@ -100,11 +51,6 @@ function TwoFASetupModal({ isOpen, onClose, darkMode, onSuccess }) {
 
     if (selectedMethod === 'telegram' && (!telegramBinding || !telegramBinding.is_linked)) {
       setError('Сначала привяжите Telegram в профиле');
-      return;
-    }
-
-    if (selectedMethod === 'email' && (!emailBinding || !emailBinding.is_linked)) {
-      setError('Сначала привяжите email');
       return;
     }
 
@@ -161,21 +107,27 @@ function TwoFASetupModal({ isOpen, onClose, darkMode, onSuccess }) {
   const titleTextClass = darkMode ? 'text-white' : 'text-slate-900';
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className={`w-full max-w-lg rounded-2xl border shadow-2xl ${panelClass}`}>
-        <div className={`flex items-center justify-between border-b p-6 ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+    <div className="modal-backdrop fixed inset-0 z-[300] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className={`modal-panel w-full max-w-lg rounded-2xl border shadow-2xl ${panelClass}`}>
+        <div
+          className={`flex items-center justify-between border-b p-6 ${
+            darkMode ? 'border-slate-700' : 'border-slate-200'
+          }`}
+        >
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600">
               <Shield className="h-5 w-5 text-white" />
             </div>
             <div>
               <h2 className={`text-lg font-bold ${titleTextClass}`}>Двухфакторная аутентификация</h2>
-              <p className={`text-sm ${mutedTextClass}`}>Выберите способ подтверждения входа</p>
+              <p className={`text-sm ${mutedTextClass}`}>Подтверждение входа через Telegram</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className={`rounded-lg p-2 transition-colors ${darkMode ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-100'}`}
+            className={`rounded-lg p-2 transition-colors ${
+              darkMode ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-100'
+            }`}
           >
             <X className="h-5 w-5" />
           </button>
@@ -195,7 +147,7 @@ function TwoFASetupModal({ isOpen, onClose, darkMode, onSuccess }) {
                   <>
                     <Check className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                     <span className="font-medium text-emerald-800 dark:text-emerald-200">
-                      2FA включена ({currentConfig.method === 'telegram' ? 'Telegram' : currentConfig.method})
+                      2FA включена (Telegram)
                     </span>
                   </>
                 ) : (
@@ -249,7 +201,7 @@ function TwoFASetupModal({ isOpen, onClose, darkMode, onSuccess }) {
                   </div>
                   <div>
                     <h3 className={`font-semibold ${titleTextClass}`}>Telegram</h3>
-                    <p className={`text-sm ${mutedTextClass}`}>Код подтверждения придёт в Telegram</p>
+                    <p className={`text-sm ${mutedTextClass}`}>Код подтверждения будет приходить в Telegram</p>
                   </div>
                 </div>
                 {telegramBinding?.is_linked ? (
@@ -264,87 +216,6 @@ function TwoFASetupModal({ isOpen, onClose, darkMode, onSuccess }) {
                 </p>
               ) : null}
             </button>
-
-            <button
-              onClick={() => handleMethodSelect('email')}
-              className={`w-full rounded-xl border-2 p-4 text-left transition-all ${
-                selectedMethod === 'email'
-                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
-                  : darkMode
-                    ? 'border-slate-600 bg-slate-800 hover:border-slate-500'
-                    : 'border-slate-300 bg-white hover:border-slate-400'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                      selectedMethod === 'email'
-                        ? 'bg-emerald-500'
-                        : darkMode
-                          ? 'bg-slate-600'
-                          : 'bg-slate-200'
-                    }`}
-                  >
-                    <Mail
-                      className={`h-5 w-5 ${
-                        selectedMethod === 'email'
-                          ? 'text-white'
-                          : darkMode
-                            ? 'text-slate-300'
-                            : 'text-slate-600'
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <h3 className={`font-semibold ${titleTextClass}`}>Email</h3>
-                    <p className={`text-sm ${mutedTextClass}`}>Код подтверждения придёт на почту</p>
-                  </div>
-                </div>
-                {emailBinding?.is_linked ? (
-                  <Check className="h-5 w-5 text-emerald-500" />
-                ) : (
-                  <AlertCircle className="h-5 w-5 text-slate-400" />
-                )}
-              </div>
-              {!emailBinding?.is_linked ? (
-                <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-                  Укажите email для привязки
-                </p>
-              ) : null}
-            </button>
-
-            {showEmailInput ? (
-              <div className={`rounded-xl border-2 p-4 ${darkMode ? 'border-slate-600 bg-slate-800' : 'border-slate-300 bg-white'}`}>
-                <p className={`mb-3 text-sm ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                  Введите email для привязки:
-                </p>
-                <div className="flex gap-2">
-                  <input
-                    type="email"
-                    value={emailInput}
-                    onChange={(event) => setEmailInput(event.target.value)}
-                    placeholder="your@email.com"
-                    className={`flex-1 rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                      darkMode
-                        ? 'border-slate-600 bg-slate-700 text-white placeholder-slate-400'
-                        : 'border-slate-300 bg-white text-slate-900 placeholder-slate-500'
-                    }`}
-                  />
-                  <button
-                    onClick={handleEmailBind}
-                    disabled={loading}
-                    className={`rounded-lg px-4 py-2 font-medium transition-colors ${
-                      loading
-                        ? 'cursor-not-allowed bg-slate-300 text-slate-500'
-                        : 'bg-emerald-500 text-white hover:bg-emerald-600'
-                    }`}
-                  >
-                    {loading ? '...' : 'Привязать'}
-                  </button>
-                </div>
-              </div>
-            ) : null}
           </div>
         </div>
 

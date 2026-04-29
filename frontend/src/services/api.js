@@ -59,6 +59,38 @@ export const api = {
     }
   },
 
+  async getNextScheduleLesson(studentCode = null) {
+    try {
+      const url = studentCode
+        ? `${API_ENDPOINTS.SCHEDULE_NEXT}?student_code=${encodeURIComponent(studentCode)}`
+        : API_ENDPOINTS.SCHEDULE_NEXT;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
+
+      return {
+        ok: response.ok,
+        status: response.status,
+        ...(data || {}),
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        status: 0,
+        detail: 'Ошибка сети',
+      };
+    }
+  },
+
   async verify2FACode(code) {
     try {
       const headers = await buildCsrfHeaders({

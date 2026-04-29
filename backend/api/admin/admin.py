@@ -12,15 +12,15 @@ from api.models import (
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ["id", "fullname", "student_code", "faculty", "email", "created_at", "last_login", "twofa_enabled"]
+    list_display = ["id", "fullname", "student_code", "faculty", "created_at", "last_login", "twofa_enabled"]
     list_filter = ["faculty", "created_at", "twofa_enabled", "twofa_method"]
-    search_fields = ["fullname", "student_code", "email", "id"]
+    search_fields = ["fullname", "student_code", "id"]
     ordering = ['-created_at']
     
     # Все поля доступны для редактирования
     fields = [
         'fullname', 'student_code', 'faculty', 'password', 
-        'email', 'created_at', 'last_login',
+        'created_at', 'last_login',
         'twofa_enabled', 'twofa_method'
     ]
     
@@ -126,6 +126,7 @@ class UserBanAdmin(admin.ModelAdmin):
     list_display = ['id', 'student_code', 'user_id', 'is_active', 'created_at', 'ban_date', 'banned_by_id']
     list_filter = ['is_active', 'created_at', 'ban_date']
     search_fields = ['student_code', 'ban_reason', 'banned_by_id']
+    readonly_fields = ['created_at', 'ban_date']
     fields = ['student_code', 'user_id', 'banned_by_id', 'ban_reason', 'is_active', 'created_at', 'ban_date', 'ban_duration_seconds']
 
 

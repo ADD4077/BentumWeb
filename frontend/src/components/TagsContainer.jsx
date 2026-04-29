@@ -75,7 +75,7 @@ export const TagsContainer = React.memo(({ tags, onTagClick }) => {
   const remainingCount = useMemo(() => tags.length - visibleCount, [tags.length, visibleCount]);
 
   return (
-    <div ref={containerRef} className="flex items-center gap-1 overflow-hidden sm:overflow-x-auto">
+    <div ref={containerRef} className="flex items-center gap-1 overflow-x-auto overflow-y-visible py-1">
       {visibleTags.map((tag, index) => (
         <button
           key={`${tag}-${index}-${visibleCount}`}

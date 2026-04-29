@@ -12,7 +12,7 @@ export const GamesPage = ({
 }) => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6">
-      <div className="text-center mb-8 sm:mb-10">
+      <div className="section-reveal text-center mb-8 sm:mb-10">
         <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4 text-slate-900 dark:text-white tracking-tight">Игры</h2>
         <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto px-4">
           Лучшие игры для студентов БНТУ - отдыхайте с пользой
@@ -20,7 +20,7 @@ export const GamesPage = ({
       </div>
 
       {/* Категории */}
-      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 px-1">
+      <div className="section-reveal flex flex-wrap justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 px-1">
         {gameCategories.map(category => (
           <button
             key={category.id}
@@ -38,13 +38,13 @@ export const GamesPage = ({
 
       {/* Рекомендуемые игры */}
       {filteredGames.filter(item => item.featured).length > 0 && (
-        <div className="mb-8 sm:mb-12">
+        <div className="section-reveal mb-8 sm:mb-12">
           <h3 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-slate-900 dark:text-white">Рекомендуемые игры</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredGames.filter(item => item.featured).map((game) => (
               <div
                 key={game.id}
-                className="group relative overflow-hidden rounded-xl border border-gray-200/70 bg-gray-100/50 shadow-lg shadow-gray-900/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20 sm:rounded-2xl"
+                className="glass-card interactive-lift shimmer-surface group relative overflow-hidden rounded-xl border border-gray-200/70 bg-gray-100/50 shadow-lg shadow-gray-900/10 backdrop-blur-md transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20 sm:rounded-2xl"
               >
                 <div className="relative h-36 sm:h-48 overflow-hidden">
                   <img
@@ -159,7 +159,7 @@ export const GamesPage = ({
       )}
 
       {/* Все игры */}
-      <div>
+      <div className="section-reveal">
         <h3 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-slate-900 dark:text-white">
           {selectedGameCategory === 'all' ? 'Все игры' : gameCategories.find(cat => cat.id === selectedGameCategory)?.name}
         </h3>
@@ -168,7 +168,7 @@ export const GamesPage = ({
             {filteredGames.filter(item => !item.featured).map((game) => (
               <div
                 key={game.id}
-                className="group overflow-hidden rounded-lg border border-gray-200/70 bg-gray-100/50 shadow-lg shadow-gray-900/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20 sm:rounded-xl"
+                className="glass-card interactive-lift shimmer-surface group overflow-hidden rounded-lg border border-gray-200/70 bg-gray-100/50 shadow-lg shadow-gray-900/10 backdrop-blur-md transition-all duration-500 hover:-translate-y-1 hover:shadow-xl dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20 sm:rounded-xl"
               >
                 <div className="relative h-28 sm:h-32 overflow-hidden">
                   <img

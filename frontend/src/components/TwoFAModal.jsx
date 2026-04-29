@@ -153,8 +153,8 @@ const TwoFAModal = ({ isOpen, onClose, onSuccess, darkMode, remainingTime = 300 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-      <div className={`w-full max-w-md ${darkMode ? 'bg-slate-900' : 'bg-white'} rounded-2xl shadow-2xl border ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+    <div className="modal-backdrop fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+      <div className={`modal-panel w-full max-w-md ${darkMode ? 'bg-slate-900' : 'bg-white'} rounded-2xl shadow-2xl border ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
         <div className={`flex items-center justify-between p-6 border-b ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">

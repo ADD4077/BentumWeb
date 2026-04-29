@@ -11,7 +11,8 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 
 from ..ban_service import BanService
 from ..common.decorators import allow_unverified_2fa
-from ..common.utils import get_user_full_data
+from ..common.permissions import is_system_administrator
+from ..common.utils import get_user_full_data, serialize_datetime
 from ..func import authorize
 from ..models import User
 from ..twofa_service import twofa_service
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 def _build_authenticated_user_payload(user: User) -> dict:
     payload = AuthService.build_auth_user_payload(user)
     payload["is_banned"] = BanService.check_ban_status(user.student_code)["is_banned"]
-    payload["is_admin"] = AuthService.is_admin(user)
+    payload["is_admin"] = is_system_administrator(user)
     return payload
 
 
@@ -36,10 +37,10 @@ def _send_or_reuse_twofa_code(request, user: User) -> tuple[bool, int, str]:
     code = twofa_service.generate_6fa_code()
     twofa_service.store_2fa_code(user.student_code, code, request)
 
-    if user.twofa_method == "telegram":
-        success, message = twofa_service.send_2fa_code_telegram_sync(user, code)
-    else:
-        success, message = twofa_service.send_2fa_code_email(user, code)
+    if user.twofa_method != "telegram":
+        return False, 0, "Неподдерживаемый метод 2FA"
+
+    success, message = twofa_service.send_2fa_code_telegram_sync(user, code)
 
     if not success:
         return False, 0, message
@@ -73,11 +74,11 @@ def save_data(request):
 
         if len(student_code) != 10 or len(password) < 7:
             return JsonResponse(
-                {"detail": "Некорректный формат кодов. Пароль должен содержать минимум 7 символов"},
+                {"detail": "Некорректный формат данных. Пароль должен содержать минимум 7 символов"},
                 status=400,
             )
 
-        can_login, error_message = AuthService.check_login_attempts(student_code)
+        can_login, error_message = AuthService.check_login_attempts(student_code, request)
         if not can_login:
             return JsonResponse({"detail": error_message}, status=429)
 
@@ -86,7 +87,7 @@ def save_data(request):
             if not AuthService.verify_user_password(existing_user, password):
                 return JsonResponse({"detail": "Неверный пароль"}, status=401)
 
-            AuthService.clear_login_attempts(student_code)
+            AuthService.clear_login_attempts(student_code, request)
             AuthService.touch_last_login(existing_user)
             SessionService.create_authenticated_session(request, existing_user)
             SessionService.enforce_session_limits(existing_user.student_code, request.session.session_key, request)
@@ -95,7 +96,7 @@ def save_data(request):
                 success, remaining_time, message = _send_or_reuse_twofa_code(request, existing_user)
                 if not success:
                     return JsonResponse(
-                        {"success": False, "detail": f"Ошибка отправки 2FA кода: {message}"},
+                        {"success": False, "detail": f"Ошибка отправки 2FA-кода: {message}"},
                         status=500,
                     )
 
@@ -127,7 +128,7 @@ def save_data(request):
         if auth_result is False:
             return JsonResponse({"detail": "Неверные данные авторизации"}, status=401)
 
-        AuthService.clear_login_attempts(student_code)
+        AuthService.clear_login_attempts(student_code, request)
         fullname, faculty = auth_result
         user = AuthService.register_user(student_code, password, fullname, faculty)
 
@@ -173,9 +174,10 @@ def dashboard(request):
                     "fullname": user.fullname,
                     "faculty": user.faculty,
                     "student_code": user.student_code,
-                    "created_at": user.created_at,
+                    "role": user.role,
+                    "created_at": serialize_datetime(user.created_at),
                     "is_banned": ban_status["is_banned"],
-                    "last_login": user.last_login,
+                    "last_login": serialize_datetime(user.last_login),
                 },
             },
             status=200,

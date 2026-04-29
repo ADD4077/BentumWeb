@@ -6,17 +6,16 @@ import {
   Lock,
   CheckCircle,
   AlertCircle,
-  ArrowRight,
 } from 'lucide-react';
 
-function InstructionModal({ isOpen, onClose, darkMode: _darkMode, onSupportOpen }) {
+function InstructionModal({ isOpen, onClose, darkMode: _darkMode, onSupportOpen: _onSupportOpen }) {
   if (!isOpen) {
     return null;
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="custom-scrollbar max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-gray-200 bg-white/95 shadow-2xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-800/95">
+    <div className="modal-backdrop fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="modal-panel custom-scrollbar max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-gray-200 bg-white/95 shadow-2xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-800/95">
         <div className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 p-6 backdrop-blur-md dark:border-slate-700 dark:bg-slate-800/95">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -120,8 +119,8 @@ function InstructionModal({ isOpen, onClose, darkMode: _darkMode, onSupportOpen 
                   </span>
                 </div>
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Обычно пароль состоит из 7 цифр. Если он был изменен ранее, используйте
-                  уже обновленный вариант.
+                  Обычно пароль состоит из 7 цифр. Если он был изменен ранее,
+                  используйте уже обновленный вариант.
                 </p>
               </div>
 
@@ -144,7 +143,7 @@ function InstructionModal({ isOpen, onClose, darkMode: _darkMode, onSupportOpen 
                   <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-400">
                     <li>• Проверьте данные еще раз</li>
                     <li>• Уточните пароль в деканате</li>
-                    <li>• Обратитесь в поддержку</li>
+                    <li>• При необходимости обратитесь в университет</li>
                   </ul>
                 </div>
               </div>
@@ -214,16 +213,6 @@ function InstructionModal({ isOpen, onClose, darkMode: _darkMode, onSupportOpen 
                   <li>• Не перепутан ли пароль</li>
                   <li>• Не включена ли неверная раскладка или лишние пробелы</li>
                 </ul>
-              </div>
-
-              <div className="text-center">
-                <button
-                  onClick={onSupportOpen}
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 font-medium text-white transition-colors hover:bg-emerald-500"
-                >
-                  <ArrowRight className="h-4 w-4" />
-                  <span>Связаться с поддержкой</span>
-                </button>
               </div>
             </div>
           </div>

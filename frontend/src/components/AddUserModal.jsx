@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   GraduationCap,
   Shield,
@@ -6,6 +7,7 @@ import {
   UserPlus,
   X,
 } from 'lucide-react';
+import { USER_ROLE_OPTIONS } from '../utils/roles.js';
 
 const FACULTIES = [
   'АТФ',
@@ -31,6 +33,7 @@ const buildInitialState = () => ({
   fullname: '',
   student_code: '',
   faculty: '',
+  role: 'student',
   registration_date: new Date().toISOString().split('T')[0],
   password: '',
   confirm_password: '',
@@ -78,6 +81,10 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
       nextErrors.faculty = 'Факультет обязателен';
     }
 
+    if (!formData.role) {
+      nextErrors.role = 'Роль обязательна';
+    }
+
     if (!formData.password) {
       nextErrors.password = 'Пароль обязателен';
     } else if (formData.password.length < 7) {
@@ -106,6 +113,7 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
         fullname: formData.fullname,
         student_code: formData.student_code,
         faculty: formData.faculty,
+        role: formData.role,
         registration_date: formData.registration_date,
         password: formData.password,
       });
@@ -132,11 +140,11 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
       : 'border-gray-300 bg-white text-gray-900'
   }`;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+  const modalContent = (
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div
-        className={`max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border shadow-2xl ${
-          darkMode ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'
+        className={`modal-panel max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border shadow-2xl ${
+          darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-300/70 bg-white/96'
         }`}
       >
         <div className={`border-b p-6 ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
@@ -152,6 +160,7 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
 
             <button
               onClick={handleClose}
+              aria-label="Закрыть модальное окно"
               className={`rounded-lg p-2 transition-colors ${
                 darkMode
                   ? 'text-slate-400 hover:bg-slate-700 hover:text-white'
@@ -187,6 +196,7 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
               <input
                 type="text"
                 name="fullname"
+                aria-label="Полное имя *"
                 value={formData.fullname}
                 onChange={handleInputChange}
                 placeholder="Введите полное имя"
@@ -210,6 +220,7 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
                 <input
                   type="text"
                   name="student_code"
+                  aria-label="Код студента *"
                   value={formData.student_code}
                   onChange={handleInputChange}
                   maxLength={10}
@@ -225,6 +236,7 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
                 </label>
                 <select
                   name="faculty"
+                  aria-label="Факультет *"
                   value={formData.faculty}
                   onChange={handleInputChange}
                   className={`${inputClassName} ${errors.faculty ? 'border-red-500' : ''}`}
@@ -241,11 +253,32 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
 
               <div>
                 <label className={`mb-2 block text-sm font-medium ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>
+                  Роль *
+                </label>
+                <select
+                  name="role"
+                  aria-label="Роль *"
+                  value={formData.role}
+                  onChange={handleInputChange}
+                  className={`${inputClassName} ${errors.role ? 'border-red-500' : ''}`}
+                >
+                  {USER_ROLE_OPTIONS.map((role) => (
+                    <option key={role.value} value={role.value}>
+                      {role.label}
+                    </option>
+                  ))}
+                </select>
+                {errors.role ? <p className="mt-1 text-sm text-red-500">{errors.role}</p> : null}
+              </div>
+
+              <div>
+                <label className={`mb-2 block text-sm font-medium ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                   Дата регистрации
                 </label>
                 <input
                   type="date"
                   name="registration_date"
+                  aria-label="Дата регистрации"
                   value={formData.registration_date}
                   onChange={handleInputChange}
                   className={inputClassName}
@@ -268,6 +301,7 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
                 <input
                   type="password"
                   name="password"
+                  aria-label="Пароль *"
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="Минимум 7 символов"
@@ -283,6 +317,7 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
                 <input
                   type="password"
                   name="confirm_password"
+                  aria-label="Подтверждение пароля *"
                   value={formData.confirm_password}
                   onChange={handleInputChange}
                   placeholder="Повторите пароль"
@@ -330,6 +365,12 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') {
+    return modalContent;
+  }
+
+  return createPortal(modalContent, document.body);
 }
 
 export default AddUserModal;

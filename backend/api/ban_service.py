@@ -1,8 +1,12 @@
+import logging
 from datetime import timedelta
 
 from django.utils import timezone
 
+from .common.permissions import is_system_administrator
 from .models import User, UserBan
+
+logger = logging.getLogger(__name__)
 
 
 class BanService:
@@ -15,9 +19,7 @@ class BanService:
         try:
             user = User.objects.get(student_code=student_code)
 
-            from .models import Administration
-
-            if Administration.objects.filter(administrator=user, is_active=True).exists():
+            if is_system_administrator(user):
                 return {
                     "success": False,
                     "detail": "Нельзя забанить администратора",
@@ -38,6 +40,7 @@ class BanService:
                 ban_end_date = None
             else:
                 ban_end_date = ban.ban_date + timedelta(seconds=duration_seconds)
+
             return {
                 "success": True,
                 "ban_id": ban.id,
@@ -50,10 +53,11 @@ class BanService:
                 "success": False,
                 "detail": "Пользователь не найден",
             }
-        except Exception as exc:
+        except Exception:
+            logger.exception("Failed to ban user %s", student_code)
             return {
                 "success": False,
-                "detail": f"Ошибка при блокировке: {exc}",
+                "detail": "Внутренняя ошибка сервера",
             }
 
     @staticmethod
@@ -79,10 +83,11 @@ class BanService:
                 "success": False,
                 "detail": "Пользователь не найден",
             }
-        except Exception as exc:
+        except Exception:
+            logger.exception("Failed to unban user %s", student_code)
             return {
                 "success": False,
-                "detail": f"Ошибка при разблокировке: {exc}",
+                "detail": "Внутренняя ошибка сервера",
             }
 
     @staticmethod
@@ -132,9 +137,7 @@ class BanService:
 
     @staticmethod
     def get_ban_statuses(student_codes):
-        """
-        Fetch ban statuses in bulk without mutating the database during read paths.
-        """
+        """Fetch ban statuses in bulk without mutating the database during read paths."""
         unique_codes = [code for code in dict.fromkeys(student_codes) if code]
         statuses = {code: BanService._default_status() for code in unique_codes}
         if not unique_codes:
@@ -162,10 +165,11 @@ class BanService:
                 student_code,
                 BanService._default_status(),
             )
-        except Exception as exc:
+        except Exception:
+            logger.exception("Failed to check ban status for %s", student_code)
             return {
                 "is_banned": False,
-                "error": str(exc),
+                "error": "internal_error",
             }
 
     @staticmethod
@@ -220,32 +224,6 @@ class BanService:
                     "ban_reason": ban.ban_reason,
                     "is_active": ban.is_active,
                     "is_currently_active": is_currently_active,
-                    "created_at": ban.created_at.isoformat(),
                 }
             )
-
         return bans
-
-    @staticmethod
-    def get_ban_statistics():
-        total_bans = UserBan.objects.count()
-        active_bans = UserBan.objects.filter(is_active=True)
-        active_ban_count = active_bans.count()
-
-        current_time = timezone.now()
-        currently_active = 0
-        for ban in active_bans.only("ban_date", "ban_duration_seconds"):
-            if ban.ban_duration_seconds == BanService.FOREVER_DURATION_SECONDS:
-                currently_active += 1
-                continue
-
-            ban_end_time = ban.ban_date + timedelta(seconds=ban.ban_duration_seconds)
-            if current_time < ban_end_time:
-                currently_active += 1
-
-        return {
-            "total_bans": total_bans,
-            "active_bans": active_ban_count,
-            "currently_active": currently_active,
-            "expired_bans": active_ban_count - currently_active,
-        }

@@ -7,7 +7,7 @@ from typing import Any, Dict
 
 from django.contrib.auth.hashers import check_password, make_password
 
-from ..common.utils import get_user_media
+from ..common.utils import get_user_media, serialize_datetime
 from ..models import User
 
 logger = logging.getLogger(__name__)
@@ -24,9 +24,8 @@ class ProfileService:
             'fullname': user.fullname,
             'student_code': user.student_code,
             'faculty': user.faculty,
-            'password': user.password,
-            'created_at': user.created_at,
-            'last_login': user.last_login,
+            'created_at': serialize_datetime(user.created_at),
+            'last_login': serialize_datetime(user.last_login),
             **media,
         }
 

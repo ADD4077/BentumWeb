@@ -84,7 +84,7 @@ function StatCard({ value, label, isLoading }) {
 
 export function MissionSection({ stats, isLoading }) {
   return (
-    <section className="relative mb-8 overflow-hidden rounded-2xl border border-white/50 bg-white/40 p-4 shadow-xl backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/40 sm:mb-12 sm:p-6 md:mb-16 md:p-8 lg:p-12">
+    <section className="mission-sweep glass-card relative mb-8 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/82 p-4 shadow-xl backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/40 sm:mb-12 sm:p-6 md:mb-16 md:p-8 lg:p-12">
       <div className="relative z-10 mb-4 flex items-center gap-3 sm:mb-6 sm:gap-4">
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg sm:h-12 sm:w-12">
           <GraduationCap className="h-5 w-5 sm:h-6 sm:w-6" />

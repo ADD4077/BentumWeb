@@ -61,7 +61,7 @@ class UpdateLastLoginMiddleware:
 
         try:
             updated = User.objects.filter(student_code=student_code).update(
-                last_login=int(timezone.now().timestamp())
+                last_login=timezone.now()
             )
             if updated > 0:
                 cache_key = f'last_login_update_{student_code}'

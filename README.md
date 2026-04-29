@@ -1,87 +1,189 @@
 # BentumWeb
 
-BentumWeb - это full-stack платформа для студентов с Django-бэкендом и React/Vite-фронтендом. В репозитории также есть локальная Docker-инфраструктура, фоновые задачи, Telegram-интеграции, административные сценарии, загрузка медиа, 2FA и контентные модули.
+BentumWeb — full-stack платформа для студентов с Django backend, React/Vite frontend, Telegram-интеграцией, 2FA, новостями, литературой, расписанием и административными сценариями.
 
 ## Стек
 
-- Backend: Django, Django REST Framework, MySQL, Redis
-- Frontend: React 18, Vite
-- Инфраструктура: Docker Compose, background worker, контейнер Telegram-бота
+- Backend: Django 4.2, Django REST Framework, MySQL, Redis
+- Frontend: React 18, Vite 5
+- Инфраструктура: Docker Compose, background worker, Telegram bot container
 
 ## Структура проекта
 
-- `backend/` - Django-приложение, API-модули, логика воркера, тесты
-- `frontend/` - React/Vite-приложение
-- `compose.yaml` - локальное multi-service окружение
-- `.github/workflows/` - CI workflow-файлы
+- `backend/` — Django-приложение, API, фоновые задачи, тесты
+- `frontend/` — React/Vite-приложение
+- `compose.yaml` — локальное multi-service окружение
+- `scripts/` — helper-скрипты для локальных проверок
+- `.env.example` — шаблон переменных окружения
 
-## Локальный запуск
+## Что нужно для запуска
 
 ### Вариант 1: Docker Compose
 
-1. Создайте или обновите корневой `.env`
-2. Поднимите стек:
+Нужно:
+
+- Docker Desktop
+- включённая виртуализация
+- рабочий WSL2 / Hyper-V backend
+
+Если Docker Desktop не стартует на Windows, сначала проверьте:
+
+- `VirtualMachinePlatform`
+- `Microsoft-Windows-Subsystem-Linux`
+- `HypervisorPlatform`
+- `hypervisorlaunchtype=Auto`
+
+### Вариант 2: Локальный frontend без Docker
+
+Нужно:
+
+- Node.js 20+
+- backend, доступный по `http://localhost:1337`
+
+## Быстрый старт через Docker
+
+1. Создайте `.env` из шаблона:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+2. При необходимости отредактируйте `.env`.
+
+Минимум проверьте:
+
+- `DJANGO_SECRET_KEY`
+- `DATABASE_PASSWORD`
+- `DJANGO_SUPERUSER_USERNAME`
+- `DJANGO_SUPERUSER_PASSWORD`
+
+3. Поднимите проект:
 
 ```powershell
 docker compose up --build
 ```
 
-Фронтенд будет доступен на `http://localhost:5173`, бэкенд - на `http://localhost:1337`.
+После старта будут доступны:
 
-### Вариант 2: Только фронтенд
+- frontend: `http://localhost:5173`
+- backend: `http://localhost:1337`
 
-```powershell
-cd frontend
-D:\nodejs\npm.cmd ci
-D:\nodejs\npm.cmd run dev
-```
+## Что делает backend при старте
 
-### Вариант 3: Только бэкенд
+Backend container автоматически:
 
-Используйте контейнер проекта или локальное Python-окружение с зависимостями из `backend/requirements.txt`.
+- применяет миграции через `python manage.py migrate`
+- создаёт superuser, если он ещё не существует
+- собирает статику через `collectstatic`
 
-## Проверки качества
+Важно:
 
-### Локальные проверки одной командой
+- `makemigrations` автоматически при старте больше не вызывается
+- новые миграции нужно создавать явно вручную
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\check-all.ps1
-```
+## Полезные команды
 
-### Фронтенд
-
-```powershell
-cd frontend
-D:\nodejs\npm.cmd ci
-D:\nodejs\npm.cmd run lint
-D:\nodejs\npm.cmd run build
-```
-
-### Smoke-тесты бэкенда
-
-Тестовый запуск бэкенда теперь поддерживает SQLite для smoke/integration-проверки без необходимости выдавать MySQL-пользователю права на создание test database.
+### Запуск smoke-тестов backend на SQLite
 
 ```powershell
 docker compose run --rm -e DJANGO_TEST_USE_SQLITE=1 server python -m pytest api/tests.py -q
 ```
 
-### Django check для бэкенда
+### Django check
 
 ```powershell
 docker compose run --rm server python manage.py check
 ```
 
-### Локальная очистка временных Docker-хвостов
+### Создать новые миграции вручную
 
-Если после ручных тестовых прогонов остался временный контейнер `backend-test-sqlite`, его можно удалить так:
+```powershell
+docker compose run --rm server python manage.py makemigrations
+```
+
+### Применить миграции вручную
+
+```powershell
+docker compose run --rm server python manage.py migrate
+```
+
+### Пересобрать backend container
+
+```powershell
+docker compose build server
+```
+
+### Удалить временный тестовый контейнер SQLite
 
 ```powershell
 docker rm -f backend-test-sqlite
 ```
 
+## Локальный frontend без Docker
+
+Если backend уже работает отдельно:
+
+1. создайте `frontend/.env.local`
+2. добавьте:
+
+```env
+VITE_API_URL=http://localhost:1337
+```
+
+3. запустите frontend:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+## Локальные проверки качества
+
+### Все проверки скриптом
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\check-all.ps1
+```
+
+### Frontend
+
+```powershell
+cd frontend
+npm install
+npm run lint
+npm run build
+```
+
+### Backend синтаксис локально
+
+```powershell
+cd backend
+python -m py_compile api\*.py
+```
+
+## Перенос на другой ПК
+
+Для запуска проекта на другой машине обычно достаточно передать:
+
+- `backend/`
+- `frontend/`
+- `scripts/`
+- `compose.yaml`
+- `.env.example`
+- `init.sql`
+- `README.md`
+
+Не нужно передавать:
+
+- `frontend/node_modules`
+- `frontend/dist`
+- `backend/test.sqlite3`
+- `backend/media`
+- кэши и локальные IDE-файлы
+
 ## Примечания
 
-- `lint/build` фронтенда покрыты через `.github/workflows/quality.yml`
-- smoke-тесты бэкенда в CI запускаются на SQLite через `DJANGO_TEST_USE_SQLITE=1`
-- публикация release-образов по-прежнему живёт в существующих Docker image workflow-файлах
-- локальные helper-скрипты лежат в `scripts/`
+- Для Docker Compose frontend использует proxy на `/api`, поэтому `VITE_API_URL` можно оставить пустым.
+- Для локального frontend вне Docker `VITE_API_URL` лучше указать явно.
+- Если BNTU TLS ведёт себя нестабильно, insecure fallback разрешается только через `BNTU_ALLOW_INSECURE_SSL` или в `DEBUG`.

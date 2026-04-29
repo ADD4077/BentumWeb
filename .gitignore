@@ -1,12 +1,39 @@
-**/venv
-**/node_modules
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Backend local files
+backend/test.sqlite3
+backend/logs/
+backend/media/
+
+# Local sqlite/content dbs if they are runtime data, not seed data
+backend/books/*.db
+backend/news/*.db
+backend/schedules/*.db
+
+# Django collected/static local artifacts
+backend/staticfiles/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Env
 .env
-*.db
-*.db-journal
-**/__pycache__
-**/logs
-**/media
-compose.yaml
-frontend/dist
+.env.*
+!.env.example
 frontend/.env.local
-backend/static
+backend/.env
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

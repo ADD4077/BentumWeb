@@ -162,69 +162,71 @@ function TeamCarousel({ teamMembers, darkMode }) {
       <h2 className="text-3xl font-bold text-center text-slate-900 dark:text-white mb-12">
         Наша команда
       </h2>
-      <div className="relative">
-        <div 
-          ref={carouselRef}
-          className="overflow-hidden rounded-2xl max-w-4xl mx-auto" 
-          style={{ 
-            padding: '20px',
-            touchAction: 'pan-y pinch-zoom'
-          }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
+      <div className="relative overflow-visible">
+        <div className="mx-auto max-w-4xl overflow-visible px-2 pb-8 pt-3">
           <div 
-            className="flex transition-transform duration-500 ease-in-out"
-            style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+            ref={carouselRef}
+            className="overflow-hidden rounded-2xl" 
+            style={{ 
+              padding: '36px 28px 42px',
+              touchAction: 'pan-y pinch-zoom'
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           >
-            {teamMembers.map((member, index) => (
-              <div key={index} className="w-full flex-shrink-0 px-4">
-                <div className="max-w-md mx-auto bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/50 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-md">
-                  <div className="flex flex-col items-center text-center">
-                    <div 
-                      className="w-32 h-32 rounded-3xl overflow-hidden bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg flex items-center justify-center mb-6 transition-all duration-300 ease-out transform translate-y-0 rotate-0 hover:shadow-2xl hover:shadow-gray-400/50 group cursor-pointer hover:-translate-y-2 hover:rotate-6"
-                      onClick={() => handleAvatarClick(member.name)}
-                    >
-                      {memberAvatars[member.name] ? (
-                        <img 
-                          src={memberAvatars[member.name].startsWith('/') ? `${API_ENDPOINTS.BASE_URL}${memberAvatars[member.name]}` : memberAvatars[member.name]}
-                          alt={member.name}
-                          className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:contrast-105"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            if (e.target.nextSibling) {
-                              e.target.nextSibling.style.display = 'flex';
-                            }
-                          }}
-                        />
-                      ) : null}
-                      {!memberAvatars[member.name] && (
-                        <span className="text-white text-4xl font-bold transition-all duration-300 group-hover:text-white group-hover:scale-110">
-                          {member.name.split(' ').map(n => n[0]).join('')}
-                        </span>
-                      )}
+            <div 
+              className="flex transition-transform duration-500 ease-in-out"
+              style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+            >
+              {teamMembers.map((member, index) => (
+                <div key={index} className="w-full flex-shrink-0 px-4">
+                  <div className="glass-card interactive-lift shimmer-surface max-w-md mx-auto bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/50 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-500 backdrop-blur-md">
+                    <div className="flex flex-col items-center text-center">
+                      <div 
+                        className="floating-slow w-32 h-32 rounded-3xl overflow-hidden bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg flex items-center justify-center mb-6 transition-all duration-500 ease-out transform translate-y-0 rotate-0 hover:shadow-2xl hover:shadow-gray-400/50 group cursor-pointer hover:-translate-y-2 hover:rotate-6"
+                        onClick={() => handleAvatarClick(member.name)}
+                      >
+                        {memberAvatars[member.name] ? (
+                          <img 
+                            src={memberAvatars[member.name].startsWith('/') ? `${API_ENDPOINTS.BASE_URL}${memberAvatars[member.name]}` : memberAvatars[member.name]}
+                            alt={member.name}
+                            className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:contrast-105"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              if (e.target.nextSibling) {
+                                e.target.nextSibling.style.display = 'flex';
+                              }
+                            }}
+                          />
+                        ) : null}
+                        {!memberAvatars[member.name] && (
+                          <span className="text-white text-4xl font-bold transition-all duration-300 group-hover:text-white group-hover:scale-110">
+                            {member.name.split(' ').map(n => n[0]).join('')}
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                        {member.name}
+                      </h3>
+                      <p className="text-emerald-600 dark:text-emerald-400 font-semibold mb-4">
+                        {member.role}
+                      </p>
+                      <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                        {member.description}
+                      </p>
                     </div>
-                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                      {member.name}
-                    </h3>
-                    <p className="text-emerald-600 dark:text-emerald-400 font-semibold mb-4">
-                      {member.role}
-                    </p>
-                    <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                      {member.description}
-                    </p>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-center gap-4 mt-6">
+      <div className="flex items-center justify-center gap-4">
         <button
           onClick={prevSlide}
-          className="w-12 h-12 bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/50 rounded-full flex items-center justify-center shadow-lg hover:bg-white/60 dark:hover:bg-slate-800/60 transition-all duration-300 backdrop-blur-md"
+          className="interactive-lift w-12 h-12 bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/50 rounded-full flex items-center justify-center shadow-lg hover:bg-white/60 dark:hover:bg-slate-800/60 transition-all duration-500 backdrop-blur-md"
         >
           <span className="text-slate-900 dark:text-white text-xl">‹</span>
         </button>
@@ -243,7 +245,7 @@ function TeamCarousel({ teamMembers, darkMode }) {
         </div>
         <button
           onClick={nextSlide}
-          className="w-12 h-12 bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/50 rounded-full flex items-center justify-center shadow-lg hover:bg-white/60 dark:hover:bg-slate-800/60 transition-all duration-300 backdrop-blur-md"
+          className="interactive-lift w-12 h-12 bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/50 rounded-full flex items-center justify-center shadow-lg hover:bg-white/60 dark:hover:bg-slate-800/60 transition-all duration-500 backdrop-blur-md"
         >
           <span className="text-slate-900 dark:text-white text-xl">›</span>
         </button>

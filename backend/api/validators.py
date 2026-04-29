@@ -4,7 +4,7 @@
 
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class LoginRequest(BaseModel):
@@ -26,7 +26,6 @@ class ProfileUpdateRequest(BaseModel):
 
     fullname: Optional[str] = Field(None, max_length=100)
     faculty: Optional[str] = Field(None, max_length=10)
-    email: Optional[EmailStr] = None
 
 
 class TwoFAVerifyRequest(BaseModel):
@@ -45,14 +44,13 @@ class TwoFAVerifyRequest(BaseModel):
 class TwoFASetupRequest(BaseModel):
     """Валидация запроса настройки 2FA."""
 
-    method: str = Field(..., description="Метод 2FA: telegram или email")
-    email: Optional[EmailStr] = None
+    method: str = Field(..., description="Метод 2FA: telegram")
 
     @field_validator("method")
     @classmethod
     def validate_method(cls, value: str) -> str:
-        if value not in ["telegram", "email"]:
-            raise ValueError("Метод должен быть telegram или email")
+        if value != "telegram":
+            raise ValueError("Метод должен быть telegram")
         return value
 
 

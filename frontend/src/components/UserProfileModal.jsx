@@ -1,48 +1,24 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
-  Calendar,
-  GraduationCap,
-  Book,
   Backpack,
+  Book,
+  Calendar,
   Clock,
+  GraduationCap,
   ShieldAlert,
 } from 'lucide-react';
+
 import { API_ENDPOINTS } from '../config/api.js';
-import { buildMediaUrl } from '../utils/media.js';
 import { calculateCourseOrDefault } from '../utils/calculateCourse.js';
-
-function formatUnixDate(timestamp) {
-  if (!timestamp) {
-    return 'Не указана';
-  }
-
-  return new Date(timestamp * 1000).toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function formatIsoDate(dateString) {
-  if (!dateString) {
-    return 'Не указан';
-  }
-
-  return new Date(dateString).toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+import { formatDateOnly, formatDateTime } from '../utils/dates.js';
+import { buildMediaUrl } from '../utils/media.js';
+import { getRoleLabel } from '../utils/roles.js';
 
 function InfoRow({ icon: Icon, label, value, className = '' }) {
   return (
-    <div className={`text-left flex items-start gap-3 ${className}`.trim()}>
-      <Icon className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+    <div className={`flex items-center gap-3 text-left ${className}`.trim()}>
+      <Icon className="h-5 w-5 shrink-0 self-center text-emerald-600 dark:text-emerald-400" />
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
           {label}
@@ -75,7 +51,13 @@ function AlertInfoRow({ icon: Icon, label, value, className = '' }) {
   );
 }
 
-export default function UserProfileModal({ isOpen, onClose, studentCode, darkMode: _darkMode }) {
+export default function UserProfileModal({
+  isOpen,
+  onClose,
+  studentCode,
+  darkMode: _darkMode,
+  showActivityMeta = false,
+}) {
   const [user, setUser] = useState(null);
   const [userMedia, setUserMedia] = useState({
     avatar_url: null,
@@ -104,7 +86,6 @@ export default function UserProfileModal({ isOpen, onClose, studentCode, darkMod
       }
 
       const data = await response.json();
-
       if (!data?.success || !data?.user) {
         onClose();
         return;
@@ -124,11 +105,13 @@ export default function UserProfileModal({ isOpen, onClose, studentCode, darkMod
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
-  return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white/90 shadow-2xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-800/90">
+  const modalContent = (
+    <div className="modal-backdrop fixed inset-0 z-[150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="modal-panel flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-slate-300/70 bg-white/96 shadow-2xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-800/90">
         <div className="relative h-32">
           {userMedia.banner_url ? (
             <img
@@ -193,6 +176,12 @@ export default function UserProfileModal({ isOpen, onClose, studentCode, darkMod
 
                 <InfoRow
                   icon={Book}
+                  label="Роль"
+                  value={getRoleLabel(user?.role)}
+                />
+
+                <InfoRow
+                  icon={Book}
                   label="Студенческий код"
                   value={user?.student_code?.slice(0, 8) || 'Не указан'}
                 />
@@ -203,23 +192,33 @@ export default function UserProfileModal({ isOpen, onClose, studentCode, darkMod
                   value={calculateCourseOrDefault(user?.student_code)}
                 />
 
-                <InfoRow
-                  icon={Calendar}
-                  label="Дата регистрации"
-                  value={formatUnixDate(user?.created_at)}
-                />
+                {showActivityMeta ? (
+                  <>
+                    <InfoRow
+                      icon={Calendar}
+                      label="Дата регистрации"
+                      value={formatDateTime(user?.created_at)}
+                    />
 
-                <InfoRow
-                  icon={Clock}
-                  label="Последний вход"
-                  value={formatUnixDate(user?.last_login)}
-                />
+                    <InfoRow
+                      icon={Clock}
+                      label="Последний вход"
+                      value={formatDateTime(user?.last_login)}
+                    />
+                  </>
+                ) : (
+                  <InfoRow
+                    icon={Calendar}
+                    label="Дата регистрации"
+                    value={formatDateOnly(user?.created_at)}
+                  />
+                )}
 
                 {user?.is_banned ? (
                   <AlertInfoRow
                     icon={ShieldAlert}
                     label="Срок бана"
-                    value={formatIsoDate(user?.ban_info?.ban_end_date)}
+                    value={formatDateTime(user?.ban_info?.ban_end_date)}
                     className="mb-2"
                   />
                 ) : null}
@@ -230,4 +229,10 @@ export default function UserProfileModal({ isOpen, onClose, studentCode, darkMod
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') {
+    return modalContent;
+  }
+
+  return createPortal(modalContent, document.body);
 }

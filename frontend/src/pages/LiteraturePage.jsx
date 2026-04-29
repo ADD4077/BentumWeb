@@ -46,7 +46,7 @@ function LiteratureCard({ item }) {
   const fileSize = item.downloadSize || item.size;
 
   return (
-    <article className="flex h-full flex-col justify-between rounded-xl border border-gray-200/70 bg-gray-100/50 p-4 shadow-lg shadow-gray-900/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20 sm:rounded-2xl sm:p-6">
+    <article className="glass-card interactive-lift shimmer-surface flex h-full flex-col justify-between rounded-xl border border-gray-200/70 bg-gray-100/50 p-4 shadow-lg shadow-gray-900/10 backdrop-blur-md transition-all duration-500 hover:-translate-y-1 hover:shadow-xl dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20 sm:rounded-2xl sm:p-6">
       <div>
         <div className="mb-3 flex items-start justify-between sm:mb-4">
           <div className="flex items-center gap-2 sm:gap-3">
@@ -183,7 +183,7 @@ export function LiteraturePage({ searchQuery, setSearchQuery, activeTab }) {
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">
-      <div className="mb-8 text-center sm:mb-10">
+      <div className="section-reveal mb-8 text-center sm:mb-10">
         <h2 className="mb-3 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:mb-4 sm:text-4xl">
           Литература
         </h2>
@@ -193,9 +193,9 @@ export function LiteraturePage({ searchQuery, setSearchQuery, activeTab }) {
         </p>
       </div>
 
-      <div className="mb-6 flex items-center gap-2 sm:mb-8">
+      <div className="section-reveal mb-6 flex items-center gap-2 sm:mb-8">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 sm:left-4 sm:h-5 sm:w-5" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400 sm:left-4 sm:h-5 sm:w-5" />
           <input
             type="text"
             placeholder="Поиск по названию, автору или описанию..."
@@ -229,7 +229,7 @@ export function LiteraturePage({ searchQuery, setSearchQuery, activeTab }) {
         </div>
       </div>
 
-      <div className="mb-4 sm:mb-6">
+      <div className="section-reveal mb-4 sm:mb-6">
         <div className="mb-2 px-1 text-xs text-slate-600 dark:text-slate-400 sm:mb-3 sm:text-sm">
           Найдено материалов:{' '}
           <span className="font-medium text-slate-900 dark:text-white">
@@ -303,7 +303,7 @@ export function LiteraturePage({ searchQuery, setSearchQuery, activeTab }) {
           </div>
 
           <div className="mt-8 flex items-center justify-center sm:mt-10">
-            <div className="flex items-center gap-1 rounded-xl border border-white/50 bg-white/40 p-1 shadow-lg backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/40 sm:gap-2 sm:rounded-2xl sm:p-2">
+            <div className="glass-card shimmer-surface flex items-center gap-1 rounded-xl border border-white/50 bg-white/40 p-1 shadow-lg backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/40 sm:gap-2 sm:rounded-2xl sm:p-2">
               <button
                 onClick={() => setLiteraturePage(1)}
                 disabled={literaturePage === 1}

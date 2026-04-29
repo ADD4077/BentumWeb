@@ -13,7 +13,14 @@ from django.http import JsonResponse
 
 from ..ban_service import BanService
 from ..media_service import MediaStorage
-from ..models import Administration, User, UserProfileMedia
+from ..models import User, UserProfileMedia, UserSettings
+from .permissions import can_access_admin_panel, is_system_administrator
+
+
+def serialize_datetime(value):
+    if value is None:
+        return None
+    return value.isoformat() if hasattr(value, "isoformat") else value
 
 
 def require_auth(view_func):
@@ -69,7 +76,7 @@ def require_admin(view_func):
                 status=404,
             )
 
-        if not Administration.objects.filter(administrator=user, is_active=True).exists():
+        if not can_access_admin_panel(user):
             return JsonResponse(
                 {
                     "success": False,
@@ -100,14 +107,23 @@ def validate_method(allowed_methods):
 
 def get_current_user(request) -> Optional[User]:
     """Получить текущего авторизованного пользователя из сессии."""
+
     student_code = request.session.get("student_code")
     if not student_code:
         return None
     return User.objects.filter(student_code=student_code).first()
 
 
+def get_user_settings(user: User) -> UserSettings:
+    """Получить настройки пользователя, создавая defaults при необходимости."""
+
+    settings_obj, _ = UserSettings.objects.get_or_create(user=user)
+    return settings_obj
+
+
 def get_user_media(user: User) -> Dict[str, Any]:
     """Получить URL аватара и баннера или плейсхолдеры."""
+
     avatar_url = None
     banner_url = None
     avatar_placeholder = None
@@ -143,27 +159,35 @@ def get_user_media(user: User) -> Dict[str, Any]:
 
 def get_user_ban_status(student_code: str) -> Dict[str, Any]:
     """Получить статус бана пользователя."""
+
     return BanService.check_ban_status(student_code)
 
 
 def get_user_admin_status(user: User) -> bool:
-    """Проверить, является ли пользователь администратором."""
-    return Administration.objects.filter(administrator=user, is_active=True).exists()
+    """Проверить, является ли пользователь системным администратором."""
+
+    return is_system_administrator(user)
 
 
 def get_user_full_data(user: User) -> Dict[str, Any]:
-    """Получить полные данные пользователя, включая медиа и статус."""
+    """Получить полные данные пользователя, включая медиа и статусы."""
+
     media = get_user_media(user)
     ban_status = get_user_ban_status(user.student_code)
     is_admin = get_user_admin_status(user)
+    user_settings = get_user_settings(user)
 
     return {
         "id": user.id,
         "fullname": user.fullname,
         "student_code": user.student_code,
         "faculty": user.faculty,
-        "created_at": user.created_at,
-        "last_login": user.last_login,
+        "role": user.role,
+        "twofa_enabled": user.twofa_enabled,
+        "twofa_method": user.twofa_method,
+        "notify_successful_login": user_settings.notify_successful_login,
+        "created_at": serialize_datetime(user.created_at),
+        "last_login": serialize_datetime(user.last_login),
         "is_banned": ban_status["is_banned"],
         "ban_info": ban_status.get("ban_info"),
         "is_admin": is_admin,
@@ -171,8 +195,23 @@ def get_user_full_data(user: User) -> Dict[str, Any]:
     }
 
 
+def get_public_user_profile_data(user: User) -> Dict[str, Any]:
+    """Return a reduced public profile payload for community/profile previews."""
+
+    media = get_user_media(user)
+
+    return {
+        "id": user.id,
+        "fullname": user.fullname,
+        "student_code": user.student_code,
+        "created_at": serialize_datetime(user.created_at),
+        **media,
+    }
+
+
 def parse_pagination(request) -> Tuple[int, int]:
     """Разобрать параметры пагинации из запроса."""
+
     try:
         page = int(request.GET.get("page", 1))
         page_size = int(request.GET.get("page_size", 6))
@@ -209,6 +248,7 @@ class SQLiteConnection:
 
 def get_sqlite_connection(db_name: str) -> Optional[SQLiteConnection]:
     """Получить SQLite-соединение с контекстным менеджером."""
+
     db_path = os.path.join(settings.BASE_DIR, db_name)
     if not os.path.exists(db_path):
         return None
@@ -217,6 +257,7 @@ def get_sqlite_connection(db_name: str) -> Optional[SQLiteConnection]:
 
 def format_size(size: Any) -> Optional[str]:
     """Нормализовать строку размера."""
+
     if not size and size != 0:
         return None
 
@@ -255,6 +296,7 @@ def format_size(size: Any) -> Optional[str]:
 
 def parse_size(size_str: str) -> int:
     """Разобрать строку размера в байты."""
+
     if not size_str:
         return 0
 
@@ -283,6 +325,7 @@ def parse_size(size_str: str) -> int:
 
 def parse_tags(tags: str) -> list:
     """Разобрать строку тегов в список."""
+
     if not tags:
         return []
 

@@ -5,6 +5,8 @@ Shared Django settings for all environments.
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -23,11 +25,17 @@ def env_list(name: str, default: list[str] | None = None) -> list[str]:
 
 
 DEBUG = env_bool("DEBUG", False)
+DJANGO_ENV = os.environ.get("DJANGO_ENV", "dev").strip().lower()
 
 STATIC_ROOT = BASE_DIR / "static"
 STATIC_URL = "/static/"
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-change-this-in-production")
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = "django-insecure-dev-only-key"
+    else:
+        raise ImproperlyConfigured("DJANGO_SECRET_KEY must be configured when DEBUG is disabled.")
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", ["127.0.0.1"])
 
 SESSION_COOKIE_SECURE = env_bool("SESSION_COOKIE_SECURE", not DEBUG)
@@ -140,6 +148,8 @@ if REDIS_URL:
         }
     }
 else:
+    if not DEBUG:
+        raise ImproperlyConfigured("REDIS_URL must be configured when DEBUG is disabled.")
     CACHES = {
         "default": {
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
@@ -149,6 +159,10 @@ else:
 
 LOGIN_RATE_LIMIT_ATTEMPTS = int(os.getenv("LOGIN_RATE_LIMIT_ATTEMPTS", 5))
 LOGIN_RATE_LIMIT_TTL_SECONDS = int(os.getenv("LOGIN_RATE_LIMIT_TTL_SECONDS", 900))
+TWOFA_CODE_TTL_SECONDS = int(os.getenv("TWOFA_CODE_TTL_SECONDS", 300))
+TWOFA_VERIFY_MAX_ATTEMPTS = int(os.getenv("TWOFA_VERIFY_MAX_ATTEMPTS", 5))
+TWOFA_RESEND_COOLDOWN_SECONDS = int(os.getenv("TWOFA_RESEND_COOLDOWN_SECONDS", 120))
+BACKGROUND_JOB_STALE_TIMEOUT_SECONDS = int(os.getenv("BACKGROUND_JOB_STALE_TIMEOUT_SECONDS", 1800))
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -169,11 +183,4 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 TELEGRAM_TOPIC_ID = 9
 TELEGRAM_NEW_USERS_TOPIC_ID = 3
 WEB_APP_URL = os.getenv("WEB_APP_URL", "https://bentum.ru")
-
-EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
-EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
-EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@bentum.by")
+TELEGRAM_INTERNAL_API_TOKEN = os.getenv("TELEGRAM_INTERNAL_API_TOKEN", "").strip()

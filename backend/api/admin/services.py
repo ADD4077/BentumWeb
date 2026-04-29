@@ -4,6 +4,7 @@
 import logging
 from typing import List, Dict, Any, Optional
 from django.utils import timezone
+from ..common.permissions import is_system_administrator
 from ..models import User, Administration, AdministrationHistory
 
 logger = logging.getLogger(__name__)
@@ -15,7 +16,7 @@ class AdminService:
     @staticmethod
     def is_admin(user: User) -> bool:
         """Проверить, является ли пользователь администратором"""
-        return Administration.objects.filter(administrator=user, is_active=True).exists()
+        return is_system_administrator(user)
     
     @staticmethod
     def appoint_administrator(user: User, appointed_by: User) -> tuple:

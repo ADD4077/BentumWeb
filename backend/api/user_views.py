@@ -1,31 +1,30 @@
-import json
 import logging
 import re
-import time
-from datetime import datetime
+from datetime import datetime, time as dt_time
 
 from django.contrib.auth.hashers import make_password
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 from rest_framework.decorators import api_view
 
 from .ban_service import BanService
 from .common.decorators import allow_unverified_2fa
-from .common.utils import get_user_full_data
+from .common.permissions import can_access_admin_panel, is_system_administrator
+from .common.utils import get_public_user_profile_data, get_user_full_data, serialize_datetime
 from .media_service import MediaStorage
 from .models import Administration, User, UserProfileMedia
 
 logger = logging.getLogger(__name__)
 
-
-def get_unix_timestamp():
-    return int(datetime.now().timestamp())
+VALID_USER_ROLES = {value for value, _label in User.ROLE_CHOICES}
 
 
 def _serialize_admin_user(user_row, ban_statuses, admin_ids, active_avatars):
     ban_status = ban_statuses.get(user_row["student_code"], {"is_banned": False})
     return {
         **user_row,
+        "created_at": serialize_datetime(user_row.get("created_at")),
+        "last_login": serialize_datetime(user_row.get("last_login")),
         "status": "banned" if ban_status["is_banned"] else "active",
         "is_admin": user_row["id"] in admin_ids,
         "avatar_url": active_avatars.get(user_row["id"]),
@@ -44,24 +43,12 @@ def _get_session_user(request):
     return user, None
 
 
-def _get_session_user_payload(request):
-    if not request.session.get("is_authenticated"):
-        return None, "Authorization required", 401
-
-    student_code = request.session.get("student_code")
-    user = User.objects.filter(student_code=student_code).first()
-    if not user:
-        return None, "User not found", 404
-
-    return user, None, None
-
-
 def _require_admin_user(request):
     user, error_response = _get_session_user(request)
     if error_response:
         return None, error_response
 
-    if not Administration.objects.filter(administrator=user, is_active=True).exists():
+    if not can_access_admin_panel(user):
         return None, JsonResponse({"detail": "Доступ запрещен"}, status=403)
 
     return user, None
@@ -85,6 +72,7 @@ def get_all_users(request):
                 "fullname",
                 "student_code",
                 "faculty",
+                "role",
                 "created_at",
                 "last_login",
             )
@@ -131,8 +119,7 @@ def get_users_stats(request):
         banned_count = sum(1 for status in ban_statuses.values() if status["is_banned"])
         active_count = total_users - banned_count
 
-        today_timestamp = int(time.time())
-        today_start = today_timestamp - (today_timestamp % 86400)
+        today_start = timezone.make_aware(datetime.combine(timezone.localdate(), dt_time.min))
         new_users_today = User.objects.filter(created_at__gte=today_start).count()
 
         return JsonResponse(
@@ -183,6 +170,13 @@ def create_user(request):
                 status=400,
             )
 
+        role = data.get("role") or User.ROLE_STUDENT
+        if role not in VALID_USER_ROLES:
+            return JsonResponse(
+                {"success": False, "detail": "Некорректная роль пользователя"},
+                status=400,
+            )
+
         if User.objects.filter(student_code=data["student_code"]).exists():
             return JsonResponse(
                 {
@@ -196,8 +190,9 @@ def create_user(request):
             fullname=data["fullname"],
             student_code=data["student_code"],
             faculty=data["faculty"],
+            role=role,
             password=make_password(data["password"]),
-            created_at=get_unix_timestamp(),
+            created_at=timezone.now(),
         )
 
         return JsonResponse(
@@ -236,7 +231,7 @@ def ban_user(request):
         except User.DoesNotExist:
             return JsonResponse({"success": False, "detail": "Пользователь не найден"}, status=404)
 
-        if Administration.objects.filter(administrator=user_to_ban, is_active=True).exists():
+        if is_system_administrator(user_to_ban):
             return JsonResponse(
                 {"success": False, "detail": "Нельзя заблокировать администратора"},
                 status=403,
@@ -247,7 +242,7 @@ def ban_user(request):
                 duration_seconds = int(duration_seconds)
             except (TypeError, ValueError):
                 return JsonResponse(
-                    {"success": False, "detail": "РќРµРєРѕСЂСЂРµРєС‚РЅР°СЏ РґР»РёС‚РµР»СЊРЅРѕСЃС‚СЊ Р±Р»РѕРєРёСЂРѕРІРєРё"},
+                    {"success": False, "detail": "Некорректная длительность блокировки"},
                     status=400,
                 )
         else:
@@ -255,7 +250,7 @@ def ban_user(request):
                 duration_days = int(duration_days)
             except (TypeError, ValueError):
                 return JsonResponse(
-                    {"success": False, "detail": "РќРµРєРѕСЂСЂРµРєС‚РЅР°СЏ РґР»РёС‚РµР»СЊРЅРѕСЃС‚СЊ Р±Р»РѕРєРёСЂРѕРІРєРё"},
+                    {"success": False, "detail": "Некорректная длительность блокировки"},
                     status=400,
                 )
             duration_seconds = (
@@ -266,9 +261,10 @@ def ban_user(request):
 
         if duration_seconds == 0 or duration_seconds < BanService.FOREVER_DURATION_SECONDS:
             return JsonResponse(
-                {"success": False, "detail": "РќРµРєРѕСЂСЂРµРєС‚РЅР°СЏ РґР»РёС‚РµР»СЊРЅРѕСЃС‚СЊ Р±Р»РѕРєРёСЂРѕРІРєРё"},
+                {"success": False, "detail": "Некорректная длительность блокировки"},
                 status=400,
             )
+
         result = BanService.ban_user(
             student_code=user_to_ban.student_code,
             banned_by_id=current_user.id,
@@ -334,7 +330,6 @@ def unban_user(request):
 
 
 @allow_unverified_2fa
-@csrf_exempt
 @api_view(["GET"])
 def get_user_by_code(request, student_code):
     """Получить информацию о пользователе по студенческому коду."""
@@ -345,8 +340,7 @@ def get_user_by_code(request, student_code):
             request.session.modified = False
             return JsonResponse({"success": True, "user": None})
 
-        user_data = get_user_full_data(user)
-        user_data["status"] = "banned" if user_data["is_banned"] else "active"
+        user_data = get_public_user_profile_data(user)
         request.session.modified = False
 
         return JsonResponse({"success": True, "user": user_data})
@@ -357,7 +351,6 @@ def get_user_by_code(request, student_code):
 
 
 @allow_unverified_2fa
-@csrf_exempt
 @api_view(["GET"])
 def get_public_stats(request):
     """Публичный endpoint для получения статистики."""
@@ -391,86 +384,3 @@ def get_public_stats(request):
             {"success": False, "detail": "Ошибка загрузки статистики"},
             status=500,
         )
-
-
-@csrf_exempt
-def email_binding_status(request):
-    """Получить статус привязки email для текущего пользователя."""
-    try:
-        if request.method != "GET":
-            return JsonResponse({"success": False, "detail": "Method not allowed"}, status=405)
-
-        user, error_detail, status_code = _get_session_user_payload(request)
-        if error_detail:
-            return JsonResponse({"success": False, "detail": error_detail}, status=status_code)
-
-        if user.email:
-            return JsonResponse(
-                {
-                    "success": True,
-                    "data": {
-                        "is_linked": True,
-                        "email": user.email,
-                    },
-                }
-            )
-
-        return JsonResponse(
-            {
-                "success": True,
-                "data": {
-                    "is_linked": False,
-                    "email": None,
-                },
-            }
-        )
-    except Exception:
-        logger.exception("Error getting email binding status")
-        return JsonResponse({"success": False, "detail": "Error checking email binding status"}, status=500)
-
-
-@csrf_exempt
-def email_bind(request):
-    """Привязать email к аккаунту пользователя."""
-    try:
-        if request.method != "POST":
-            return JsonResponse({"success": False, "detail": "Method not allowed"}, status=405)
-
-        user, error_detail, status_code = _get_session_user_payload(request)
-        if error_detail:
-            return JsonResponse({"success": False, "detail": error_detail}, status=status_code)
-
-        try:
-            data = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({"success": False, "detail": "Invalid JSON"}, status=400)
-
-        email = data.get("email", "").strip()
-        if not email or "@" not in email:
-            return JsonResponse({"success": False, "detail": "Invalid email address"}, status=400)
-
-        existing_user = User.objects.filter(email=email).exclude(id=user.id).first()
-        if existing_user:
-            return JsonResponse(
-                {"success": False, "detail": "Email already used by another account"},
-                status=400,
-            )
-
-        user.email = email
-        user.save(update_fields=["email"])
-
-        logger.info("Email %s bound to user %s", email, user.student_code)
-
-        return JsonResponse(
-            {
-                "success": True,
-                "message": "Email successfully bound",
-                "data": {
-                    "is_linked": True,
-                    "email": email,
-                },
-            }
-        )
-    except Exception:
-        logger.exception("Error binding email")
-        return JsonResponse({"success": False, "detail": "Error binding email"}, status=500)

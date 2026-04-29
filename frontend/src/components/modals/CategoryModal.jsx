@@ -10,8 +10,8 @@ export const CategoryModal = () => {
   if (!isCategoryModalOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
-      <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+    <div className="modal-backdrop fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
+      <div className="modal-panel bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col">
         <div className="flex items-center justify-between p-6 border-b border-white/20 dark:border-slate-700/50">
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
             <Filter className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />

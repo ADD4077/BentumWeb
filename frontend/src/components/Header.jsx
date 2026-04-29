@@ -1,10 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   GraduationCap,
-  LogOut,
-  MessageCircle,
   Moon,
-  Shield,
   Sun,
   User,
 } from 'lucide-react';
@@ -77,14 +74,13 @@ function NavButton({ active, label, onClick, admin = false, mobile = false }) {
     return (
       <button
         onClick={onClick}
-        className={`flex items-center gap-3 rounded-full px-4 py-3 text-left text-sm font-semibold transition-all duration-300 ${
+        className={`rounded-full px-4 py-2 text-sm font-semibold transition-all duration-300 ${
           active
-            ? 'bg-emerald-100 text-emerald-700 shadow-sm dark:bg-emerald-900/40 dark:text-emerald-300'
-            : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30'
-        } ${mobile ? 'w-full' : ''}`}
+            ? 'text-emerald-700 dark:text-emerald-300'
+            : 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300'
+        } ${mobile ? 'w-full text-left py-3' : 'whitespace-nowrap'}`}
       >
-        <Shield className="h-4 w-4" />
-        Админ
+        {label}
       </button>
     );
   }
@@ -94,7 +90,7 @@ function NavButton({ active, label, onClick, admin = false, mobile = false }) {
       onClick={onClick}
       className={`rounded-full px-4 py-2 text-sm font-semibold transition-all duration-300 ${
         active
-          ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
+          ? 'bg-slate-200 text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
           : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
       } ${mobile ? 'w-full py-3 text-left' : 'whitespace-nowrap'}`}
     >
@@ -109,7 +105,6 @@ function Header({
   darkMode,
   toggleTheme,
   setIsLoginModalOpen,
-  setIsSupportModalOpen,
   isMobileMenuOpen,
   setIsMobileMenuOpen,
   setIsProfileModalOpen,
@@ -186,12 +181,6 @@ function Header({
     setIsMobileMenuOpen(false);
   };
 
-  const handleLogout = () => {
-    logout();
-    setActiveTab('home');
-    setIsMobileMenuOpen(false);
-  };
-
   const renderAvatar = () => {
     if (userMedia?.avatar_url) {
       return (
@@ -231,7 +220,7 @@ function Header({
     <header ref={headerRef} className="sticky top-0 z-50 w-full bg-transparent">
       <div className="container mx-auto px-6 py-4">
         <div
-          className={`relative mx-auto max-w-4xl border border-gray-200 bg-gray-100/50 shadow-lg shadow-gray-900/10 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20 ${
+          className={`nav-shell glass-surface relative mx-auto max-w-4xl border border-gray-200 bg-gray-100/50 shadow-lg shadow-gray-900/10 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20 ${
             isHeaderPill ? 'rounded-full' : 'rounded-[32px]'
           }`}
         >
@@ -260,12 +249,11 @@ function Header({
                 <div className="hidden items-center gap-2 md:flex">
                   {themeButton}
                   <button
-                    className="rounded-full bg-gray-100 p-2.5 text-slate-600 transition-all hover:bg-gray-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
-                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    aria-expanded={isMobileMenuOpen}
-                    aria-label="Меню"
+                    className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-slate-600 transition-all hover:bg-gray-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+                    onClick={() => setIsProfileModalOpen(true)}
+                    aria-label="Профиль"
                   >
-                    <BurgerIcon isOpen={isMobileMenuOpen} />
+                    {renderAvatar()}
                   </button>
                 </div>
 
@@ -311,7 +299,7 @@ function Header({
                           setIsProfileModalOpen(true);
                           setIsMobileMenuOpen(false);
                         }}
-                        className="flex flex-1 items-center gap-3 rounded-2xl px-4 py-3 text-left transition-all hover:bg-gray-100 dark:hover:bg-slate-700"
+                        className="flex flex-1 items-center gap-3 rounded-full px-4 py-3 text-left transition-all hover:bg-gray-100 dark:hover:bg-slate-700"
                       >
                         <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-gray-200 dark:bg-slate-700">
                           {renderAvatar()}
@@ -324,13 +312,6 @@ function Header({
                             {user?.faculty || 'Студент'}
                           </div>
                         </div>
-                      </button>
-
-                      <button
-                        onClick={handleLogout}
-                        className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFB2B2] transition-all hover:bg-[#FF9696] dark:bg-[#542426] dark:hover:bg-[#4a2526]"
-                      >
-                        <LogOut className="h-4 w-4 text-red-600 dark:text-red-400" />
                       </button>
                     </div>
                   ) : (
@@ -361,18 +342,6 @@ function Header({
                   </nav>
                 ) : null}
 
-                <div className="mt-3 border-t border-gray-200 pt-3 dark:border-slate-700">
-                  <button
-                    onClick={() => {
-                      setIsSupportModalOpen(true);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="flex w-full items-center gap-3 rounded-full bg-emerald-50 px-4 py-3 text-left text-sm font-semibold text-emerald-600 transition-all duration-300 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30"
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    Поддержка
-                  </button>
-                </div>
               </div>
             </div>
           </div>

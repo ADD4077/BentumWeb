@@ -59,6 +59,7 @@ jobs:
       REDIS_URL: ""
       TELEGRAM_BOT_TOKEN: test-token
       TELEGRAM_CHAT_ID: test-chat
+      TELEGRAM_INTERNAL_API_TOKEN: test-internal-token
     steps:
       - name: Получить код репозитория
         uses: actions/checkout@v5
@@ -75,6 +76,9 @@ jobs:
 
       - name: Запустить Django system check
         run: python manage.py check
+
+      - name: Проверить отсутствие дрейфа миграций
+        run: python manage.py makemigrations api --check --dry-run
 
       - name: Запустить smoke-тесты
         run: python -m pytest api/tests.py -q

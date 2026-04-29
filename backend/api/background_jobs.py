@@ -2,11 +2,13 @@ import logging
 import time
 from datetime import timedelta
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
 from .ban_service import BanService
-from .models import BackgroundJob
+from .content_parser_service import BNTUContentParserService
+from .models import BackgroundJob, LiteratureItem, NewsItem, ScheduleEntry
 from .telegram_binding_service import TelegramBindingService
 from .telegram_service import TelegramService
 from .user_notification_service import UserNotificationService
@@ -19,11 +21,17 @@ class BackgroundJobType:
     NEW_USER_NOTIFICATION = "new_user_notification"
     CLEANUP_EXPIRED_BANS = "cleanup_expired_bans"
     CLEANUP_TELEGRAM_TOKENS = "cleanup_telegram_tokens"
+    NEWS_BOOTSTRAP = "news_bootstrap"
+    NEWS_INCREMENTAL_SYNC = "news_incremental_sync"
+    LITERATURE_BOOTSTRAP = "literature_bootstrap"
+    LITERATURE_INCREMENTAL_SYNC = "literature_incremental_sync"
+    SCHEDULE_FULL_SYNC = "schedule_full_sync"
 
 
 class BackgroundJobService:
     DEFAULT_MAX_ATTEMPTS = 3
     MAINTENANCE_INTERVAL_SECONDS = 300
+    STALE_RUNNING_TIMEOUT_SECONDS = getattr(settings, "BACKGROUND_JOB_STALE_TIMEOUT_SECONDS", 1800)
 
     @staticmethod
     def enqueue(job_type, payload=None, *, max_attempts=None, available_at=None):
@@ -84,6 +92,39 @@ class BackgroundJobService:
         )
 
     @staticmethod
+    def recover_stale_running_jobs():
+        stale_before = timezone.now() - timedelta(seconds=BackgroundJobService.STALE_RUNNING_TIMEOUT_SECONDS)
+        stale_jobs = list(
+            BackgroundJob.objects.filter(
+                status=BackgroundJob.STATUS_RUNNING,
+                started_at__lt=stale_before,
+            )
+        )
+
+        for job in stale_jobs:
+            job.finished_at = timezone.now()
+            job.last_error = "Recovered stale running job after worker interruption"
+            if job.attempts >= job.max_attempts:
+                job.status = BackgroundJob.STATUS_FAILED
+                job.available_at = timezone.now()
+            else:
+                job.status = BackgroundJob.STATUS_PENDING
+                job.available_at = timezone.now()
+            job.started_at = None
+            job.save(
+                update_fields=[
+                    "status",
+                    "available_at",
+                    "started_at",
+                    "finished_at",
+                    "last_error",
+                    "updated_at",
+                ]
+            )
+
+        return len(stale_jobs)
+
+    @staticmethod
     def _dispatch(job):
         payload = job.payload or {}
 
@@ -113,6 +154,28 @@ class BackgroundJobService:
             TelegramBindingService().cleanup_expired_tokens()
             return
 
+        parser_service = BNTUContentParserService()
+
+        if job.job_type == BackgroundJobType.NEWS_BOOTSTRAP:
+            parser_service.sync_news_bootstrap()
+            return
+
+        if job.job_type == BackgroundJobType.NEWS_INCREMENTAL_SYNC:
+            parser_service.sync_news_incremental()
+            return
+
+        if job.job_type == BackgroundJobType.LITERATURE_BOOTSTRAP:
+            parser_service.sync_literature_bootstrap()
+            return
+
+        if job.job_type == BackgroundJobType.LITERATURE_INCREMENTAL_SYNC:
+            parser_service.sync_literature_incremental()
+            return
+
+        if job.job_type == BackgroundJobType.SCHEDULE_FULL_SYNC:
+            parser_service.sync_schedule()
+            return
+
         raise ValueError(f"Unsupported background job type: {job.job_type}")
 
     @staticmethod
@@ -136,6 +199,7 @@ class BackgroundJobService:
 
     @staticmethod
     def schedule_maintenance_jobs():
+        BackgroundJobService.recover_stale_running_jobs()
         now = timezone.now()
         threshold = now - timedelta(seconds=BackgroundJobService.MAINTENANCE_INTERVAL_SECONDS)
 
@@ -157,6 +221,68 @@ class BackgroundJobService:
 
             if not exists and not recently_completed:
                 BackgroundJobService.enqueue(job_type, {})
+
+        BackgroundJobService.schedule_content_jobs()
+
+    @staticmethod
+    def _has_active_job(job_type):
+        return BackgroundJob.objects.filter(
+            job_type=job_type,
+            status__in=[BackgroundJob.STATUS_PENDING, BackgroundJob.STATUS_RUNNING],
+        ).exists()
+
+    @staticmethod
+    def _has_recent_completion(job_type, interval_seconds):
+        threshold = timezone.now() - timedelta(seconds=interval_seconds)
+        return BackgroundJob.objects.filter(
+            job_type=job_type,
+            status=BackgroundJob.STATUS_COMPLETED,
+            finished_at__gte=threshold,
+        ).exists()
+
+    @staticmethod
+    def _has_recent_attempt(job_type, interval_seconds):
+        threshold = timezone.now() - timedelta(seconds=interval_seconds)
+        return BackgroundJob.objects.filter(
+            job_type=job_type,
+            finished_at__gte=threshold,
+        ).exists()
+
+    @staticmethod
+    def schedule_content_jobs():
+        if BackgroundJobService._has_active_job(BackgroundJobType.NEWS_BOOTSTRAP):
+            pass
+        elif not NewsItem.objects.exists():
+            if not BackgroundJobService._has_active_job(BackgroundJobType.NEWS_BOOTSTRAP) and not BackgroundJobService._has_recent_attempt(
+                BackgroundJobType.NEWS_BOOTSTRAP, 900
+            ):
+                BackgroundJobService.enqueue(BackgroundJobType.NEWS_BOOTSTRAP, {})
+        elif not BackgroundJobService._has_active_job(BackgroundJobType.NEWS_INCREMENTAL_SYNC) and not BackgroundJobService._has_recent_completion(
+            BackgroundJobType.NEWS_INCREMENTAL_SYNC, 4 * 60 * 60
+        ):
+            BackgroundJobService.enqueue(BackgroundJobType.NEWS_INCREMENTAL_SYNC, {})
+
+        if BackgroundJobService._has_active_job(BackgroundJobType.LITERATURE_BOOTSTRAP):
+            pass
+        elif not LiteratureItem.objects.exists():
+            if not BackgroundJobService._has_active_job(BackgroundJobType.LITERATURE_BOOTSTRAP) and not BackgroundJobService._has_recent_attempt(
+                BackgroundJobType.LITERATURE_BOOTSTRAP, 900
+            ):
+                BackgroundJobService.enqueue(BackgroundJobType.LITERATURE_BOOTSTRAP, {})
+        elif not BackgroundJobService._has_active_job(BackgroundJobType.LITERATURE_INCREMENTAL_SYNC) and not BackgroundJobService._has_recent_completion(
+            BackgroundJobType.LITERATURE_INCREMENTAL_SYNC, 4 * 60 * 60
+        ):
+            BackgroundJobService.enqueue(BackgroundJobType.LITERATURE_INCREMENTAL_SYNC, {})
+
+        if not ScheduleEntry.objects.exists():
+            if not BackgroundJobService._has_active_job(BackgroundJobType.SCHEDULE_FULL_SYNC) and not BackgroundJobService._has_recent_attempt(
+                BackgroundJobType.SCHEDULE_FULL_SYNC, 900
+            ):
+                BackgroundJobService.enqueue(BackgroundJobType.SCHEDULE_FULL_SYNC, {})
+        elif not BackgroundJobService._has_active_job(BackgroundJobType.SCHEDULE_FULL_SYNC) and not BackgroundJobService._has_recent_completion(
+            BackgroundJobType.SCHEDULE_FULL_SYNC, 24 * 60 * 60
+        ):
+            BackgroundJobService.enqueue(BackgroundJobType.SCHEDULE_FULL_SYNC, {})
 
     @staticmethod
     def run_forever(batch_size=20, sleep_seconds=5):

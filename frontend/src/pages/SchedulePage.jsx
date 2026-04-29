@@ -1,135 +1,533 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  CalendarDays,
+  Clock3,
+  Coffee,
+  GraduationCap,
+  Loader2,
+  MapPinned,
+  Route,
+} from 'lucide-react';
+
 import ScheduleItem from '../components/ScheduleItem.jsx';
-import { daysOfWeek, quickDayButtons, groupInfo } from '../utils/constants.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useSchedule } from '../hooks/useSchedule.js';
+import { api } from '../services/api.js';
+import { daysOfWeek, quickDayButtons } from '../utils/constants.js';
 
-/**
- * Страница расписания занятий
- */
-export const SchedulePage = () => {
-  const { user, isAuthenticated } = useAuth();
+const QUICK_BUTTON_META = {
+  today: {
+    label: 'Сегодня',
+    icon: CalendarDays,
+  },
+  tomorrow: {
+    label: 'Завтра',
+    icon: Clock3,
+  },
+};
+
+const DAY_NAME_MAP = {
+  Пн: 'Понедельник',
+  Вт: 'Вторник',
+  Ср: 'Среда',
+  Чт: 'Четверг',
+  Пт: 'Пятница',
+  Сб: 'Суббота',
+};
+
+function getCurrentTimeMinutes() {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
+function parseLessonTimeRange(timeRange) {
+  const [start = '', end = ''] = String(timeRange || '').split(' - ');
+  const [startHour = 0, startMinute = 0] = start.split(':').map(Number);
+  const hasExplicitEnd = Boolean(end && end.includes(':'));
+
+  let endHour = 0;
+  let endMinute = 0;
+
+  if (hasExplicitEnd) {
+    [endHour, endMinute] = end.split(':').map(Number);
+  } else {
+    const totalEndMinutes = startHour * 60 + startMinute + 95;
+    endHour = Math.floor(totalEndMinutes / 60);
+    endMinute = totalEndMinutes % 60;
+  }
+
+  return {
+    start,
+    end: hasExplicitEnd ? end : `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`,
+    startMinutes: startHour * 60 + startMinute,
+    endMinutes: endHour * 60 + endMinute,
+  };
+}
+
+function cleanLessonSubject(subject) {
+  return String(subject || '')
+    .replace(/^\(Лаб\.\)\s*/, '')
+    .replace(/^\(Лекц\.\)\s*/, '')
+    .replace(/^\(Практ\.\)\s*/, '')
+    .replace(/^\(Сем\.\)\s*/, '')
+    .trim();
+}
+
+function inferLessonType(subject) {
+  const value = String(subject || '');
+
+  if (value.includes('(Лаб.)') || value.includes('Лабораторная')) return 'Лабораторная';
+  if (value.includes('(Лекц.)') || value.includes('Лекция')) return 'Лекция';
+  if (value.includes('(Практ.)') || value.includes('Практика')) return 'Практика';
+  if (value.includes('(Сем.)') || value.includes('Семинар')) return 'Семинар';
+
+  return '';
+}
+
+function capitalizeFirst(text) {
+  if (!text) {
+    return '';
+  }
+
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function formatGap(minutes) {
+  if (minutes <= 0) {
+    return 'Сейчас идёт занятие';
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+
+  if (hours > 0 && mins > 0) {
+    return `${hours} ч ${mins} мин`;
+  }
+
+  if (hours > 0) {
+    return `${hours} ч`;
+  }
+
+  return `${mins} мин`;
+}
+
+function buildLocation(item) {
+  const locationParts = [];
+
+  if (item?.frame) {
+    locationParts.push(`Корпус ${item.frame}`);
+  }
+
+  if (item?.classroom) {
+    locationParts.push(`ауд. ${item.classroom}`);
+  }
+
+  return locationParts.join(', ');
+}
+
+function formatScheduleUpdatedAt(value) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date).replace(',', '');
+}
+
+function SideCard({ icon: Icon, title, children }) {
+  return (
+    <section className="section-reveal rounded-[1.5rem] border border-slate-200/70 bg-white/80 p-4 shadow-lg shadow-slate-900/5 backdrop-blur-md dark:border-slate-800/70 dark:bg-[#121927] dark:shadow-black/20 sm:rounded-[1.75rem] sm:p-5">
+      <div className="mb-3 flex items-center gap-2.5 sm:mb-4 sm:gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-500/12 text-emerald-500 dark:bg-emerald-500/10">
+          <Icon className="h-4 w-4" />
+        </div>
+        <h3 className="text-[15px] font-bold text-slate-900 dark:text-white sm:text-base">{title}</h3>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+export function SchedulePage() {
+  const { isAuthenticated, user } = useAuth();
+  const [nextLessonData, setNextLessonData] = useState(null);
   const {
     userSchedule,
-    currentSchedule,
+    scheduleUpdatedAt,
     scheduleLoading,
     selectedDay,
     setSelectedDay,
     weekType,
     setWeekType,
-    loadUserSchedule,
+    currentSchedule,
+    handleQuickDaySelect,
     getTodayDay,
-    getTomorrowDay,
     getWeekType,
-    handleQuickDaySelect
   } = useSchedule(isAuthenticated, user);
+
+  const todayDay = getTodayDay();
+  const tomorrowDay = useMemo(() => {
+    const dayOrder = [...daysOfWeek, 'Вс'];
+    const todayIndex = dayOrder.indexOf(todayDay);
+    if (todayIndex === -1) {
+      return null;
+    }
+
+    return dayOrder[(todayIndex + 1) % dayOrder.length];
+  }, [todayDay]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadNextLesson = async () => {
+      if (!isAuthenticated || !user?.student_code) {
+        if (isMounted) {
+          setNextLessonData(null);
+        }
+        return;
+      }
+
+      const response = await api.getNextScheduleLesson(user.student_code);
+      if (!isMounted) {
+        return;
+      }
+
+      if (response.ok && response.success && response.next_lesson) {
+        setNextLessonData(response.next_lesson);
+        return;
+      }
+
+      setNextLessonData(null);
+    };
+
+    loadNextLesson();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, user?.student_code]);
+
+  const nextLesson = useMemo(() => {
+    if (nextLessonData) {
+      return nextLessonData;
+    }
+
+    const todaySchedule = todayDay ? (selectedDay === todayDay ? currentSchedule : []) : [];
+    const nowMinutes = getCurrentTimeMinutes();
+
+    return todaySchedule.find((lesson) => parseLessonTimeRange(lesson.time).endMinutes > nowMinutes) || null;
+  }, [currentSchedule, nextLessonData, selectedDay, todayDay]);
+
+  const todayScheduleActual = useMemo(() => {
+    if (!todayDay || !userSchedule || todayDay === 'Вс') {
+      return [];
+    }
+
+    const fullDayName = DAY_NAME_MAP[todayDay];
+    const actualWeekType = getWeekType();
+    const dayBucket = userSchedule?.[fullDayName]?.[actualWeekType] || [];
+
+    return dayBucket.map((item, index) => ({
+      id: index + 1,
+      time: item.time,
+      subject: item.subject,
+      teacher: item.teacher,
+      frame: item.type,
+      classroom: item.classroom,
+    }));
+  }, [getWeekType, todayDay, userSchedule]);
+
+  const lessonGap = useMemo(() => {
+    if (!todayDay || todayScheduleActual.length === 0) {
+      return null;
+    }
+
+    const nowMinutes = getCurrentTimeMinutes();
+    const normalizedTodaySchedule = todayScheduleActual.map((lesson) => ({
+      lesson,
+      ...parseLessonTimeRange(lesson.time),
+    }));
+
+    const upcomingLessonIndex = normalizedTodaySchedule.findIndex(({ startMinutes }) => startMinutes > nowMinutes);
+    if (upcomingLessonIndex <= 0) {
+      return null;
+    }
+
+    const previousLesson = normalizedTodaySchedule[upcomingLessonIndex - 1];
+    const upcomingLesson = normalizedTodaySchedule[upcomingLessonIndex];
+    const gapMinutes = upcomingLesson.startMinutes - previousLesson.endMinutes;
+
+    if (gapMinutes <= 0) {
+      return null;
+    }
+
+    return {
+      startsInMinutes: gapMinutes,
+      start: upcomingLesson.start,
+    };
+  }, [todayDay, todayScheduleActual]);
+
+  const profileGroup = user?.student_code ? `Группа ${user.student_code}` : 'Группа не указана';
+  const facultyLabel = user?.faculty || 'БНТУ';
+  const upcomingLocation = buildLocation(nextLesson);
+  const nextLessonSubject = capitalizeFirst(cleanLessonSubject(nextLesson?.subject));
+  const nextLessonType = inferLessonType(nextLesson?.subject);
+  const isTomorrowSelected = selectedDay === tomorrowDay;
+  const scheduleUpdatedAtLabel = useMemo(() => formatScheduleUpdatedAt(scheduleUpdatedAt), [scheduleUpdatedAt]);
+
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-end md:items-center mb-10 gap-6 w-full">
-        <div className="text-left self-start">
-          <h2 className="text-4xl font-bold mb-2 text-slate-900 dark:text-white tracking-tight">Расписание</h2>
-          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-            <span className="rounded-lg border border-gray-200/70 bg-gray-100/50 px-3 py-1 text-sm font-medium shadow-lg shadow-gray-900/10 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20">
-              Группа {user?.student_code?.slice(0, 8) || groupInfo.group}
-            </span>
-            <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
-            <span className="text-sm">{user?.faculty || groupInfo.faculty}</span>
-          </div>
-        </div>
-        <div className="relative mx-auto flex w-full max-w-md rounded-2xl border border-gray-200/70 bg-gray-100/50 p-1.5 shadow-lg shadow-gray-900/10 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20">
-          <div 
-            className={`absolute top-1.5 bottom-1.5 rounded-xl bg-white dark:bg-slate-700 transition-all duration-300 ease-out shadow-sm`}
-            style={{
-              left: weekType === 'upper' ? '6px' : '50%',
-              width: 'calc(50% - 6px)'
-            }}
-          ></div>
-          <button
-            onClick={() => setWeekType('upper')}
-            className={`relative z-10 px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 flex-1 ${
-              weekType === 'upper' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            1 Неделя
-          </button>
-          <button
-            onClick={() => setWeekType('lower')}
-            className={`relative z-10 px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 flex-1 ${
-              weekType === 'lower' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            2 Неделя
-          </button>
-        </div>
-      </div>
-      <div className="flex gap-3 mb-4">
-        {quickDayButtons.map((button) => (
-          <button
-            key={button.id}
-            onClick={() => handleQuickDaySelect(button.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-              (button.id === 'today' && getTodayDay() && selectedDay === getTodayDay() && weekType === getWeekType()) ||
-              (button.id === 'tomorrow' && getTomorrowDay() && selectedDay === getTomorrowDay() && weekType === getWeekType())
-                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
-                : button.id === 'today' && !getTodayDay()
-                ? 'border border-gray-200/70 bg-gray-100/50 text-gray-400 shadow-lg shadow-gray-900/10 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-gray-500 dark:shadow-black/20'
-                : 'border border-gray-200/70 bg-gray-100/50 text-slate-600 shadow-lg shadow-gray-900/10 backdrop-blur-md hover:border-emerald-300 hover:text-emerald-600 dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-400 dark:shadow-black/20 dark:hover:border-emerald-600 dark:hover:text-emerald-400'
-            }`}
-          >
-            {button.name}
-          </button>
-        ))}
-      </div>
-      <div className="flex overflow-x-auto px-3 py-2 pb-6 gap-3 mb-2">
-        {daysOfWeek.map((day) => (
-          <button
-            key={day}
-            onClick={() => setSelectedDay(day)}
-            className={`min-w-[3rem] h-12 sm:min-w-[4rem] sm:h-16 rounded-2xl flex flex-col items-center justify-center border-2 transition-all duration-300 ${
-              selectedDay === day
-                ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-105'
-                : 'border-gray-200/70 bg-gray-100/50 text-slate-500 shadow-lg shadow-gray-900/10 backdrop-blur-md hover:border-emerald-200 hover:text-slate-900 dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-400 dark:shadow-black/20 dark:hover:border-slate-600 dark:hover:text-slate-200'
-            }`}
-          >
-            <span className={`text-xs sm:text-sm font-medium ${selectedDay === day ? 'opacity-80' : 'opacity-60'}`}>{day}</span>
-          </button>
-        ))}
-      </div>
-      <div className="space-y-4">
-        {scheduleLoading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-6"></div>
-            <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Загрузка расписания...</h3>
-          </div>
-        ) : currentSchedule.length > 0 ? (
-          currentSchedule.map((item) => (
-            <ScheduleItem key={item.id} item={item} />
-          ))
-        ) : (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="text-6xl mb-6">{selectedDay === 'Вс' ? '😴' : '☀️'}</div>
-            <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
-              {userSchedule ? (selectedDay === 'Вс' ? 'Воскресенье' : 'Свободный день') : 'Расписание не загружено'}
-            </h3>
-            <p className="text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
-              {userSchedule 
-                ? (selectedDay === 'Вс' ? 'Пар нет. Отличное время для саморазвития или отдыха.' : 'Пар нет. Отличное время для саморазвития или отдыха.')
-                : 'Попробуйте обновить страницу или войти заново.'
-              }
-            </p>
-            {!userSchedule && (
-              <button 
-                onClick={loadUserSchedule}
-                className="mt-4 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-colors"
+    <div className="mx-auto max-w-7xl overflow-x-hidden px-3 sm:px-6">
+      <div className="grid gap-4 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0">
+          <div className="section-reveal mb-5 sm:mb-8">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+              <div>
+                <h1 className="text-[2.15rem] font-semibold tracking-tight text-slate-950 dark:text-white sm:text-5xl">
+                  Расписание
+                </h1>
+              </div>
+
+              <div className="hidden rounded-2xl border border-slate-200/70 bg-white/75 p-1 dark:border-slate-800/70 dark:bg-[#121927] xl:inline-flex">
+                <button
+                  onClick={() => setWeekType('lower')}
+                  className={`h-11 flex-1 rounded-2xl px-4 text-sm font-semibold transition-all duration-300 xl:flex-none xl:px-6 ${
+                    weekType === 'lower'
+                      ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-700'
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                  }`}
+                >
+                  1 неделя
+                </button>
+                <button
+                  onClick={() => setWeekType('upper')}
+                  className={`h-11 flex-1 rounded-2xl px-4 text-sm font-semibold transition-all duration-300 xl:flex-none xl:px-6 ${
+                    weekType === 'upper'
+                      ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-700'
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                  }`}
+                >
+                  2 неделя
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2.5 text-sm text-slate-600 dark:text-slate-400 sm:mt-4 sm:gap-3">
+              <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200/70 bg-white/70 px-3 py-2 text-[13px] font-medium text-slate-700 shadow-sm dark:border-slate-800/70 dark:bg-[#121927] dark:text-slate-300 sm:px-4 sm:text-sm">
+                <GraduationCap className="h-4 w-4 text-emerald-500" />
+                <span>{profileGroup}</span>
+              </div>
+              <span className="hidden text-slate-400 dark:text-slate-600 sm:inline">•</span>
+              <span className="text-[13px] font-medium text-slate-700 dark:text-slate-300 sm:text-base">{facultyLabel}</span>
+            </div>
+
+            <div className="mt-3 inline-flex w-full rounded-2xl border border-slate-200/70 bg-white/75 p-1 dark:border-slate-800/70 dark:bg-[#121927] xl:hidden">
+              <button
+                onClick={() => setWeekType('lower')}
+                className={`h-11 flex-1 rounded-2xl px-4 text-sm font-semibold transition-all duration-300 ${
+                  weekType === 'lower'
+                    ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-700'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                }`}
               >
-                Обновить расписание
+                1 неделя
               </button>
-            )}
+              <button
+                onClick={() => setWeekType('upper')}
+                className={`h-11 flex-1 rounded-2xl px-4 text-sm font-semibold transition-all duration-300 ${
+                  weekType === 'upper'
+                    ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-700'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                }`}
+              >
+                2 неделя
+              </button>
+            </div>
           </div>
-        )}
+
+          <div className="section-reveal mb-4 flex flex-col gap-3 sm:mb-6 sm:gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="grid gap-4 xl:flex xl:flex-1 xl:items-center xl:justify-between">
+              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+                {quickDayButtons.map((button) => {
+                  const meta = QUICK_BUTTON_META[button.id];
+                  const Icon = meta.icon;
+                  const isActive =
+                    (button.id === 'today' && selectedDay === todayDay) ||
+                    (button.id === 'tomorrow' && isTomorrowSelected);
+
+                  return (
+                    <button
+                      key={button.id}
+                      onClick={() => handleQuickDaySelect(button.id)}
+                      className={`inline-flex h-11 items-center gap-2 rounded-2xl border px-4 text-sm font-semibold transition-all duration-300 sm:h-12 sm:px-5 ${
+                        isActive
+                          ? 'border-emerald-400/70 bg-emerald-500/12 text-emerald-600 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-400'
+                          : 'border-slate-200/70 bg-white/75 text-slate-700 hover:border-emerald-300 hover:text-emerald-600 dark:border-slate-800/70 dark:bg-[#121927] dark:text-slate-300 dark:hover:border-emerald-500/30 dark:hover:text-emerald-400'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span>{meta.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="grid grid-cols-6 gap-2 sm:flex sm:flex-wrap sm:items-center xl:justify-end">
+                {daysOfWeek.map((day) => (
+                  <button
+                    key={day}
+                    onClick={() => setSelectedDay(day)}
+                    className={`aspect-square min-h-[46px] rounded-2xl border px-0 text-sm font-semibold transition-all duration-300 sm:h-12 sm:min-h-0 sm:min-w-[56px] sm:flex-none sm:px-4 ${
+                      selectedDay === day
+                        ? 'border-emerald-400/70 bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                        : 'border-slate-200/70 bg-white/75 text-slate-600 hover:border-emerald-300 hover:text-emerald-600 dark:border-slate-800/70 dark:bg-[#121927] dark:text-slate-300 dark:hover:border-emerald-500/30 dark:hover:text-emerald-400'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {scheduleLoading ? (
+            <div className="section-reveal flex min-h-[260px] items-center justify-center rounded-[1.5rem] border border-slate-200/70 bg-white/80 shadow-lg shadow-slate-900/5 backdrop-blur-md dark:border-slate-800/70 dark:bg-[#121927] dark:shadow-black/20 sm:min-h-[320px] sm:rounded-[1.75rem]">
+              <div className="flex items-center gap-3 text-sm font-medium text-slate-600 dark:text-slate-300 sm:text-base">
+                <Loader2 className="h-5 w-5 animate-spin text-emerald-500" />
+                Загрузка расписания...
+              </div>
+            </div>
+          ) : !isAuthenticated ? (
+            <div className="section-reveal rounded-[1.5rem] border border-slate-200/70 bg-white/80 px-5 py-8 text-center shadow-lg shadow-slate-900/5 backdrop-blur-md dark:border-slate-800/70 dark:bg-[#121927] dark:shadow-black/20 sm:rounded-[1.75rem] sm:px-6 sm:py-10">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">Войдите в аккаунт</h3>
+              <p className="mt-3 text-sm text-slate-600 dark:text-slate-400 sm:text-base">
+                После входа здесь появится персональное расписание вашей группы.
+              </p>
+            </div>
+          ) : !userSchedule ? (
+            <div className="section-reveal rounded-[1.5rem] border border-slate-200/70 bg-white/80 px-5 py-8 text-center shadow-lg shadow-slate-900/5 backdrop-blur-md dark:border-slate-800/70 dark:bg-[#121927] dark:shadow-black/20 sm:rounded-[1.75rem] sm:px-6 sm:py-10">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">Расписание пока недоступно</h3>
+              <p className="mt-3 text-sm text-slate-600 dark:text-slate-400 sm:text-base">
+                Мы не нашли данные для вашей группы. Попробуйте немного позже.
+              </p>
+            </div>
+          ) : currentSchedule.length === 0 ? (
+            <div className="section-reveal rounded-[1.5rem] border border-slate-200/70 bg-white/80 px-5 py-8 text-center shadow-lg shadow-slate-900/5 backdrop-blur-md dark:border-slate-800/70 dark:bg-[#121927] dark:shadow-black/20 sm:rounded-[1.75rem] sm:px-6 sm:py-10">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">На этот день пар нет</h3>
+              <p className="mt-3 text-sm text-slate-600 dark:text-slate-400 sm:text-base">
+                Можно переключиться на другой день или неделю в верхней панели.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2.5 sm:space-y-3">
+              {currentSchedule.map((item, index) => {
+                const isHighlighted = nextLesson && item.time === nextLesson.time && item.subject === nextLesson.subject;
+
+                return (
+                  <ScheduleItem
+                    key={`${selectedDay}-${weekType}-${item.time}-${item.subject}-${index}`}
+                    item={item}
+                    highlighted={Boolean(isHighlighted)}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {scheduleUpdatedAtLabel ? (
+            <div className="section-reveal mt-5 hidden text-[13px] text-slate-600 dark:text-slate-400 sm:mt-6 sm:block sm:text-sm">
+              <span className="font-medium text-slate-700 dark:text-slate-300">Расписание обновлено:</span>{' '}
+              {scheduleUpdatedAtLabel}
+            </div>
+          ) : null}
+        </div>
+
+        <aside className="min-w-0 space-y-4 sm:space-y-5">
+          <SideCard icon={Clock3} title="Следующее занятие">
+            {nextLesson ? (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="inline-flex items-center rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-500">
+                    {parseLessonTimeRange(nextLesson.time).start}
+                  </div>
+                  {nextLessonType ? (
+                    <span className="inline-flex items-center rounded-full border border-slate-200/80 bg-white/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300">
+                      {nextLessonType}
+                    </span>
+                  ) : null}
+                </div>
+                <h4 className="text-[1.05rem] font-bold leading-tight text-slate-900 dark:text-white sm:text-lg">{nextLessonSubject}</h4>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-slate-600 dark:text-slate-400 sm:text-[13px]">
+                  {upcomingLocation ? (
+                    <>
+                      <span className="inline-flex items-center gap-1.5">
+                        <MapPinned className="h-3.5 w-3.5 flex-none text-emerald-500" />
+                        <span className="font-medium">{upcomingLocation}</span>
+                      </span>
+                      {nextLesson.teacher ? <span className="text-slate-300 dark:text-slate-600">|</span> : null}
+                    </>
+                  ) : null}
+                  {nextLesson.teacher ? <span className="whitespace-nowrap">{nextLesson.teacher}</span> : <span className="whitespace-nowrap">Преподаватель будет указан позже</span>}
+                </div>
+              </div>
+            ) : (
+              <p className="text-[12px] text-slate-600 dark:text-slate-400 sm:text-[13px]">
+                На сегодня новых занятий уже нет. Можно спокойно выдохнуть.
+              </p>
+            )}
+          </SideCard>
+
+          <SideCard icon={Coffee} title="Окно между парами">
+            {lessonGap ? (
+              <div className="space-y-3">
+                <div className="text-[1.45rem] font-bold tracking-tight text-emerald-500 sm:text-[1.65rem]">
+                  {formatGap(lessonGap.startsInMinutes)}
+                </div>
+                <p className="text-[12px] text-slate-600 dark:text-slate-400 sm:text-[13px]">До {lessonGap.start}</p>
+              </div>
+            ) : (
+              <p className="text-[12px] text-slate-600 dark:text-slate-400 sm:text-[13px]">
+                Сегодня больших окон больше не ожидается.
+              </p>
+            )}
+          </SideCard>
+
+          <SideCard icon={Route} title="Навигация по корпусам">
+            <div className="mb-4 overflow-hidden rounded-[1.35rem] border border-slate-200/70 bg-slate-100/80 dark:border-slate-800/70 dark:bg-[#0F1522] sm:rounded-[1.5rem]">
+              <div className="flex h-32 items-center justify-center bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.18),_transparent_58%),linear-gradient(135deg,rgba(15,23,42,0.95),rgba(30,41,59,0.85))] sm:h-40">
+                <MapPinned className="h-10 w-10 text-emerald-400 sm:h-12 sm:w-12" />
+              </div>
+            </div>
+            <div className="space-y-4">
+              <p className="text-[13px] font-medium text-slate-600 dark:text-slate-400">
+                {upcomingLocation || 'Корпус и аудитория появятся вместе с ближайшей парой'}
+              </p>
+              <button className="inline-flex w-full items-center justify-between rounded-2xl border border-slate-200/70 bg-white px-4 py-3 text-[13px] font-semibold text-slate-700 transition-all duration-300 hover:border-emerald-300 hover:text-emerald-600 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:border-emerald-500/30 dark:hover:text-emerald-400">
+                <span>Построить маршрут</span>
+                <Route className="h-4 w-4" />
+              </button>
+            </div>
+          </SideCard>
+
+          {scheduleUpdatedAtLabel ? (
+            <div className="section-reveal text-[13px] text-slate-600 dark:text-slate-400 sm:hidden">
+              <span className="font-medium text-slate-700 dark:text-slate-300">Расписание обновлено:</span>{' '}
+              {scheduleUpdatedAtLabel}
+            </div>
+          ) : null}
+        </aside>
       </div>
     </div>
   );
-};
+}
 
 export default SchedulePage;

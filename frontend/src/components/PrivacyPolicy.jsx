@@ -160,10 +160,12 @@ function Section({ section }) {
   const Icon = section.icon;
 
   return (
-    <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-lg dark:border-slate-700 dark:bg-slate-800 sm:rounded-2xl sm:p-6 lg:p-8">
-      <h2 className="mb-3 flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white sm:mb-4 sm:gap-3 sm:text-2xl">
-        <Icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400 sm:h-6 sm:w-6" />
-        <span className="text-lg sm:text-xl">{section.title}</span>
+    <section className="rounded-2xl border border-white/60 bg-white/45 p-4 shadow-xl backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-800/45 sm:p-6 lg:p-8">
+      <h2 className="mb-3 flex items-center gap-3 text-xl font-bold text-slate-900 dark:text-white sm:mb-4 sm:text-2xl">
+        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100/80 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
+          <Icon className="h-5 w-5" />
+        </span>
+        <span>{section.title}</span>
       </h2>
 
       {section.content ? (
@@ -177,7 +179,10 @@ function Section({ section }) {
       {section.blocks ? (
         <div className="space-y-4 sm:space-y-6">
           {section.blocks.map((block) => (
-            <div key={block.title} className="rounded-lg bg-gray-50 p-3 dark:bg-slate-700/50 sm:p-4">
+            <div
+              key={block.title}
+              className="rounded-xl border border-white/60 bg-white/50 p-4 backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/35"
+            >
               <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white sm:text-base">
                 {block.title}
               </h3>
@@ -207,24 +212,21 @@ function PrivacyPolicy({ setActiveTab }) {
       <div className="container mx-auto max-w-4xl px-4 py-6 sm:py-8">
         <button
           onClick={() => setActiveTab?.('home')}
-          className="mb-4 inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-gray-50 hover:shadow-md dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 sm:mb-6 sm:rounded-2xl sm:px-4 sm:text-base"
+          className="mb-4 inline-flex items-center gap-2 rounded-2xl border border-white/60 bg-white/45 px-4 py-2 text-sm font-medium text-slate-600 shadow-lg backdrop-blur-md transition-all duration-200 hover:bg-white/60 dark:border-slate-700/60 dark:bg-slate-800/45 dark:text-slate-300 dark:hover:bg-slate-800/60 sm:mb-6 sm:text-base"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Назад</span>
         </button>
 
-        <div className="mb-8 text-center sm:mb-12">
-          <div className="mb-3 flex justify-center sm:mb-4">
-            <div className="rounded-xl bg-emerald-100 p-2 dark:bg-emerald-900/20 sm:rounded-2xl sm:p-3">
-              <Shield className="h-6 w-6 text-emerald-600 dark:text-emerald-400 sm:h-8 sm:w-8" />
+        <div className="mb-8 rounded-3xl border border-white/60 bg-white/45 px-6 py-8 text-center shadow-xl backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-800/45 sm:mb-12 sm:px-8">
+          <div className="mb-4 flex justify-center">
+            <div className="rounded-2xl bg-emerald-100/80 p-3 dark:bg-emerald-500/10">
+              <Shield className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
-          <h1 className="mb-3 px-2 text-2xl font-bold text-slate-900 dark:text-white sm:mb-4 sm:text-3xl lg:text-4xl">
+          <h1 className="mb-4 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl lg:text-4xl">
             Политика конфиденциальности
           </h1>
-          <p className="mx-auto max-w-2xl px-4 text-sm text-slate-600 dark:text-slate-300 sm:text-base lg:text-lg">
-            Последнее обновление: {LAST_UPDATED}
-          </p>
         </div>
 
         <div className="space-y-6 sm:space-y-8">
@@ -233,7 +235,7 @@ function PrivacyPolicy({ setActiveTab }) {
           ))}
         </div>
 
-        <div className="mt-8 px-4 text-center text-slate-600 dark:text-slate-400 sm:mt-12">
+        <div className="mt-8 rounded-2xl border border-white/60 bg-white/40 px-4 py-4 text-center text-slate-600 shadow-lg backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-800/40 dark:text-slate-400 sm:mt-12">
           <p className="text-xs sm:text-sm">
             Эта политика действует с {LAST_UPDATED} и применяется ко всем пользователям платформы Bentum.
           </p>

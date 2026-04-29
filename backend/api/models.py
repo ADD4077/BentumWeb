@@ -3,13 +3,25 @@ from django.utils import timezone
 
 
 class User(models.Model):
+    ROLE_STUDENT = "student"
+    ROLE_TEACHER = "teacher"
+    ROLE_CHAIRPERSON = "chairperson"
+    ROLE_MODERATOR = "moderator"
+
+    ROLE_CHOICES = [
+        (ROLE_STUDENT, "Студент"),
+        (ROLE_TEACHER, "Преподаватель"),
+        (ROLE_CHAIRPERSON, "Председатель"),
+        (ROLE_MODERATOR, "Модератор"),
+    ]
+
     fullname = models.CharField(max_length=100)
     faculty = models.CharField(max_length=255)
     student_code = models.CharField(max_length=10, unique=True)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_STUDENT)
     password = models.CharField(max_length=128)
-    created_at = models.IntegerField(null=True, blank=True)
-    last_login = models.IntegerField(null=True, blank=True)
-    email = models.EmailField(max_length=255, null=True, blank=True)
+    created_at = models.DateTimeField(null=True, blank=True)
+    last_login = models.DateTimeField(null=True, blank=True)
     twofa_enabled = models.BooleanField(default=False)
     twofa_method = models.CharField(max_length=20, null=True, blank=True)
 
@@ -18,6 +30,23 @@ class User(models.Model):
 
     def __str__(self):
         return self.student_code
+
+
+class UserSettings(models.Model):
+    user = models.OneToOneField("User", on_delete=models.CASCADE, related_name="settings")
+    notify_successful_login = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "user_settings"
+        indexes = [
+            models.Index(fields=["notify_successful_login"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        return f"Settings: {self.user.student_code}"
 
 
 class UserSession(models.Model):
@@ -41,7 +70,7 @@ class UserSession(models.Model):
 
 
 class UserProfileMedia(models.Model):
-    """Модель для хранения медиа файлов пользователей."""
+    """Модель для хранения медиафайлов пользователей."""
 
     user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="media_files")
     media_type = models.CharField(
@@ -100,7 +129,7 @@ class MediaOptimization(models.Model):
 
 
 class Administration(models.Model):
-    """Модель для отслеживания администраторов системы."""
+    """Модель для отслеживания системных администраторов."""
 
     administrator = models.ForeignKey("User", on_delete=models.CASCADE, related_name="admin_assignments")
     appointed_by = models.ForeignKey(
@@ -153,7 +182,7 @@ class UserBan(models.Model):
 
 
 class TelegramBinding(models.Model):
-    """Модель для хранения привязки Telegram аккаунтов к пользователям."""
+    """Модель для хранения привязки Telegram-аккаунтов к пользователям."""
 
     user = models.OneToOneField("User", on_delete=models.CASCADE, related_name="telegram_binding")
     telegram_id = models.BigIntegerField(default=0, db_index=True)
@@ -218,3 +247,84 @@ class BackgroundJob(models.Model):
 
     def __str__(self):
         return f"{self.job_type} [{self.status}]"
+
+
+class LiteratureItem(models.Model):
+    source_id = models.BigIntegerField(null=True, blank=True, unique=True)
+    handle = models.CharField(max_length=255, blank=True)
+    title = models.CharField(max_length=255)
+    faculty = models.CharField(max_length=64, blank=True)
+    category = models.CharField(max_length=191, blank=True)
+    authors = models.TextField(blank=True)
+    publishing_date = models.CharField(max_length=50, blank=True)
+    description = models.TextField(blank=True)
+    image_url = models.URLField(max_length=1000, blank=True)
+    download_size = models.CharField(max_length=100, blank=True)
+    download_link = models.URLField(max_length=1000, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "literature_items"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["title", "faculty", "category"],
+                name="unique_literature_item_per_faculty_category",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["handle"]),
+            models.Index(fields=["faculty"]),
+            models.Index(fields=["category"]),
+            models.Index(fields=["publishing_date"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        return self.title
+
+
+class NewsItem(models.Model):
+    title = models.CharField(max_length=500)
+    link = models.CharField(max_length=255, unique=True)
+    date = models.CharField(max_length=100, blank=True)
+    timestamp = models.BigIntegerField(default=0, db_index=True)
+    summary = models.TextField(blank=True)
+    tags = models.TextField(blank=True)
+    image_url = models.URLField(max_length=1000, blank=True)
+    reading_time = models.IntegerField(default=5)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "news_items"
+        indexes = [
+            models.Index(fields=["timestamp"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        return self.title
+
+
+class ScheduleEntry(models.Model):
+    group_number = models.CharField(max_length=20, db_index=True)
+    week = models.IntegerField()
+    day = models.CharField(max_length=32)
+    time = models.CharField(max_length=32)
+    matter = models.CharField(max_length=500, blank=True)
+    teacher = models.CharField(max_length=255, blank=True)
+    frame = models.CharField(max_length=255, blank=True)
+    classroom = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "schedule_entries"
+        indexes = [
+            models.Index(fields=["group_number", "day", "week"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.group_number}: {self.day} {self.time}"

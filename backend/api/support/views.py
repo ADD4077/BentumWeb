@@ -1,11 +1,10 @@
 import json
+import logging
+
 from django.conf import settings
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-from django.contrib.auth.decorators import login_required
-import logging
 from django.utils import timezone
+from django.views.decorators.http import require_http_methods
 from ..background_jobs import BackgroundJobService, BackgroundJobType
 from ..common.decorators import allow_unverified_2fa
 from ..models import User
@@ -98,7 +97,6 @@ def submit_support_request(request):
         }, status=500)
 
 @allow_unverified_2fa
-@csrf_exempt
 @require_http_methods(["GET"])
 def test_telegram_connection(request):
     """Тест соединения с Telegram (только для разработки)"""
@@ -130,7 +128,6 @@ def test_telegram_connection(request):
         }, status=500)
 
 @allow_unverified_2fa
-@csrf_exempt
 @require_http_methods(["GET"])
 def test_new_user_notification(request):
     """Тестирование уведомлений о новых пользователях"""
@@ -154,7 +151,6 @@ def test_new_user_notification(request):
         }, status=500)
 
 @allow_unverified_2fa
-@csrf_exempt
 @require_http_methods(["POST"])
 def send_new_user_notification(request):
     """Отправка уведомления о новом пользователе"""
@@ -164,7 +160,7 @@ def send_new_user_notification(request):
         data = json.loads(request.body)
         
         # Проверяем обязательные поля
-        required_fields = ['fullname', 'email', 'student_code']
+        required_fields = ['fullname', 'student_code']
         for field in required_fields:
             if not data.get(field):
                 return JsonResponse({

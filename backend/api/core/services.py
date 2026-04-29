@@ -1,9 +1,8 @@
 """
-Сервисы для аутентификации, управления сессиями и вспомогательной работы с пользователями.
+Authentication and session services.
 """
 
 import logging
-from datetime import datetime
 from typing import Optional, Tuple
 
 from django.conf import settings
@@ -13,7 +12,9 @@ from django.core.cache import cache
 from django.utils import timezone
 
 from ..background_jobs import BackgroundJobService, BackgroundJobType
-from ..models import Administration, User, UserSession
+from ..common.permissions import is_system_administrator
+from ..common.utils import get_user_settings, serialize_datetime
+from ..models import User, UserSession
 from ..user_agent_parser import UserAgentParser
 
 logger = logging.getLogger(__name__)
@@ -22,29 +23,61 @@ SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 
 
 class AuthService:
-    """Бизнес-логика входа, проверки пароля и регистрации."""
+    """Business logic for login, password verification, and registration."""
 
     FULLNAME_MAX_LENGTH = 100
     FACULTY_MAX_LENGTH = 255
 
     @staticmethod
-    def get_unix_timestamp() -> int:
-        return int(datetime.now().timestamp())
+    def current_datetime():
+        return timezone.now()
 
     @staticmethod
-    def check_login_attempts(student_code: str) -> Tuple[bool, str]:
-        user_key = f"login_attempts_user:{student_code}"
-        user_attempts = cache.get(user_key, 0)
+    def _login_rate_limit_keys(student_code: str, request=None) -> list[str]:
+        keys = [f"login_attempts_user:{student_code}"]
 
-        if user_attempts >= settings.LOGIN_RATE_LIMIT_ATTEMPTS:
-            return False, "Слишком много попыток входа. Попробуйте позже."
+        if not request:
+            return keys
 
-        cache.set(user_key, user_attempts + 1, settings.LOGIN_RATE_LIMIT_TTL_SECONDS)
+        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
+        ip_address = (
+            x_forwarded_for.split(",")[0].strip()
+            if x_forwarded_for
+            else request.META.get("REMOTE_ADDR", "")
+        ).strip()
+        session_key = request.session.session_key or "anonymous"
+        user_agent = (request.META.get("HTTP_USER_AGENT", "") or "")[:120]
+
+        if ip_address:
+            keys.append(f"login_attempts_ip:{ip_address}")
+
+        if ip_address or user_agent:
+            keys.append(f"login_attempts_client:{ip_address}:{session_key}:{user_agent}")
+
+        return keys
+
+    @staticmethod
+    def check_login_attempts(student_code: str, request=None) -> Tuple[bool, str]:
+        keys = AuthService._login_rate_limit_keys(student_code, request)
+        user_limit = settings.LOGIN_RATE_LIMIT_ATTEMPTS
+        ip_limit = user_limit
+
+        for key in keys:
+            attempts = cache.get(key, 0)
+            limit = ip_limit if key.startswith("login_attempts_ip:") else user_limit
+            if attempts >= limit:
+                return False, "Слишком много попыток входа. Попробуйте позже."
+
+        for key in keys:
+            attempts = cache.get(key, 0)
+            cache.set(key, attempts + 1, settings.LOGIN_RATE_LIMIT_TTL_SECONDS)
+
         return True, ""
 
     @staticmethod
-    def clear_login_attempts(student_code: str) -> None:
-        cache.delete(f"login_attempts_user:{student_code}")
+    def clear_login_attempts(student_code: str, request=None) -> None:
+        for key in AuthService._login_rate_limit_keys(student_code, request):
+            cache.delete(key)
 
     @staticmethod
     def password_is_hashed(password_hash: str) -> bool:
@@ -70,7 +103,7 @@ class AuthService:
 
     @staticmethod
     def touch_last_login(user: User) -> None:
-        user.last_login = AuthService.get_unix_timestamp()
+        user.last_login = AuthService.current_datetime()
         user.save(update_fields=["last_login"])
 
     @staticmethod
@@ -82,9 +115,10 @@ class AuthService:
             fullname=normalized_fullname,
             faculty=normalized_faculty,
             student_code=student_code,
+            role=User.ROLE_STUDENT,
             password=make_password(password),
-            created_at=AuthService.get_unix_timestamp(),
-            last_login=AuthService.get_unix_timestamp(),
+            created_at=AuthService.current_datetime(),
+            last_login=AuthService.current_datetime(),
         )
 
         try:
@@ -106,28 +140,37 @@ class AuthService:
 
     @staticmethod
     def build_auth_user_payload(user: User) -> dict:
+        user_settings = get_user_settings(user)
         return {
             "id": user.id,
             "fullname": user.fullname,
             "student_code": user.student_code,
             "faculty": user.faculty,
-            "created_at": user.created_at,
+            "role": user.role,
+            "twofa_enabled": user.twofa_enabled,
+            "twofa_method": user.twofa_method,
+            "notify_successful_login": user_settings.notify_successful_login,
+            "created_at": serialize_datetime(user.created_at),
+            "last_login": serialize_datetime(user.last_login),
         }
 
     @staticmethod
     def is_admin(user: User) -> bool:
-        return Administration.objects.filter(administrator=user, is_active=True).exists()
+        return is_system_administrator(user)
 
 
 class SessionService:
-    """Работа с сессиями: хранение, ограничения и сериализация."""
+    """Session lifecycle and active session tracking."""
 
     @staticmethod
     def create_authenticated_session(request, user: User) -> None:
+        request.session.cycle_key()
         request.session["student_code"] = user.student_code
         request.session["fullname"] = user.fullname
         request.session["faculty"] = user.faculty
         request.session["is_authenticated"] = True
+        request.session["twofa_pending"] = False
+        request.session["twofa_verified"] = False
         request.session.set_expiry(SESSION_MAX_AGE_SECONDS)
         request.session.save()
 
@@ -200,7 +243,7 @@ class SessionService:
 
 
 class UserService:
-    """Небольшие вспомогательные методы для поиска пользователей."""
+    """Small helpers for fetching users."""
 
     @staticmethod
     def get_user_by_code(student_code: str) -> Optional[User]:

@@ -19,8 +19,8 @@ const BanSuccessModal = ({ isOpen, onClose, user, reason, duration, durationLabe
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl dark:bg-slate-800">
+    <div className="modal-backdrop fixed inset-0 z-[150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="modal-panel w-full max-w-md rounded-3xl bg-white shadow-2xl dark:bg-slate-800">
         <div className="flex items-center justify-between border-b border-gray-200 p-6 dark:border-slate-700">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">

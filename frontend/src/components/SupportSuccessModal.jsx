@@ -5,8 +5,8 @@ function SupportSuccessModal({ isOpen, onClose, darkMode: _darkMode }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[160] flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full p-8 relative">
+    <div className="modal-backdrop fixed inset-0 bg-black/50 backdrop-blur-sm z-[160] flex items-center justify-center p-4">
+      <div className="modal-panel bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full p-8 relative">
         {/* Кнопка закрытия */}
         <button
           onClick={onClose}

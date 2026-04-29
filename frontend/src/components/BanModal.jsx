@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Ban, AlertTriangle, User, Calendar } from 'lucide-react';
 
 const DURATION_MODE_PRESET = 'preset';
@@ -113,9 +114,9 @@ const BanModal = ({ isOpen, onClose, user, onBan, darkMode: _darkMode }) => {
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="max-h-[85vh] w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-slate-800">
+  return createPortal(
+    <div className="modal-backdrop fixed inset-0 z-[150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="modal-panel max-h-[85vh] w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-slate-800">
         <div className="flex items-center justify-between border-b border-gray-200 p-6 dark:border-slate-700">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
@@ -209,7 +210,7 @@ const BanModal = ({ isOpen, onClose, user, onBan, darkMode: _darkMode }) => {
               <select
                 value={presetDuration}
                 onChange={(event) => setPresetDuration(event.target.value)}
-                className={`w-full rounded-xl border px-4 py-3 transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 ${
+                className={`w-full rounded-xl border px-4 py-3 text-gray-900 transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 dark:text-gray-100 ${
                   errors.duration
                     ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
                     : 'border-gray-300 bg-white dark:border-slate-600 dark:bg-slate-800'
@@ -229,7 +230,7 @@ const BanModal = ({ isOpen, onClose, user, onBan, darkMode: _darkMode }) => {
                   step="1"
                   value={customValue}
                   onChange={(event) => setCustomValue(event.target.value)}
-                  className={`rounded-xl border px-4 py-3 transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 ${
+                  className={`rounded-xl border px-4 py-3 text-gray-900 transition-all placeholder:text-slate-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 dark:text-gray-100 dark:placeholder:text-slate-400 ${
                     errors.duration
                       ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
                       : 'border-gray-300 bg-white dark:border-slate-600 dark:bg-slate-800'
@@ -239,7 +240,7 @@ const BanModal = ({ isOpen, onClose, user, onBan, darkMode: _darkMode }) => {
                 <select
                   value={customUnit}
                   onChange={(event) => setCustomUnit(event.target.value)}
-                  className="rounded-xl border border-gray-300 bg-white px-4 py-3 transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-800"
+                  className="rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
                 >
                   <option value="minutes">Минуты</option>
                   <option value="hours">Часы</option>
@@ -292,7 +293,8 @@ const BanModal = ({ isOpen, onClose, user, onBan, darkMode: _darkMode }) => {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

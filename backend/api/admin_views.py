@@ -4,7 +4,6 @@ import logging
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .ban_service import BanService
@@ -41,7 +40,6 @@ def _get_admin_user(request):
     return current_user, None
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def appoint_administrator(request):
     """Назначение администратора."""
@@ -125,7 +123,6 @@ def appoint_administrator(request):
         )
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def remove_administrator(request):
     """Снятие администратора с должности."""
@@ -190,7 +187,6 @@ def remove_administrator(request):
         )
 
 
-@csrf_exempt
 @require_http_methods(["GET"])
 def get_administrators(request):
     """Получение списка активных администраторов."""
@@ -271,7 +267,6 @@ def get_administrators(request):
         )
 
 
-@csrf_exempt
 @require_http_methods(["GET"])
 def get_administration_history(request):
     """Получение истории назначений администраторов."""

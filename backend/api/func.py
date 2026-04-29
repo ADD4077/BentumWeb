@@ -6,6 +6,7 @@ from urllib.parse import urljoin, urlparse
 
 import bs4
 import requests
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -46,11 +47,11 @@ INVALID_FACULTY_MARKERS = (
     "третья ступень",
     "общее высшее образование",
 )
-ALLOW_INSECURE_SSL_FALLBACK = os.environ.get("BNTU_ALLOW_INSECURE_SSL", "1").lower() in {
-    "1",
-    "true",
-    "yes",
-}
+def _allow_insecure_ssl_fallback() -> bool:
+    explicit_value = os.environ.get("BNTU_ALLOW_INSECURE_SSL")
+    if explicit_value is not None:
+        return explicit_value.lower() in {"1", "true", "yes", "on"}
+    return bool(getattr(settings, "DEBUG", False))
 
 
 def _extract_login_form(html: str) -> tuple[bs4.Tag | None, str | None]:
@@ -89,7 +90,7 @@ def _build_form_payload(form: bs4.Tag, login: str, password: str) -> dict[str, s
             password_field_name = name
             continue
 
-        if login_field_name is None and field_type in {"text", "email", "tel", "number"}:
+        if login_field_name is None and field_type in {"text", "tel", "number"}:
             login_field_name = name
 
     payload[password_field_name] = password
@@ -266,7 +267,8 @@ def authorize(login: str, password: str) -> Union[bool, tuple[str, str]]:
         logger.info("Запрос авторизации нового пользователя через bntu.by: %s", login)
 
         verification_modes = [requests.certs.where()]
-        if ALLOW_INSECURE_SSL_FALLBACK:
+        allow_insecure_ssl_fallback = _allow_insecure_ssl_fallback()
+        if allow_insecure_ssl_fallback:
             verification_modes.append(False)
 
         response = None
@@ -288,7 +290,7 @@ def authorize(login: str, password: str) -> Union[bool, tuple[str, str]]:
             try:
                 if verify_mode is False:
                     logger.warning(
-                        "Повторяем запрос к BNTU без проверки SSL для %s из-за проблемной цепочки сертификатов",
+                        "Retrying BNTU auth for %s with insecure SSL fallback after secure validation failed",
                         login,
                     )
 
@@ -314,8 +316,14 @@ def authorize(login: str, password: str) -> Union[bool, tuple[str, str]]:
             except requests.exceptions.SSLError:
                 if verify_mode is False:
                     raise
+                if not allow_insecure_ssl_fallback:
+                    logger.warning(
+                        "BNTU SSL validation failed for %s and insecure fallback is disabled",
+                        login,
+                    )
+                    return False
                 logger.warning(
-                    "BNTU вернул некорректную SSL-цепочку для %s, пробуем резервный небезопасный режим",
+                    "BNTU SSL validation failed for %s, switching to insecure fallback mode",
                     login,
                 )
                 continue

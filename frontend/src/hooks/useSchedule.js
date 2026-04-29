@@ -10,6 +10,7 @@ const getLessonType = (subject) => {
 
 export const useSchedule = (isAuthenticated, user) => {
   const [userSchedule, setUserSchedule] = useState(null);
+  const [scheduleUpdatedAt, setScheduleUpdatedAt] = useState(null);
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [selectedDay, setSelectedDay] = useState('Пн');
   const [weekType, setWeekType] = useState('lower');
@@ -45,6 +46,14 @@ export const useSchedule = (isAuthenticated, user) => {
     return diffWeeks % 2 === 0 ? 'lower' : 'upper';
   }, [getMoscowTime]);
 
+  useEffect(() => {
+    const todayDay = getTodayDay();
+    if (!todayDay) return;
+
+    setSelectedDay(todayDay);
+    setWeekType(getWeekType());
+  }, [getTodayDay, getWeekType]);
+
   const loadUserSchedule = useCallback(async () => {
     if (!user?.student_code) return;
     setScheduleLoading(true);
@@ -61,6 +70,7 @@ export const useSchedule = (isAuthenticated, user) => {
         const data = await response.json();
         if (data.success) {
           setUserSchedule(data.schedule);
+          setScheduleUpdatedAt(data.schedule_updated_at || null);
         }
       }
     } catch (error) {
@@ -127,6 +137,7 @@ export const useSchedule = (isAuthenticated, user) => {
 
   return {
     userSchedule,
+    scheduleUpdatedAt,
     scheduleLoading,
     selectedDay,
     setSelectedDay,
