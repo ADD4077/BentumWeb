@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { X, AlertCircle, Lock, Smartphone } from 'lucide-react';
 
+import { API_ENDPOINTS } from '../config/api.js';
 import { buildCsrfHeaders } from '../utils/http.js';
+import { sanitizeTelegramUrl } from '../utils/url.js';
 
 const TwoFARecoveryModal = ({ isOpen, onClose, darkMode }) => {
   const [telegramLinked, setTelegramLinked] = useState(false);
@@ -24,7 +26,7 @@ const TwoFARecoveryModal = ({ isOpen, onClose, darkMode }) => {
     setError('');
 
     try {
-      const response = await fetch('/api/telegram/binding-status', {
+      const response = await fetch(API_ENDPOINTS.TELEGRAM_BINDING_STATUS, {
         credentials: 'include',
       });
 
@@ -45,7 +47,7 @@ const TwoFARecoveryModal = ({ isOpen, onClose, darkMode }) => {
 
   const checkTwoFAStatus = async () => {
     try {
-      const response = await fetch('/api/2fa/config', {
+      const response = await fetch(API_ENDPOINTS.TWO_FA_CONFIG, {
         credentials: 'include',
       });
 
@@ -68,7 +70,7 @@ const TwoFARecoveryModal = ({ isOpen, onClose, darkMode }) => {
       const headers = await buildCsrfHeaders({
         'Content-Type': 'application/json',
       });
-      const response = await fetch('/api/2fa/config', {
+      const response = await fetch(API_ENDPOINTS.TWO_FA_CONFIG, {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -101,13 +103,16 @@ const TwoFARecoveryModal = ({ isOpen, onClose, darkMode }) => {
     }
 
     popup.document.title = 'Подготовка привязки Telegram...';
-    popup.document.body.innerHTML = '<p>Подготавливаем ссылку для привязки Telegram...</p>';
+    popup.document.body.textContent = '';
+    const message = popup.document.createElement('p');
+    message.textContent = 'Подготавливаем ссылку для привязки Telegram...';
+    popup.document.body.appendChild(message);
 
     try {
       const headers = await buildCsrfHeaders({
         'Content-Type': 'application/json',
       });
-      const response = await fetch('/api/telegram/generate-link', {
+      const response = await fetch(API_ENDPOINTS.TELEGRAM_GENERATE_LINK, {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -120,7 +125,15 @@ const TwoFARecoveryModal = ({ isOpen, onClose, darkMode }) => {
         return;
       }
 
-      popup.location.href = data.data.binding_link;
+      const bindingLink = sanitizeTelegramUrl(data.data.binding_link);
+      if (!bindingLink) {
+        popup.close();
+        setError('Сервер вернул некорректную ссылку Telegram');
+        return;
+      }
+
+      popup.opener = null;
+      popup.location.href = bindingLink;
     } catch (fetchError) {
       popup.close();
       setError('Ошибка при создании ссылки для Telegram');

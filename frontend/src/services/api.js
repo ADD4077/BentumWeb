@@ -1,259 +1,214 @@
 import { API_ENDPOINTS } from '../config/api.js';
 import { buildCsrfHeaders } from '../utils/http.js';
 
+const AUTH_CHECK_CACHE_TTL_MS = 3000;
+
+let authCheckPromise = null;
+let authCheckCache = null;
+let authCheckCacheAt = 0;
+
+function readAuthCheckCache() {
+  if (!authCheckCache) {
+    return null;
+  }
+  if (Date.now() - authCheckCacheAt > AUTH_CHECK_CACHE_TTL_MS) {
+    authCheckCache = null;
+    authCheckCacheAt = 0;
+    return null;
+  }
+  return authCheckCache;
+}
+
+function writeAuthCheckCache(payload) {
+  authCheckCache = payload;
+  authCheckCacheAt = Date.now();
+  return payload;
+}
+
+function clearAuthCheckCache() {
+  authCheckPromise = null;
+  authCheckCache = null;
+  authCheckCacheAt = 0;
+}
+
+async function parseJsonResponse(response) {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+function buildNetworkErrorPayload() {
+  return {
+    ok: false,
+    status: 0,
+    detail: 'РћС€РёР±РєР° СЃРµС‚Рё',
+  };
+}
+
+async function requestJson(url, options = {}) {
+  try {
+    const response = await fetch(url, {
+      credentials: 'include',
+      ...options,
+    });
+    const data = await parseJsonResponse(response);
+    return {
+      ok: response.ok,
+      status: response.status,
+      ...(data || {}),
+    };
+  } catch {
+    return buildNetworkErrorPayload();
+  }
+}
+
+async function requestJsonWithCsrf(url, options = {}, headers = {}) {
+  const csrfHeaders = await buildCsrfHeaders(headers);
+  return requestJson(url, {
+    ...options,
+    headers: csrfHeaders,
+  });
+}
+
+function throwForHttpError(payload) {
+  if (payload.ok) {
+    return;
+  }
+  const error = new Error(`HTTP error! status: ${payload.status}`);
+  error.response = { status: payload.status };
+  throw error;
+}
+
 export const api = {
+  clearAuthCheckCache,
+
   async saveData(userData) {
-    try {
-      const headers = await buildCsrfHeaders({
-        'Content-Type': 'application/json',
-      });
-      const response = await fetch(API_ENDPOINTS.SAVE_DATA, {
+    const payload = await requestJsonWithCsrf(
+      API_ENDPOINTS.SAVE_DATA,
+      {
         method: 'POST',
-        headers,
         body: JSON.stringify(userData),
-        credentials: 'include',
-      });
-      
-      let data;
-      try {
-        data = await response.json();
-      } catch {
-        data = null;
+      },
+      {
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (payload.success || payload.requires_2fa) {
+      clearAuthCheckCache();
+    }
+
+    return payload;
+  },
+
+  async authCheck({ force = false } = {}) {
+    if (!force) {
+      const cached = readAuthCheckCache();
+      if (cached) {
+        return cached;
       }
-      
-      return {
-        ok: response.ok,
-        status: response.status,
-        ...(data || {}),
-      };
-    } catch (error) {
-      return {
-        ok: false,
-        status: 0,
-        detail: 'Ошибка сети'
-      };
+
+      if (authCheckPromise) {
+        return authCheckPromise;
+      }
+    }
+
+    authCheckPromise = (async () => {
+      const payload = await requestJson(API_ENDPOINTS.AUTH_CHECK, {
+        method: 'GET',
+      });
+      return writeAuthCheckCache(payload);
+    })();
+
+    try {
+      return await authCheckPromise;
+    } finally {
+      authCheckPromise = null;
     }
   },
 
-  async authCheck() {
-    try {
-      const response = await fetch(API_ENDPOINTS.AUTH_CHECK, {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      let data;
-      try {
-        data = await response.json();
-      } catch {
-        data = null;
-      }
-
-      return {
-        ok: response.ok,
-        status: response.status,
-        ...(data || {}),
-      };
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  async getNextScheduleLesson(studentCode = null) {
-    try {
-      const url = studentCode
-        ? `${API_ENDPOINTS.SCHEDULE_NEXT}?student_code=${encodeURIComponent(studentCode)}`
-        : API_ENDPOINTS.SCHEDULE_NEXT;
-
-      const response = await fetch(url, {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      let data;
-      try {
-        data = await response.json();
-      } catch {
-        data = null;
-      }
-
-      return {
-        ok: response.ok,
-        status: response.status,
-        ...(data || {}),
-      };
-    } catch (error) {
-      return {
-        ok: false,
-        status: 0,
-        detail: 'Ошибка сети',
-      };
-    }
+  async getNextScheduleLesson(_studentCode = null) {
+    return requestJson(API_ENDPOINTS.SCHEDULE_NEXT, {
+      method: 'GET',
+    });
   },
 
   async verify2FACode(code) {
-    try {
-      const headers = await buildCsrfHeaders({
-        'Content-Type': 'application/json',
-      });
-      const response = await fetch(API_ENDPOINTS.TWO_FA_VERIFY, {
+    return requestJsonWithCsrf(
+      API_ENDPOINTS.TWO_FA_VERIFY,
+      {
         method: 'POST',
-        headers,
         body: JSON.stringify({ code }),
-        credentials: 'include',
-      });
-
-      let data;
-      try {
-        data = await response.json();
-      } catch {
-        data = null;
-      }
-
-      return {
-        ok: response.ok,
-        status: response.status,
-        ...(data || {}),
-      };
-    } catch (error) {
-      throw error;
-    }
+      },
+      {
+        'Content-Type': 'application/json',
+      },
+    );
   },
 
   async get2FAConfig() {
-    try {
-      const response = await fetch(API_ENDPOINTS.TWO_FA_CONFIG, {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      let data;
-      try {
-        data = await response.json();
-      } catch {
-        data = null;
-      }
-
-      return {
-        ok: response.ok,
-        status: response.status,
-        ...(data || {}),
-      };
-    } catch (error) {
-      throw error;
-    }
+    return requestJson(API_ENDPOINTS.TWO_FA_CONFIG, {
+      method: 'GET',
+    });
   },
 
   async set2FAConfig(enabled, method) {
-    try {
-      const headers = await buildCsrfHeaders({
-        'Content-Type': 'application/json',
-      });
-      const response = await fetch(API_ENDPOINTS.TWO_FA_CONFIG, {
+    return requestJsonWithCsrf(
+      API_ENDPOINTS.TWO_FA_CONFIG,
+      {
         method: 'POST',
-        headers,
         body: JSON.stringify({ enabled, method }),
-        credentials: 'include',
-      });
-
-      let data;
-      try {
-        data = await response.json();
-      } catch {
-        data = null;
-      }
-
-      return {
-        ok: response.ok,
-        status: response.status,
-        ...(data || {}),
-      };
-    } catch (error) {
-      throw error;
-    }
+      },
+      {
+        'Content-Type': 'application/json',
+      },
+    );
   },
 
   async resend2FACode() {
-    try {
-      const headers = await buildCsrfHeaders({
-        'Content-Type': 'application/json',
-      });
-      const response = await fetch(API_ENDPOINTS.TWO_FA_RESEND, {
+    return requestJsonWithCsrf(
+      API_ENDPOINTS.TWO_FA_RESEND,
+      {
         method: 'POST',
-        headers,
         body: JSON.stringify({}),
-        credentials: 'include',
-      });
-
-      let data;
-      try {
-        data = await response.json();
-      } catch {
-        data = null;
-      }
-
-      return {
-        ok: response.ok,
-        status: response.status,
-        ...(data || {}),
-      };
-    } catch (error) {
-      throw error;
-    }
-  },
-  async getDashboard() {
-    try {
-      const response = await fetch(API_ENDPOINTS.DASHBOARD, {
-        method: 'GET',
-        credentials: 'include',
-      });
-      if (!response.ok) {
-        const error = new Error(`HTTP error! status: ${response.status}`);
-        error.response = { status: response.status };
-        throw error;
-      }
-      return await response.json();
-    } catch (error) {
-      throw error;
-    }
-  },
-  async logout() {
-    try {
-      const headers = await buildCsrfHeaders();
-      const response = await fetch(API_ENDPOINTS.LOGOUT, {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-      });
-      if (!response.ok) {
-        const error = new Error(`HTTP error! status: ${response.status}`);
-        error.response = { status: response.status };
-        throw error;
-      }
-      return await response.json();
-    } catch (error) {
-      throw error;
-    }
-  },
-  async saveTheme(theme) {
-    try {
-      const headers = await buildCsrfHeaders({
+      },
+      {
         'Content-Type': 'application/json',
-      });
-      const response = await fetch(API_ENDPOINTS.THEME, {
+      },
+    );
+  },
+
+  async getDashboard() {
+    const payload = await requestJson(API_ENDPOINTS.DASHBOARD, {
+      method: 'GET',
+    });
+    clearAuthCheckCache();
+    throwForHttpError(payload);
+    return payload;
+  },
+
+  async logout() {
+    const payload = await requestJsonWithCsrf(API_ENDPOINTS.LOGOUT, {
+      method: 'POST',
+    });
+    throwForHttpError(payload);
+    return payload;
+  },
+
+  async saveTheme(theme) {
+    const payload = await requestJsonWithCsrf(
+      API_ENDPOINTS.THEME,
+      {
         method: 'POST',
-        headers,
         body: JSON.stringify({ theme }),
-        credentials: 'include',
-      });
-      if (!response.ok) {
-        const error = new Error(`HTTP error! status: ${response.status}`);
-        error.response = { status: response.status };
-        throw error;
-      }
-      return await response.json();
-    } catch (error) {
-      throw error;
-    }
+      },
+      {
+        'Content-Type': 'application/json',
+      },
+    );
+    throwForHttpError(payload);
+    return payload;
   },
 };

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { api } from '../services/api.js';
-import { clearAuthStorage, safeSetUserData } from '../utils/storage.js';
+import { clearAuthStorage } from '../utils/storage.js';
 
 const AuthContext = createContext();
 
@@ -12,21 +12,13 @@ export const AuthProvider = ({ children }) => {
   const [requires2FA, setRequires2FA] = useState(false);
   const [remainingTime, setRemainingTime] = useState(300);
 
-  useEffect(() => {
-    if (!checked) {
-      checkAuth();
-      setChecked(true);
-    }
-  }, [checked]);
-
-  const checkAuth = async () => {
+  const checkAuth = async ({ force = false } = {}) => {
     try {
-      const auth = await api.authCheck();
+      const auth = await api.authCheck({ force });
 
       if (auth?.success && auth?.user) {
         setIsAuthenticated(true);
         setUser(auth.user);
-        safeSetUserData(auth.user);
         setRequires2FA(false);
       } else if (auth?.requires_2fa) {
         setIsAuthenticated(false);
@@ -48,6 +40,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  useEffect(() => {
+    if (!checked) {
+      checkAuth();
+      setChecked(true);
+    }
+  }, [checked]);
+
   const login = async (studentCode, password) => {
     try {
       const data = await api.saveData({
@@ -61,7 +60,6 @@ export const AuthProvider = ({ children }) => {
           setUser(data.user);
           setRequires2FA(true);
           setRemainingTime(data.remaining_time || 300);
-          safeSetUserData(data.user);
           return { success: true, requires_2fa: true, remaining_time: data.remaining_time || 300 };
         }
 
@@ -69,7 +67,6 @@ export const AuthProvider = ({ children }) => {
         setUser(data.user);
         setRequires2FA(false);
         setRemainingTime(300);
-        safeSetUserData(data.user);
         return { success: true };
       }
 
@@ -86,7 +83,8 @@ export const AuthProvider = ({ children }) => {
       if (response.success) {
         setIsAuthenticated(true);
         setRequires2FA(false);
-        await checkAuth();
+        api.clearAuthCheckCache();
+        await checkAuth({ force: true });
         return { success: true };
       }
 
@@ -105,6 +103,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       setUser(null);
       setRequires2FA(false);
+      api.clearAuthCheckCache();
       clearAuthStorage();
     }
   };

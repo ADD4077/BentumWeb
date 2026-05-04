@@ -10,32 +10,33 @@ import {
 
 import { lessonTypes } from '../utils/constants.js';
 
+const getTypeClass = (type) => lessonTypes[type] || lessonTypes['Практика'];
+
+const getMobileTypeLabel = (type) => {
+  if (type === 'Лабораторная') return 'ЛАБ';
+  if (type === 'Практика') return 'ПРАКТ';
+  if (type === 'Лекция') return 'ЛЕКЦ';
+  if (type === 'Семинар') return 'СЕМ';
+  return type;
+};
+
+const cleanSubjectName = (subject) =>
+  String(subject || '')
+    .replace(/^\(Лаб\.\)\s*/, '')
+    .replace(/^\(Лекц\.\)\s*/, '')
+    .replace(/^\(Практ\.\)\s*/, '')
+    .replace(/^\(Сем\.\)\s*/, '')
+    .trim();
+
+const renderLessonIcon = (type) => {
+  const iconClassName = 'h-6 w-6';
+  if (type === 'Лабораторная') return <FlaskConical className={iconClassName} />;
+  if (type === 'Практика') return <Wrench className={iconClassName} />;
+  if (type === 'Лекция') return <Presentation className={iconClassName} />;
+  return <BookOpen className={iconClassName} />;
+};
+
 function ScheduleItem({ item, highlighted = false }) {
-  const getTypeClass = (type) => lessonTypes[type] || lessonTypes['Практика'];
-  const getMobileTypeLabel = (type) => {
-    if (type === 'Лабораторная') return 'ЛАБ';
-    if (type === 'Практика') return 'ПРАКТ';
-    if (type === 'Лекция') return 'ЛЕКЦ';
-    if (type === 'Семинар') return 'СЕМ';
-    return type;
-  };
-
-  const cleanSubjectName = (subject) =>
-    String(subject || '')
-      .replace(/^\(Лаб\.\)\s*/, '')
-      .replace(/^\(Лекц\.\)\s*/, '')
-      .replace(/^\(Практ\.\)\s*/, '')
-      .replace(/^\(Сем\.\)\s*/, '')
-      .trim();
-
-  const getLessonIcon = (type) => {
-    if (type === 'Лабораторная') return FlaskConical;
-    if (type === 'Практика') return Wrench;
-    if (type === 'Лекция') return Presentation;
-    return BookOpen;
-  };
-
-  const LessonIcon = getLessonIcon(item.type);
   const startTime = String(item.time || '').split(' - ')[0];
   const locationLabel = [item.frame ? `Корпус ${item.frame}` : null, item.classroom ? `ауд. ${item.classroom}` : null]
     .filter(Boolean)
@@ -86,7 +87,7 @@ function ScheduleItem({ item, highlighted = false }) {
         <div className="h-12 w-px bg-gray-200/80 dark:bg-slate-800/80" />
 
         <div className="hidden h-12 w-12 flex-none items-center justify-center rounded-2xl bg-emerald-500/12 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 lg:flex">
-          <LessonIcon className="h-6 w-6" />
+          {renderLessonIcon(item.type)}
         </div>
 
         <div className="min-w-0 flex-1">

@@ -1,7 +1,7 @@
 """2FA service helpers."""
 
 import logging
-import random
+import secrets
 import string
 import time
 import urllib.parse
@@ -28,7 +28,7 @@ class TwoFAService:
         return user.twofa_method == "telegram"
 
     def generate_6fa_code(self):
-        return "".join(random.choices(string.digits, k=6))
+        return "".join(secrets.choice(string.digits) for _ in range(6))
 
     def _session_scope(self, request=None):
         session_key = "no-session"

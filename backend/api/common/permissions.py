@@ -14,6 +14,8 @@ def get_product_role(user: Optional[User]) -> Optional[str]:
 def is_system_administrator(user: Optional[User]) -> bool:
     if user is None or not getattr(user, "pk", None):
         return False
+    if getattr(user, "is_superuser", False):
+        return True
     return Administration.objects.filter(administrator=user, is_active=True).exists()
 
 

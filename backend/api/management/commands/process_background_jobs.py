@@ -18,6 +18,7 @@ class Command(BaseCommand):
 
         if loop:
             self.stdout.write(self.style.SUCCESS("Starting background job worker..."))
+            BackgroundJobService.recover_stale_running_jobs(force_all=True)
             BackgroundJobService.run_forever(batch_size=limit, sleep_seconds=sleep_seconds)
             return
 

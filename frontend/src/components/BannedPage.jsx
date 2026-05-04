@@ -3,11 +3,11 @@ import { AlertTriangle, Clock, Mail, User } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api.js';
 import { useModal } from '../contexts/ModalContext.jsx';
 
-function BannedPage() {
+function BannedPage({ setActiveTab }) {
   const [banInfo, setBanInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { setIsSupportModalOpen, setIsProfileModalOpen } = useModal();
+  const { setIsProfileModalOpen } = useModal();
 
   useEffect(() => {
     const fetchBanInfo = async () => {
@@ -38,7 +38,7 @@ function BannedPage() {
   }, []);
 
   const handleContactSupport = () => {
-    setIsSupportModalOpen(true);
+    setActiveTab?.('support');
   };
 
   const handleProfileOpen = () => {

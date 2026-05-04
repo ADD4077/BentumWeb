@@ -38,5 +38,4 @@ RUN chmod +x ./entrypoint.sh
 
 ENTRYPOINT ["./entrypoint.sh"]
 
-CMD ["gunicorn", "--bind", "0.0.0.0:1337", "--workers", "3", "backend.wsgi:application"]
-
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-1337} --workers ${WEB_CONCURRENCY:-3} backend.wsgi:application"]

@@ -1,8 +1,53 @@
+from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
+from django.contrib.auth.models import PermissionsMixin
 from django.db import models
 from django.utils import timezone
 
 
-class User(models.Model):
+class UserManager(BaseUserManager):
+    use_in_migrations = True
+
+    def _extract_student_code(self, student_code=None, extra_fields=None):
+        extra_fields = extra_fields or {}
+        identifier = student_code or extra_fields.pop("username", None) or extra_fields.pop("student_code", None)
+        if not identifier:
+            raise ValueError("The student_code must be set")
+        return str(identifier).strip()
+
+    def create_user(self, student_code=None, password=None, **extra_fields):
+        student_code = self._extract_student_code(student_code, extra_fields)
+        fullname = extra_fields.pop("fullname", None) or student_code
+        faculty = extra_fields.pop("faculty", None) or "ADMIN"
+
+        user = self.model(
+            student_code=student_code,
+            fullname=fullname,
+            faculty=faculty,
+            **extra_fields,
+        )
+        if password:
+            user.set_password(password)
+        else:
+            user.set_unusable_password()
+        if user.created_at is None:
+            user.created_at = timezone.now()
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, student_code=None, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("is_active", True)
+
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
+
+        return self.create_user(student_code=student_code, password=password, **extra_fields)
+
+
+class User(AbstractBaseUser, PermissionsMixin):
     ROLE_STUDENT = "student"
     ROLE_TEACHER = "teacher"
     ROLE_CHAIRPERSON = "chairperson"
@@ -19,11 +64,17 @@ class User(models.Model):
     faculty = models.CharField(max_length=255)
     student_code = models.CharField(max_length=10, unique=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_STUDENT)
-    password = models.CharField(max_length=128)
     created_at = models.DateTimeField(null=True, blank=True)
-    last_login = models.DateTimeField(null=True, blank=True)
     twofa_enabled = models.BooleanField(default=False)
     twofa_method = models.CharField(max_length=20, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    auth_sync_managed = models.BooleanField(default=False)
+
+    objects = UserManager()
+
+    USERNAME_FIELD = "student_code"
+    REQUIRED_FIELDS = []
 
     class Meta:
         db_table = "users"
@@ -35,6 +86,11 @@ class User(models.Model):
 class UserSettings(models.Model):
     user = models.OneToOneField("User", on_delete=models.CASCADE, related_name="settings")
     notify_successful_login = models.BooleanField(default=True)
+    notify_support_replies = models.BooleanField(default=True)
+    notify_security_events = models.BooleanField(default=True)
+    show_profile_in_community = models.BooleanField(default=True)
+    show_faculty = models.BooleanField(default=True)
+    allow_telegram_discovery = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -42,6 +98,9 @@ class UserSettings(models.Model):
         db_table = "user_settings"
         indexes = [
             models.Index(fields=["notify_successful_login"]),
+            models.Index(fields=["notify_support_replies"]),
+            models.Index(fields=["notify_security_events"]),
+            models.Index(fields=["show_profile_in_community"]),
             models.Index(fields=["created_at"]),
         ]
 
@@ -70,8 +129,6 @@ class UserSession(models.Model):
 
 
 class UserProfileMedia(models.Model):
-    """Модель для хранения медиафайлов пользователей."""
-
     user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="media_files")
     media_type = models.CharField(
         max_length=10,
@@ -101,8 +158,6 @@ class UserProfileMedia(models.Model):
 
 
 class MediaOptimization(models.Model):
-    """Модель для хранения оптимизированных версий изображений."""
-
     original_media = models.ForeignKey(
         "UserProfileMedia",
         on_delete=models.CASCADE,
@@ -129,8 +184,6 @@ class MediaOptimization(models.Model):
 
 
 class Administration(models.Model):
-    """Модель для отслеживания системных администраторов."""
-
     administrator = models.ForeignKey("User", on_delete=models.CASCADE, related_name="admin_assignments")
     appointed_by = models.ForeignKey(
         "User",
@@ -156,11 +209,21 @@ class Administration(models.Model):
 
 
 class UserBan(models.Model):
-    """Модель для хранения информации о блокировках пользователей."""
-
     student_code = models.CharField(max_length=10, db_index=True)
-    user_id = models.IntegerField(db_index=True)
-    banned_by_id = models.IntegerField(null=True, blank=True)
+    user = models.ForeignKey(
+        "User",
+        on_delete=models.CASCADE,
+        related_name="bans",
+        db_column="user_id",
+    )
+    banned_by = models.ForeignKey(
+        "User",
+        on_delete=models.SET_NULL,
+        related_name="issued_bans",
+        db_column="banned_by_id",
+        null=True,
+        blank=True,
+    )
     ban_date = models.DateTimeField(auto_now_add=True)
     ban_duration_seconds = models.IntegerField()
     ban_reason = models.TextField()
@@ -171,8 +234,8 @@ class UserBan(models.Model):
         db_table = "user_bans"
         indexes = [
             models.Index(fields=["student_code", "is_active"]),
-            models.Index(fields=["user_id", "is_active"]),
-            models.Index(fields=["banned_by_id"]),
+            models.Index(fields=["user", "is_active"]),
+            models.Index(fields=["banned_by"]),
             models.Index(fields=["ban_date"]),
             models.Index(fields=["created_at"]),
         ]
@@ -182,8 +245,6 @@ class UserBan(models.Model):
 
 
 class TelegramBinding(models.Model):
-    """Модель для хранения привязки Telegram-аккаунтов к пользователям."""
-
     user = models.OneToOneField("User", on_delete=models.CASCADE, related_name="telegram_binding")
     telegram_id = models.BigIntegerField(default=0, db_index=True)
     telegram_username = models.CharField(max_length=32, blank=True, null=True)
@@ -221,6 +282,7 @@ class BackgroundJob(models.Model):
     ]
 
     job_type = models.CharField(max_length=100, db_index=True)
+    job_key = models.CharField(max_length=255, blank=True, default="", db_index=True)
     payload = models.JSONField(default=dict, blank=True)
     status = models.CharField(
         max_length=20,
@@ -249,6 +311,142 @@ class BackgroundJob(models.Model):
         return f"{self.job_type} [{self.status}]"
 
 
+class ActivityEvent(models.Model):
+    EVENT_USER_UNBANNED = "user_unbanned"
+    EVENT_ADMIN_REMOVED = "admin_removed"
+    EVENT_TWOFA_ENABLED = "twofa_enabled"
+    EVENT_TWOFA_DISABLED = "twofa_disabled"
+    EVENT_TELEGRAM_UNLINKED = "telegram_unlinked"
+
+    EVENT_CHOICES = [
+        (EVENT_USER_UNBANNED, "Пользователь разблокирован"),
+        (EVENT_ADMIN_REMOVED, "Снятие администратора"),
+        (EVENT_TWOFA_ENABLED, "2FA включен"),
+        (EVENT_TWOFA_DISABLED, "2FA отключен"),
+        (EVENT_TELEGRAM_UNLINKED, "Telegram отвязан"),
+    ]
+
+    event_type = models.CharField(max_length=40, choices=EVENT_CHOICES, db_index=True)
+    user = models.ForeignKey(
+        "User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="activity_events",
+    )
+    actor = models.ForeignKey(
+        "User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="performed_activity_events",
+    )
+    details = models.TextField(blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "activity_events"
+        indexes = [
+            models.Index(fields=["event_type", "created_at"]),
+            models.Index(fields=["user", "created_at"]),
+            models.Index(fields=["actor", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.event_type} @ {self.created_at}"
+
+
+class DevTeamMember(models.Model):
+    fullname = models.CharField(max_length=100)
+    student_code = models.CharField(max_length=10, blank=True, db_index=True)
+    role = models.CharField(max_length=120)
+    description = models.TextField(blank=True)
+    display_order = models.PositiveIntegerField(default=0, db_index=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "dev_team_members"
+        ordering = ["display_order", "id"]
+        indexes = [
+            models.Index(fields=["is_active", "display_order"]),
+            models.Index(fields=["student_code"]),
+        ]
+
+    def __str__(self):
+        return f"{self.fullname} - {self.role}"
+
+
+class SupportThread(models.Model):
+    STATUS_OPEN = "open"
+    STATUS_ANSWERED = "answered"
+    STATUS_CLOSED = "closed"
+
+    STATUS_CHOICES = [
+        (STATUS_OPEN, "Открыто"),
+        (STATUS_ANSWERED, "Есть ответ"),
+        (STATUS_CLOSED, "Закрыто"),
+    ]
+
+    TYPE_SUPPORT = "support"
+    TYPE_BUG = "bug"
+    TYPE_FEATURE = "feature"
+    TYPE_QUESTION = "question"
+
+    TYPE_CHOICES = [
+        (TYPE_SUPPORT, "Поддержка"),
+        (TYPE_BUG, "Ошибка"),
+        (TYPE_FEATURE, "Предложение"),
+        (TYPE_QUESTION, "Вопрос"),
+    ]
+
+    created_by = models.ForeignKey("User", on_delete=models.CASCADE, related_name="support_threads")
+    assigned_moderator = models.ForeignKey(
+        "User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_support_threads",
+    )
+    subject = models.CharField(max_length=255)
+    request_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default=TYPE_SUPPORT, db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_OPEN, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_message_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "support_threads"
+        indexes = [
+            models.Index(fields=["status", "last_message_at"]),
+            models.Index(fields=["request_type", "last_message_at"]),
+            models.Index(fields=["created_by", "last_message_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.subject} [{self.status}]"
+
+
+class SupportMessage(models.Model):
+    thread = models.ForeignKey("SupportThread", on_delete=models.CASCADE, related_name="messages")
+    author = models.ForeignKey("User", on_delete=models.CASCADE, related_name="support_messages")
+    body = models.TextField()
+    is_moderator_reply = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "support_messages"
+        indexes = [
+            models.Index(fields=["thread", "created_at"]),
+            models.Index(fields=["author", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.thread_id}: {self.author_id}"
+
+
 class LiteratureItem(models.Model):
     source_id = models.BigIntegerField(null=True, blank=True, unique=True)
     handle = models.CharField(max_length=255, blank=True)
@@ -266,12 +464,6 @@ class LiteratureItem(models.Model):
 
     class Meta:
         db_table = "literature_items"
-        constraints = [
-            models.UniqueConstraint(
-                fields=["title", "faculty", "category"],
-                name="unique_literature_item_per_faculty_category",
-            )
-        ]
         indexes = [
             models.Index(fields=["handle"]),
             models.Index(fields=["faculty"]),

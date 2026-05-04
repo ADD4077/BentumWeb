@@ -73,9 +73,8 @@ export const safeRemoveItem = (key) => {
 export const clearAuthStorage = () => {
   const keysToRemove = [
     'token',
-    'user',
     'banEndDate',
-    'activeTab',
+    'admin_users',
   ];
   
   let success = true;
@@ -109,53 +108,6 @@ export const clearAppStorage = () => {
   });
   
   return success;
-};
-
-/**
- * Проверяет валидность пользовательских данных
- * @param {any} userData - данные пользователя
- * @returns {boolean} валидны ли данные
- */
-export const isValidUserData = (userData) => {
-  if (!userData || typeof userData !== 'object') {
-    return false;
-  }
-  
-  // Проверяем обязательные поля
-  const requiredFields = ['id', 'fullname'];
-  return requiredFields.every(field => 
-    userData.hasOwnProperty(field) && userData[field] !== null && userData[field] !== undefined
-  );
-};
-
-/**
- * Безопасно сохраняет пользовательские данные с валидацией
- * @param {object} userData - данные пользователя
- * @returns {boolean} успешно ли сохранено
- */
-export const safeSetUserData = (userData) => {
-  if (!isValidUserData(userData)) {
-    safeLogWarning('Попытка сохранить невалидные данные пользователя:', userData);
-    return false;
-  }
-  
-  return safeSetItem('user', userData);
-};
-
-/**
- * Безопасно получает пользовательские данные с валидацией
- * @returns {object|null} данные пользователя или null
- */
-export const safeGetUserData = () => {
-  const userData = safeGetItem('user', null);
-  
-  if (userData && !isValidUserData(userData)) {
-    safeLogWarning('Обнаружены невалидные данные пользователя, очищаю...');
-    safeRemoveItem('user');
-    return null;
-  }
-  
-  return userData;
 };
 
 /**

@@ -21,6 +21,12 @@ class Command(BaseCommand):
             help="Принудительно выполнить только инкрементальное обновление литературы.",
         )
         parser.add_argument(
+            "--literature-sample",
+            type=int,
+            default=0,
+            help="Загрузить тестовую выборку литературы: до N записей на каждый раздел.",
+        )
+        parser.add_argument(
             "--news-bootstrap",
             action="store_true",
             help="Принудительно выполнить полную первичную загрузку новостей за последние 2 года.",
@@ -36,7 +42,9 @@ class Command(BaseCommand):
         targets = self._resolve_targets(options)
 
         if "literature" in targets:
-            if options["literature_bootstrap"]:
+            if options["literature_sample"]:
+                count = parser_service.sync_literature_bootstrap(sample_per_section=options["literature_sample"])
+            elif options["literature_bootstrap"]:
                 count = parser_service.sync_literature_bootstrap()
             elif options["literature_incremental"]:
                 count = parser_service.sync_literature_incremental()
@@ -59,7 +67,12 @@ class Command(BaseCommand):
 
     def _resolve_targets(self, options):
         selected = {
-            "literature": options["literature"] or options["literature_bootstrap"] or options["literature_incremental"],
+            "literature": (
+                options["literature"]
+                or options["literature_bootstrap"]
+                or options["literature_incremental"]
+                or bool(options["literature_sample"])
+            ),
             "news": options["news"] or options["news_bootstrap"] or options["news_incremental"],
             "schedule": options["schedule"],
         }

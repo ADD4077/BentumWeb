@@ -3,19 +3,29 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+.Python
+.venv/
+venv/
+env/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+.coverage.*
+coverage/
+htmlcov/
 
 # Backend local files
 backend/test.sqlite3
 backend/logs/
 backend/media/
+backend/static/
 
 # Local sqlite/content dbs if they are runtime data, not seed data
 backend/books/*.db
 backend/news/*.db
 backend/schedules/*.db
+backend/*.sqlite3
 
 # Django collected/static local artifacts
 backend/staticfiles/
@@ -24,13 +34,30 @@ backend/staticfiles/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+frontend/coverage/
 
 # Env
 .env
 .env.*
 !.env.example
+!.env.vps.example
 frontend/.env.local
 backend/.env
+
+# Logs / runtime
+*.log
+*.pid
+*.pid.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Docker / local deployment overrides
+compose.override.yaml
+compose.override.yml
+docker-compose.override.yaml
+docker-compose.override.yml
 
 # OS / IDE
 .DS_Store

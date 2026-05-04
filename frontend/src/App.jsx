@@ -1,16 +1,19 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import NotFoundPage from './components/NotFoundPage.jsx';
 import BannedPage from './components/BannedPage.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
+import ModeratorSupportPage from './components/ModeratorSupportPage.jsx';
+import SupportPage from './components/SupportPage.jsx';
 import ProfileSettings from './components/ProfileSettings.jsx';
 import PrivacyPolicy from './components/PrivacyPolicy.jsx';
 import FeatureCard from './components/FeatureCard.jsx';
 import TeamCarousel from './components/TeamCarousel.jsx';
 import { MissionSection, CTASection } from './components/AboutPage.jsx';
-import { features, teamMembers } from './utils/constants.js';
+import { features } from './utils/constants.js';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
 import { ModalProvider, useModal } from './contexts/ModalContext.jsx';
 import { gamesData, gameCategories } from './config/games.js';
+import { fetchDevTeamMembers } from './services/devTeam.js';
 import { useTheme } from './hooks/useTheme.js';
 import { useNavigation } from './hooks/useNavigation.js';
 import { useUserMedia } from './hooks/useUserMedia.js';
@@ -31,8 +34,6 @@ function AppContent() {
   const {
     isLoginModalOpen,
     setIsLoginModalOpen,
-    isSupportModalOpen,
-    setIsSupportModalOpen,
     isInstructionModalOpen,
     isProfileModalOpen,
     setIsProfileModalOpen,
@@ -46,20 +47,38 @@ function AppContent() {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedGameCategory, setSelectedGameCategory] = useState('all');
+  const [teamMembers, setTeamMembers] = useState([]);
 
   const userMedia = useUserMedia(isAuthenticated, user, isProfileModalOpen);
   const { missionStats, isMissionLoading } = useMissionStats();
   const isBanned = Boolean(!loading && isAuthenticated && user?.is_banned);
   const isAdmin = Boolean(isAuthenticated && user?.is_admin);
+  const canModerate = Boolean(isAuthenticated && (user?.role === 'moderator' || user?.is_admin));
 
   const filteredGames = useMemo(() => gamesData.filter((item) => (
     selectedGameCategory === 'all' || item.category === selectedGameCategory
   )), [selectedGameCategory]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDevTeam = async () => {
+      const members = await fetchDevTeamMembers();
+      if (!cancelled) {
+        setTeamMembers(members);
+      }
+    };
+
+    loadDevTeam();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useAppSideEffects({
     activeTab,
     setActiveTab,
-    setIsSupportModalOpen,
     setIsLoginModalOpen,
     setIsProfileModalOpen,
     isProfileSettingsOpen,
@@ -89,7 +108,15 @@ function AppContent() {
     }
 
     if (activeTab === 'admin' && isAdmin) {
-      return <AdminPanel darkMode={darkMode} />;
+      return <AdminPanel darkMode={darkMode} setActiveTab={setActiveTab} />;
+    }
+
+    if (activeTab === 'moder' && canModerate) {
+      return <ModeratorSupportPage darkMode={darkMode} />;
+    }
+
+    if (activeTab === 'support') {
+      return <SupportPage setIsLoginModalOpen={setIsLoginModalOpen} />;
     }
 
     if (activeTab === '404') {
@@ -135,8 +162,8 @@ function AppContent() {
   return (
     <div className={`${darkMode ? 'dark' : ''} app-stage min-h-screen flex flex-col font-sans selection:bg-emerald-500 selection:text-white`}>
       <div className="flex-1 bg-slate-100 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 transition-colors duration-500 relative flex flex-col">
-        {isBanned ? (
-          <BannedPage />
+        {isBanned && activeTab !== 'support' ? (
+          <BannedPage setActiveTab={setActiveTab} />
         ) : isProfileSettingsOpen ? (
           <ProfileSettings
             darkMode={darkMode}
@@ -156,7 +183,6 @@ function AppContent() {
           <AppShell
             hideHeader={
               isLoginModalOpen ||
-              isSupportModalOpen ||
               isInstructionModalOpen ||
               isCategoryModalOpen ||
               isSortModalOpen ||
@@ -167,7 +193,6 @@ function AppContent() {
             darkMode={darkMode}
             toggleTheme={toggleTheme}
             setIsLoginModalOpen={setIsLoginModalOpen}
-            setIsSupportModalOpen={setIsSupportModalOpen}
             isMobileMenuOpen={isMobileMenuOpen}
             setIsMobileMenuOpen={setIsMobileMenuOpen}
             isProfileModalOpen={isProfileModalOpen}

@@ -37,8 +37,6 @@ literature_per_faculty = {
     "fms": "https://rep.bntu.by/handle/data/88"
 }
 
-requests.packages.urllib3.disable_warnings()
-
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -94,7 +92,7 @@ async def init_literature_database():
 async def fetch_literature_details(session, title, literature_link):
     """Fetch details for a single literature item"""
     try:
-        async with session.get(literature_link, ssl=False) as response:
+        async with session.get(literature_link) as response:
             if response.status == 200:
                 content = await response.text()
                 soup = bs4.BeautifulSoup(content, "html.parser")
@@ -149,7 +147,7 @@ async def parse_literature() -> None:
             for faculty, endpoint in faculty_pbar:
                 faculty_literature = 0
                 
-                async with session.get(endpoint, ssl=False) as response:
+                async with session.get(endpoint) as response:
                     if response.status != 200:
                         continue
                     
@@ -172,7 +170,7 @@ async def parse_literature() -> None:
                             collection_title = link_element.find_all(recursive=False)[0].text
                             
                             # Fetch collection page
-                            async with session.get(link, ssl=False) as collection_response:
+                            async with session.get(link) as collection_response:
                                 if collection_response.status == 200:
                                     collection_content = await collection_response.text()
                                     collection_soup = bs4.BeautifulSoup(collection_content, "html.parser")
@@ -303,7 +301,7 @@ async def init_database():
 async def fetch_news_details(session, title, full_link):
     """Fetch details for a single news article"""
     try:
-        async with session.get(full_link, ssl=False) as response:
+        async with session.get(full_link) as response:
             if response.status == 200:
                 content = await response.text()
                 detail_soup = bs4.BeautifulSoup(content, "html.parser")
@@ -685,7 +683,7 @@ async def fetch_schedule_table(session, endpoint, group):
     """Fetch schedule table for a specific group"""
     try:
         headers = {"cookie": f"group={group};"}
-        async with session.get(endpoint + "/table", headers=headers, ssl=False) as response:
+        async with session.get(endpoint + "/table", headers=headers) as response:
             if response.status == 200:
                 content = await response.text()
                 return bs4.BeautifulSoup(content, "html.parser")
@@ -736,7 +734,7 @@ async def parse_schedule() -> None:
                 endpoint = f"https://bntu.by/raspisanie/{faculty}"
                 
                 try:
-                    async with session.get(endpoint, ssl=False) as response:
+                    async with session.get(endpoint) as response:
                         if response.status != 200:
                             continue
                         

@@ -4,6 +4,7 @@ from django.http import JsonResponse
 from rest_framework.decorators import api_view
 
 from ...ban_service import BanService
+from ...common.utils import get_current_user, is_request_authenticated
 from ...models import User
 
 
@@ -69,10 +70,11 @@ def _format_duration(duration_seconds):
 def get_ban_info(request):
     """Получить информацию о бане текущего пользователя."""
     try:
-        if not request.session.get("is_authenticated"):
+        if not is_request_authenticated(request):
             return JsonResponse({"detail": "Требуется авторизация"}, status=401)
 
-        student_code = request.session.get("student_code")
+        user = get_current_user(request)
+        student_code = user.student_code if user else None
         if not student_code or len(student_code) != 10 or not student_code.isdigit():
             return JsonResponse({"detail": "Некорректный код студента"}, status=400)
 

@@ -6,6 +6,12 @@ import os
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+except ImportError:
+    sentry_sdk = None
+    DjangoIntegration = None
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -24,8 +30,40 @@ def env_list(name: str, default: list[str] | None = None) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def env_float(name: str, default: float = 0.0) -> float:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except ValueError:
+        return default
+
+
+def env_int(name: str, default: int = 0) -> int:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+
 DEBUG = env_bool("DEBUG", False)
 DJANGO_ENV = os.environ.get("DJANGO_ENV", "dev").strip().lower()
+APP_VERSION = os.environ.get("APP_VERSION", "").strip() or None
+
+SENTRY_DSN = os.environ.get("SENTRY_DSN", "").strip()
+if SENTRY_DSN and sentry_sdk and DjangoIntegration:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration()],
+        environment=os.environ.get("SENTRY_ENVIRONMENT", DJANGO_ENV),
+        release=APP_VERSION,
+        send_default_pii=False,
+        traces_sample_rate=env_float("SENTRY_TRACES_SAMPLE_RATE", 0.0),
+    )
 
 STATIC_ROOT = BASE_DIR / "static"
 STATIC_URL = "/static/"
@@ -46,6 +84,13 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 CSRF_COOKIE_SECURE = env_bool("CSRF_COOKIE_SECURE", not DEBUG)
 CSRF_COOKIE_SAMESITE = "Lax"
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", not DEBUG)
+SECURE_HSTS_SECONDS = env_int("SECURE_HSTS_SECONDS", 31536000 if not DEBUG else 0)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", not DEBUG)
+SECURE_HSTS_PRELOAD = env_bool("SECURE_HSTS_PRELOAD", not DEBUG)
+SECURE_CONTENT_TYPE_NOSNIFF = env_bool("SECURE_CONTENT_TYPE_NOSNIFF", True)
+SECURE_REFERRER_POLICY = os.environ.get("SECURE_REFERRER_POLICY", "same-origin").strip() or "same-origin"
+X_FRAME_OPTIONS = os.environ.get("X_FRAME_OPTIONS", "DENY").strip() or "DENY"
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -57,7 +102,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "drf_spectacular",
     "rest_framework",
-    "api",
+    "api.apps.ApiConfig",
 ]
 
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", [])
@@ -74,6 +119,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "api.common.middleware.UpdateLastLoginMiddleware",
+    "api.common.middleware.EnforceActiveBanMiddleware",
     "api.security.twofa.middleware.TwoFAAuthenticationMiddleware",
 ]
 
@@ -138,6 +184,7 @@ USE_I18N = True
 USE_TZ = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+AUTH_USER_MODEL = "api.User"
 
 REDIS_URL = os.getenv("REDIS_URL", "").strip()
 if REDIS_URL:
@@ -163,6 +210,9 @@ TWOFA_CODE_TTL_SECONDS = int(os.getenv("TWOFA_CODE_TTL_SECONDS", 300))
 TWOFA_VERIFY_MAX_ATTEMPTS = int(os.getenv("TWOFA_VERIFY_MAX_ATTEMPTS", 5))
 TWOFA_RESEND_COOLDOWN_SECONDS = int(os.getenv("TWOFA_RESEND_COOLDOWN_SECONDS", 120))
 BACKGROUND_JOB_STALE_TIMEOUT_SECONDS = int(os.getenv("BACKGROUND_JOB_STALE_TIMEOUT_SECONDS", 1800))
+TRUST_X_FORWARDED_FOR = env_bool("TRUST_X_FORWARDED_FOR", False)
+SCHEDULE_SYNC_MIN_ENTRIES = env_int("SCHEDULE_SYNC_MIN_ENTRIES", 1)
+SCHEDULE_SYNC_MIN_EXISTING_RATIO = env_float("SCHEDULE_SYNC_MIN_EXISTING_RATIO", 0.5)
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"

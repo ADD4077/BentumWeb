@@ -1,10 +1,11 @@
 import logging
 from datetime import timedelta
 
+from django.contrib.sessions.models import Session
 from django.utils import timezone
 
 from .common.permissions import is_system_administrator
-from .models import User, UserBan
+from .models import User, UserBan, UserSession
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +14,18 @@ class BanService:
     """Service for user ban lifecycle and ban status lookups."""
 
     FOREVER_DURATION_SECONDS = -1
+
+    @staticmethod
+    def revoke_user_sessions(student_code):
+        session_keys = list(
+            UserSession.objects.filter(student_code=student_code).values_list(
+                "session_key",
+                flat=True,
+            )
+        )
+        if session_keys:
+            Session.objects.filter(session_key__in=session_keys).delete()
+        UserSession.objects.filter(student_code=student_code).delete()
 
     @staticmethod
     def ban_user(student_code, banned_by_id, duration_seconds, reason):
@@ -29,7 +42,7 @@ class BanService:
 
             ban = UserBan.objects.create(
                 student_code=student_code,
-                user_id=user.id,
+                user=user,
                 banned_by_id=banned_by_id,
                 ban_duration_seconds=duration_seconds,
                 ban_reason=reason,
@@ -40,6 +53,8 @@ class BanService:
                 ban_end_date = None
             else:
                 ban_end_date = ban.ban_date + timedelta(seconds=duration_seconds)
+
+            BanService.revoke_user_sessions(student_code)
 
             return {
                 "success": True,

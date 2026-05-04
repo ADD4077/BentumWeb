@@ -12,7 +12,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from ..ban_service import BanService
 from ..common.decorators import allow_unverified_2fa
 from ..common.permissions import is_system_administrator
-from ..common.utils import get_user_full_data, serialize_datetime
+from ..common.utils import get_current_user, get_user_full_data, is_request_authenticated, serialize_datetime
 from ..func import authorize
 from ..models import User
 from ..twofa_service import twofa_service
@@ -85,14 +85,24 @@ def save_data(request):
         existing_user = User.objects.filter(student_code=student_code).first()
         if existing_user:
             if not AuthService.verify_user_password(existing_user, password):
-                return JsonResponse({"detail": "Неверный пароль"}, status=401)
+                return JsonResponse({"detail": "Неверные данные авторизации"}, status=401)
+
+            ban_status = BanService.check_ban_status(existing_user.student_code)
+            if ban_status["is_banned"]:
+                AuthService.clear_login_attempts(student_code, request)
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "detail": "Аккаунт заблокирован",
+                        "is_banned": True,
+                        "ban_info": ban_status.get("ban_info"),
+                    },
+                    status=403,
+                )
 
             AuthService.clear_login_attempts(student_code, request)
-            AuthService.touch_last_login(existing_user)
-            SessionService.create_authenticated_session(request, existing_user)
-            SessionService.enforce_session_limits(existing_user.student_code, request.session.session_key, request)
-
             if twofa_service.is_2fa_required(existing_user):
+                SessionService.begin_authenticated_session(request, existing_user)
                 success, remaining_time, message = _send_or_reuse_twofa_code(request, existing_user)
                 if not success:
                     return JsonResponse(
@@ -115,6 +125,9 @@ def save_data(request):
                     status=200,
                 )
 
+            SessionService.finalize_authenticated_session(request, existing_user)
+            SessionService.enforce_session_limits(existing_user.student_code, request.session.session_key, request)
+            AuthService.touch_last_login(existing_user)
             return JsonResponse(
                 {
                     "success": True,
@@ -132,7 +145,7 @@ def save_data(request):
         fullname, faculty = auth_result
         user = AuthService.register_user(student_code, password, fullname, faculty)
 
-        SessionService.create_authenticated_session(request, user)
+        SessionService.finalize_authenticated_session(request, user)
         SessionService.enforce_session_limits(user.student_code, request.session.session_key, request)
 
         return JsonResponse(
@@ -155,13 +168,14 @@ def dashboard(request):
     if request.method != "GET":
         return JsonResponse({"detail": "Метод не разрешён"}, status=405)
 
-    student_code = request.GET.get("student_code") or request.session.get("student_code")
-    if not request.session.get("is_authenticated") or not student_code:
+    viewer = get_current_user(request)
+    student_code = request.GET.get("student_code") or (viewer.student_code if viewer else None)
+    if not is_request_authenticated(request) or not student_code:
         return JsonResponse({"detail": "Пользователь не авторизован"}, status=401)
 
     try:
         user = User.objects.get(student_code=student_code)
-        if request.session.get("student_code") != student_code:
+        if viewer is None or viewer.student_code != student_code:
             return JsonResponse({"detail": "Доступ запрещён"}, status=403)
 
         ban_status = BanService.check_ban_status(student_code)
@@ -195,15 +209,14 @@ def auth_check(request):
     if request.method != "GET":
         return JsonResponse({"detail": "Метод не разрешён"}, status=405)
 
-    if not request.session.get("is_authenticated"):
+    if not is_request_authenticated(request):
         return JsonResponse({"success": False, "detail": "Пользователь не авторизован"}, status=401)
 
-    student_code = request.session.get("student_code")
-    if not student_code:
+    user = get_current_user(request)
+    if user is None:
         return JsonResponse({"success": False, "detail": "Отсутствует код студента"}, status=401)
 
     try:
-        user = User.objects.get(student_code=student_code)
         if getattr(user, "twofa_enabled", False) and not request.session.get("twofa_verified", False):
             return JsonResponse(
                 {
@@ -263,10 +276,14 @@ def get_user_sessions(request):
         return JsonResponse({"detail": "Метод не разрешён"}, status=405)
 
     try:
-        if not request.session.get("is_authenticated"):
+        if not is_request_authenticated(request):
             return JsonResponse({"success": False, "detail": "Требуется авторизация"}, status=401)
 
-        student_code = request.session.get("student_code")
+        user = get_current_user(request)
+        if user is None:
+            return JsonResponse({"success": False, "detail": "РћС‚СЃСѓС‚СЃС‚РІСѓРµС‚ РєРѕРґ СЃС‚СѓРґРµРЅС‚Р°"}, status=401)
+
+        student_code = user.student_code
         current_session_key = request.session.session_key
         sessions_data = SessionService.get_user_sessions(student_code, current_session_key=current_session_key)
 

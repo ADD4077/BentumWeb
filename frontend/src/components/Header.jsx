@@ -76,8 +76,8 @@ function NavButton({ active, label, onClick, admin = false, mobile = false }) {
         onClick={onClick}
         className={`rounded-full px-4 py-2 text-sm font-semibold transition-all duration-300 ${
           active
-            ? 'text-emerald-700 dark:text-emerald-300'
-            : 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300'
+            ? 'bg-emerald-100 text-emerald-800 shadow-sm dark:bg-emerald-500/15 dark:text-emerald-300'
+            : 'text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-300'
         } ${mobile ? 'w-full text-left py-3' : 'whitespace-nowrap'}`}
       >
         {label}
@@ -110,19 +110,23 @@ function Header({
   setIsProfileModalOpen,
   userMedia,
 }) {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [isHeaderPill, setIsHeaderPill] = useState(!isMobileMenuOpen);
   const headerRef = useRef(null);
 
   const isAdmin = Boolean(isAuthenticated && user?.is_admin);
+  const isModerator = Boolean(isAuthenticated && (user?.role === 'moderator' || user?.is_admin));
 
   const navItems = useMemo(() => {
-    const items = [...NAV_ITEMS];
+    const items = NAV_ITEMS.filter((item) => item.id !== 'games');
+    if (isModerator) {
+      items.push({ id: 'moder', label: 'Модер', admin: true });
+    }
     if (isAdmin) {
       items.push({ id: 'admin', label: 'Админ', admin: true });
     }
     return items;
-  }, [isAdmin]);
+  }, [isAdmin, isModerator]);
 
   useEffect(() => {
     if (isMobileMenuOpen) {

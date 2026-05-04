@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X, CheckCircle, Calendar, AlertTriangle, User } from 'lucide-react';
 
 const formatDuration = (duration, durationLabel) => {
@@ -18,7 +19,7 @@ const formatDuration = (duration, durationLabel) => {
 const BanSuccessModal = ({ isOpen, onClose, user, reason, duration, durationLabel, darkMode: _darkMode }) => {
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="modal-backdrop fixed inset-0 z-[150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div className="modal-panel w-full max-w-md rounded-3xl bg-white shadow-2xl dark:bg-slate-800">
         <div className="flex items-center justify-between border-b border-gray-200 p-6 dark:border-slate-700">
@@ -99,7 +100,8 @@ const BanSuccessModal = ({ isOpen, onClose, user, reason, duration, durationLabe
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

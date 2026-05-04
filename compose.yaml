@@ -8,21 +8,15 @@ services:
     env_file:
       - .env
     ports:
-      - 5173:5173
+      - 5173:80
     depends_on:
       server:
         condition: service_healthy
-  server:
+  server-init:
     build:
       context: ./backend
-    ports:
-      - 1337:1337
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:1337/api/health"]
-      interval: 5s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
+    restart: "no"
+    command: ["true"]
     depends_on:
       db:
         condition: service_healthy
@@ -46,18 +40,24 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
       TELEGRAM_INTERNAL_API_TOKEN: ${TELEGRAM_INTERNAL_API_TOKEN}
+      RUN_INIT_TASKS_ONLY: "1"
     volumes:
       - ./backend:/app
       - ./backend/media:/app/media
-      - ./backend/books:/app/books
-      - ./backend/news:/app/news
-      - ./backend/schedules:/app/schedules
-  worker:
+  server:
     build:
       context: ./backend
-    restart: always
-    command: python manage.py process_background_jobs --loop --sleep 5 --limit 20
+    ports:
+      - 1337:1337
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:1337/api/health"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     depends_on:
+      server-init:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
       redis:
@@ -84,9 +84,40 @@ services:
     volumes:
       - ./backend:/app
       - ./backend/media:/app/media
-      - ./backend/books:/app/books
-      - ./backend/news:/app/news
-      - ./backend/schedules:/app/schedules
+  worker:
+    build:
+      context: ./backend
+    restart: always
+    command: python manage.py process_background_jobs --loop --sleep 5 --limit 20
+    depends_on:
+      server-init:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      DJANGO_ENV: ${DJANGO_ENV:-dev}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD}
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME}
+      DEBUG: ${DEBUG}
+      DJANGO_LOGLEVEL: ${DJANGO_LOGLEVEL}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+      DATABASE_ENGINE: ${DATABASE_ENGINE}
+      DATABASE_NAME: ${DATABASE_NAME}
+      DATABASE_USERNAME: ${DATABASE_USERNAME}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+      TELEGRAM_INTERNAL_API_TOKEN: ${TELEGRAM_INTERNAL_API_TOKEN}
+      SKIP_INIT_TASKS: "1"
+    volumes:
+      - ./backend:/app
+      - ./backend/media:/app/media
   telegram-bot:
     build: 
       context: ./backend
@@ -104,7 +135,6 @@ services:
       - db
   db:
     image: mysql:8.4
-    command: --require_secure_transport=OFF
     restart: always
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
@@ -119,7 +149,7 @@ services:
       DATABASE_HOST: ${DATABASE_HOST}
       DATABASE_PORT: ${DATABASE_PORT}
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql 
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql

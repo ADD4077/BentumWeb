@@ -1,10 +1,8 @@
 import React from 'react';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, Home, RefreshCw } from 'lucide-react';
 
-/**
- * Error Boundary - перехватывает ошибки в дочерних компонентах
- * и показывает fallback UI вместо краша всего приложения
- */
+import { captureException } from '../utils/sentry.js';
+
 export class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -12,19 +10,17 @@ export class ErrorBoundary extends React.Component {
   }
 
   static getDerivedStateFromError(error) {
-    // Обновляем state чтобы показать fallback UI
     return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
-    // Логируем ошибку
     console.error('ErrorBoundary caught an error:', error, errorInfo);
     this.setState({ errorInfo });
-    
-    // Можно отправить в сервис мониторинга (Sentry, etc.)
-    // if (process.env.NODE_ENV === 'production') {
-    //   sentry.captureException(error);
-    // }
+    captureException(error, {
+      extra: {
+        componentStack: errorInfo?.componentStack,
+      },
+    });
   }
 
   handleReload = () => {
@@ -35,82 +31,127 @@ export class ErrorBoundary extends React.Component {
     this.setState({ hasError: false, error: null, errorInfo: null });
   };
 
+  handleGoHome = () => {
+    window.location.assign('/');
+  };
+
   render() {
-    if (this.state.hasError) {
-      const { darkMode } = this.props;
-      
-      return (
-        <div className={`min-h-screen flex items-center justify-center p-4 ${
-          darkMode ? 'bg-slate-900 text-white' : 'bg-gray-50 text-gray-900'
-        }`}>
-          <div className={`max-w-md w-full rounded-3xl p-8 shadow-2xl ${
-            darkMode 
-              ? 'bg-slate-800 border border-slate-700' 
-              : 'bg-white border border-gray-200'
-          }`}>
-            <div className="flex items-center justify-center mb-6">
-              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
-                darkMode ? 'bg-red-500/20' : 'bg-red-100'
-              }`}>
-                <AlertCircle className={`w-8 h-8 ${
-                  darkMode ? 'text-red-400' : 'text-red-600'
-                }`} />
-              </div>
-            </div>
-            
-            <h2 className="text-2xl font-bold text-center mb-2">
-              Что-то пошло не так
-            </h2>
-            
-            <p className={`text-center mb-6 ${
-              darkMode ? 'text-slate-400' : 'text-gray-600'
-            }`}>
-              Произошла ошибка в приложении. Мы уже знаем о проблеме и работаем над её решением.
-            </p>
-            
-            {process.env.NODE_ENV === 'development' && this.state.error && (
-              <div className={`mb-6 p-4 rounded-xl overflow-auto max-h-40 text-sm font-mono ${
-                darkMode 
-                  ? 'bg-slate-900 text-red-300' 
-                  : 'bg-red-50 text-red-700'
-              }`}>
-                <p className="font-semibold">{this.state.error.toString()}</p>
-                {this.state.errorInfo && (
-                  <pre className="mt-2 text-xs opacity-75">
-                    {this.state.errorInfo.componentStack}
-                  </pre>
-                )}
-              </div>
-            )}
-            
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={this.handleReload}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-colors"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Перезагрузить
-              </button>
-              
-              {this.props.onReset && (
-                <button
-                  onClick={this.handleReset}
-                  className={`flex-1 px-6 py-3 rounded-xl font-medium transition-colors ${
-                    darkMode
-                      ? 'bg-slate-700 hover:bg-slate-600 text-white'
-                      : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+    if (!this.state.hasError) {
+      return this.props.children;
+    }
+
+    const { darkMode, onReset } = this.props;
+    const isDark = Boolean(darkMode);
+
+    return (
+      <div
+        className={`flex min-h-screen items-center justify-center px-4 py-8 sm:px-6 ${
+          isDark
+            ? 'bg-[#0B0F19] text-white'
+            : 'bg-slate-100 text-slate-900'
+        }`}
+      >
+        <div className="w-full max-w-3xl">
+          <div
+            className={`overflow-hidden rounded-[2rem] border shadow-2xl backdrop-blur-md ${
+              isDark
+                ? 'border-slate-700/60 bg-slate-800/85 shadow-black/30'
+                : 'border-slate-300/70 bg-white/92 shadow-slate-900/10'
+            }`}
+          >
+            <div
+              className={`border-b px-6 py-8 sm:px-8 sm:py-10 ${
+                isDark
+                  ? 'border-slate-700/60 bg-[radial-gradient(circle_at_top,rgba(239,68,68,0.18),transparent_55%),linear-gradient(180deg,rgba(30,41,59,0.82),rgba(15,23,42,0.96))]'
+                  : 'border-slate-200/80 bg-[radial-gradient(circle_at_top,rgba(248,113,113,0.16),transparent_58%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96))]'
+              }`}
+            >
+              <div className="mx-auto flex max-w-2xl flex-col items-center text-center">
+                <div
+                  className={`flex h-20 w-20 items-center justify-center rounded-[1.75rem] ${
+                    isDark ? 'bg-red-500/15 text-red-300' : 'bg-red-100 text-red-600'
                   }`}
                 >
-                  Попробовать снова
-                </button>
-              )}
+                  <AlertCircle className="h-10 w-10" />
+                </div>
+
+                <h1 className="mt-6 text-3xl font-bold tracking-tight sm:text-4xl">
+                  Что-то пошло не так
+                </h1>
+
+                <p
+                  className={`mt-4 max-w-xl text-sm leading-7 sm:text-base ${
+                    isDark ? 'text-slate-300' : 'text-slate-600'
+                  }`}
+                >
+                  Произошла ошибка в приложении. Мы уже знаем о проблеме и работаем
+                  над её решением.
+                </p>
+              </div>
+            </div>
+
+            <div className="px-6 py-6 sm:px-8 sm:py-8">
+              <div className="mx-auto flex max-w-2xl flex-col gap-4">
+                {process.env.NODE_ENV === 'development' && this.state.error ? (
+                  <div
+                    className={`overflow-auto rounded-[1.5rem] border p-4 text-left font-mono text-xs sm:text-sm ${
+                      isDark
+                        ? 'border-slate-700/60 bg-slate-900/70 text-red-300'
+                        : 'border-red-200 bg-red-50 text-red-700'
+                    }`}
+                  >
+                    <p className="font-semibold">{this.state.error.toString()}</p>
+                    {this.state.errorInfo ? (
+                      <pre className="mt-3 whitespace-pre-wrap opacity-80">
+                        {this.state.errorInfo.componentStack}
+                      </pre>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={this.handleReload}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Перезагрузить
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={this.handleGoHome}
+                    className={`inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border px-5 py-3 text-sm font-semibold transition-colors ${
+                      isDark
+                        ? 'border-slate-700/60 bg-slate-900/60 text-slate-100 hover:bg-slate-800'
+                        : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    <Home className="h-4 w-4" />
+                    На главную
+                  </button>
+
+                  {onReset ? (
+                    <button
+                      type="button"
+                      onClick={this.handleReset}
+                      className={`inline-flex flex-1 items-center justify-center rounded-2xl border px-5 py-3 text-sm font-semibold transition-colors ${
+                        isDark
+                          ? 'border-slate-700/60 text-slate-300 hover:bg-slate-800/80'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      Попробовать снова
+                    </button>
+                  ) : null}
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      );
-    }
-
-    return this.props.children;
+      </div>
+    );
   }
 }
 

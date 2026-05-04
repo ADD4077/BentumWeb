@@ -169,7 +169,12 @@ export default function SecuritySettingsSection({
                   key={session.session_key || index}
                   className="rounded-2xl border border-gray-200/70 bg-white/82 px-4 py-3 text-sm dark:border-slate-800/60 dark:bg-[#17202d]"
                 >
-                  <div className="font-medium text-slate-900 dark:text-white">{session.device || 'Устройство'}</div>
+                  <div className="font-medium text-slate-900 dark:text-white">
+                    {[session.device, session.browser, session.os]
+                      .filter(Boolean)
+                      .filter((value, position, array) => array.indexOf(value) === position)
+                      .join(' • ') || 'Устройство'}
+                  </div>
                   <div className="text-slate-600 dark:text-slate-400">{session.ip_address || 'IP не определён'}</div>
                 </div>
               ))

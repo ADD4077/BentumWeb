@@ -7,6 +7,7 @@ from functools import wraps
 from django.http import JsonResponse
 from django.db import DatabaseError
 from django.core.exceptions import ValidationError
+from django.middleware.csrf import CsrfViewMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -59,3 +60,29 @@ def allow_unverified_2fa(func):
     """
     setattr(func, "_allow_unverified_2fa", True)
     return func
+
+
+def session_csrf_protect(view_func):
+    """
+    Enforce Django CSRF checks for DRF function views that use cookie sessions.
+
+    DRF's `api_view` returns a csrf-exempt callable, which is appropriate for
+    token auth but unsafe for this project because mutating endpoints authorize
+    through Django's session cookie.
+    """
+
+    def wrapper(request, *args, **kwargs):
+        rejection = CsrfViewMiddleware(lambda _request: None).process_view(
+            request,
+            None,
+            args,
+            kwargs,
+        )
+        if rejection is not None:
+            return rejection
+        return view_func(request, *args, **kwargs)
+
+    wrapper.__name__ = getattr(view_func, "__name__", "session_csrf_protected_view")
+    wrapper.__module__ = getattr(view_func, "__module__", __name__)
+    wrapper.__doc__ = getattr(view_func, "__doc__", None)
+    return wrapper

@@ -13,7 +13,7 @@ from django.http import JsonResponse
 
 from ..ban_service import BanService
 from ..media_service import MediaStorage
-from ..models import User, UserProfileMedia, UserSettings
+from ..models import TelegramBinding, User, UserProfileMedia, UserSettings
 from .permissions import can_access_admin_panel, is_system_administrator
 
 
@@ -28,7 +28,7 @@ def require_auth(view_func):
 
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        if not request.session.get("is_authenticated"):
+        if not is_request_authenticated(request):
             return JsonResponse(
                 {
                     "success": False,
@@ -46,7 +46,7 @@ def require_admin(view_func):
 
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        if not request.session.get("is_authenticated"):
+        if not is_request_authenticated(request):
             return JsonResponse(
                 {
                     "success": False,
@@ -90,6 +90,14 @@ def require_admin(view_func):
     return wrapper
 
 
+def is_request_authenticated(request) -> bool:
+    request_user = getattr(request, "user", None)
+    if isinstance(request_user, User) and getattr(request_user, "is_authenticated", False):
+        return True
+    session = getattr(request, "session", None)
+    return bool(session and session.get("is_authenticated"))
+
+
 def validate_method(allowed_methods):
     """Декоратор для валидации HTTP-метода."""
 
@@ -108,7 +116,21 @@ def validate_method(allowed_methods):
 def get_current_user(request) -> Optional[User]:
     """Получить текущего авторизованного пользователя из сессии."""
 
-    student_code = request.session.get("student_code")
+    request_user = getattr(request, "user", None)
+    if isinstance(request_user, User) and getattr(request_user, "is_authenticated", False):
+        session = getattr(request, "session", None)
+        if session is not None:
+            session["student_code"] = request_user.student_code
+            session["fullname"] = request_user.fullname
+            session["faculty"] = request_user.faculty
+            session["is_authenticated"] = True
+        return request_user
+
+    session = getattr(request, "session", None)
+    if session is None:
+        return None
+
+    student_code = session.get("student_code")
     if not student_code:
         return None
     return User.objects.filter(student_code=student_code).first()
@@ -119,6 +141,17 @@ def get_user_settings(user: User) -> UserSettings:
 
     settings_obj, _ = UserSettings.objects.get_or_create(user=user)
     return settings_obj
+
+
+def serialize_user_preferences(user_settings: UserSettings) -> Dict[str, bool]:
+    return {
+        "notify_successful_login": user_settings.notify_successful_login,
+        "notify_support_replies": user_settings.notify_support_replies,
+        "notify_security_events": user_settings.notify_security_events,
+        "show_profile_in_community": user_settings.show_profile_in_community,
+        "show_faculty": user_settings.show_faculty,
+        "allow_telegram_discovery": user_settings.allow_telegram_discovery,
+    }
 
 
 def get_user_media(user: User) -> Dict[str, Any]:
@@ -176,6 +209,9 @@ def get_user_full_data(user: User) -> Dict[str, Any]:
     ban_status = get_user_ban_status(user.student_code)
     is_admin = get_user_admin_status(user)
     user_settings = get_user_settings(user)
+    binding = TelegramBinding.objects.filter(user=user, is_active=True).first()
+
+    preferences = serialize_user_preferences(user_settings)
 
     return {
         "id": user.id,
@@ -185,9 +221,15 @@ def get_user_full_data(user: User) -> Dict[str, Any]:
         "role": user.role,
         "twofa_enabled": user.twofa_enabled,
         "twofa_method": user.twofa_method,
-        "notify_successful_login": user_settings.notify_successful_login,
+        **preferences,
+        "preferences": preferences,
         "created_at": serialize_datetime(user.created_at),
         "last_login": serialize_datetime(user.last_login),
+        "telegram_display": (
+            f"@{binding.telegram_username}"
+            if binding and binding.telegram_username
+            else ("Telegram привязан" if binding else None)
+        ),
         "is_banned": ban_status["is_banned"],
         "ban_info": ban_status.get("ban_info"),
         "is_admin": is_admin,
@@ -195,18 +237,65 @@ def get_user_full_data(user: User) -> Dict[str, Any]:
     }
 
 
-def get_public_user_profile_data(user: User) -> Dict[str, Any]:
+def get_public_user_profile_data(
+    user: User,
+    viewer: Optional[User] = None,
+    *,
+    respect_privacy_strictly: bool = False,
+) -> Optional[Dict[str, Any]]:
     """Return a reduced public profile payload for community/profile previews."""
 
     media = get_user_media(user)
+    user_settings = get_user_settings(user)
+    viewer_is_owner = bool(viewer and viewer.id == user.id)
+    viewer_is_admin = bool(viewer and is_system_administrator(viewer))
 
-    return {
+    if not user_settings.show_profile_in_community and (
+        respect_privacy_strictly or (not viewer_is_owner and not viewer_is_admin)
+    ):
+        return None
+
+    can_bypass_privacy = not respect_privacy_strictly and (viewer_is_owner or viewer_is_admin)
+    faculty = (
+        user.faculty
+        if (
+            not respect_privacy_strictly
+            and (user_settings.show_faculty or can_bypass_privacy)
+        )
+        else None
+    )
+    telegram_display = None
+
+    if not respect_privacy_strictly and (
+        user_settings.allow_telegram_discovery or can_bypass_privacy
+    ):
+        binding = TelegramBinding.objects.filter(user=user, is_active=True).first()
+        if binding:
+            telegram_display = (
+                f"@{binding.telegram_username}"
+                if binding.telegram_username
+                else "Telegram привязан"
+            )
+
+    payload = {
         "id": user.id,
         "fullname": user.fullname,
         "student_code": user.student_code,
         "created_at": serialize_datetime(user.created_at),
         **media,
     }
+
+    if faculty:
+        payload["faculty"] = faculty
+
+    if telegram_display:
+        payload["telegram_display"] = telegram_display
+
+    if can_bypass_privacy:
+        payload["role"] = user.role
+        payload["last_login"] = serialize_datetime(user.last_login)
+
+    return payload
 
 
 def parse_pagination(request) -> Tuple[int, int]:

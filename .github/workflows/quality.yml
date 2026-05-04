@@ -12,7 +12,7 @@ on:
 
 jobs:
   frontend:
-    name: Фронтенд: lint и build
+    name: "Фронтенд: lint, test и build"
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -31,14 +31,20 @@ jobs:
       - name: Установить зависимости
         run: npm ci
 
+      - name: Проверить npm audit
+        run: npm audit --audit-level=moderate
+
       - name: Запустить lint
         run: npm run lint
+
+      - name: Запустить тесты
+        run: npm run test
 
       - name: Собрать production build
         run: npm run build
 
   backend:
-    name: Бэкенд: smoke-тесты
+    name: "Бэкенд: smoke-тесты"
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -64,6 +70,9 @@ jobs:
       - name: Получить код репозитория
         uses: actions/checkout@v5
 
+      - name: Установить системные зависимости
+        run: sudo apt-get update && sudo apt-get install -y default-libmysqlclient-dev pkg-config
+
       - name: Настроить Python
         uses: actions/setup-python@v5
         with:
@@ -72,7 +81,10 @@ jobs:
           cache-dependency-path: backend/requirements.txt
 
       - name: Установить зависимости
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt pip-audit
+
+      - name: Проверить Python зависимости
+        run: python -m pip_audit -r requirements.txt
 
       - name: Запустить Django system check
         run: python manage.py check

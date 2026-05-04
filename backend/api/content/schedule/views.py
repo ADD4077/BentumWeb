@@ -1,14 +1,13 @@
-"""Представления для расписания."""
+"""Views for schedule content."""
 
 from datetime import date, timedelta
 from zoneinfo import ZoneInfo
-import sqlite3
 
 from django.db.models import Max
 from django.http import JsonResponse
 from django.utils import timezone
 
-from ...common.decorators import allow_unverified_2fa
+from ...common.utils import get_current_user, is_request_authenticated
 from ...models import ScheduleEntry
 
 MOSCOW_TZ = ZoneInfo("Europe/Moscow")
@@ -22,10 +21,6 @@ WEEKDAY_NAMES = {
     5: "Суббота",
     6: "Воскресенье",
 }
-
-
-def get_sqlite_connection(_db_name):
-    return None
 
 
 def get_moscow_now():
@@ -128,42 +123,19 @@ def find_next_lesson_for_group(group_id):
     return None
 
 
-@allow_unverified_2fa
 def get_schedule(request):
-    """Получение расписания для группы пользователя."""
     if request.method != "GET":
-        return JsonResponse({"detail": "Метод не разрешён"}, status=405)
+        return JsonResponse({"detail": "РњРµС‚РѕРґ РЅРµ СЂР°Р·СЂРµС€С‘РЅ"}, status=405)
 
-    if not request.session.get("is_authenticated"):
-        return JsonResponse({"detail": "Требуется авторизация"}, status=401)
+    if not is_request_authenticated(request):
+        return JsonResponse({"detail": "РўСЂРµР±СѓРµС‚СЃСЏ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ"}, status=401)
 
-    student_code = request.session.get("student_code")
-    if not student_code:
-        return JsonResponse({"detail": "Отсутствует код студента"}, status=400)
+    user = get_current_user(request)
+    if user is None:
+        return JsonResponse({"detail": "РћС‚СЃСѓС‚СЃС‚РІСѓРµС‚ РєРѕРґ СЃС‚СѓРґРµРЅС‚Р°"}, status=400)
 
+    student_code = user.student_code
     group_id = student_code[:8]
-    test_connection = get_sqlite_connection("schedules/schedules.db")
-    if test_connection:
-        try:
-            with test_connection as cursor:
-                cursor.execute(
-                    """
-                    SELECT day, week, time, matter, frame, teacher, classroom
-                    FROM schedules
-                    WHERE group_number = ?
-                    ORDER BY day, week, time
-                    """,
-                    (group_id,),
-                )
-                rows = cursor.fetchall()
-        except sqlite3.Error:
-            return JsonResponse({"detail": "Ошибка базы данных расписаний"}, status=500)
-
-        if not rows:
-            return JsonResponse({"detail": f"Расписание для группы {group_id} не найдено"}, status=404)
-
-        return JsonResponse(serialize_schedule_rows(rows, student_code), status=200)
-
     queryset = ScheduleEntry.objects.filter(group_number=group_id)
     rows = list(
         queryset
@@ -172,26 +144,24 @@ def get_schedule(request):
     )
 
     if not rows:
-        return JsonResponse({"detail": f"Расписание для группы {group_id} не найдено"}, status=404)
+        return JsonResponse({"detail": f"Р Р°СЃРїРёСЃР°РЅРёРµ РґР»СЏ РіСЂСѓРїРїС‹ {group_id} РЅРµ РЅР°Р№РґРµРЅРѕ"}, status=404)
 
     latest_updated_at = queryset.aggregate(last_updated_at=Max("updated_at"))["last_updated_at"]
-
     return JsonResponse(serialize_schedule_rows(rows, student_code, latest_updated_at), status=200)
 
 
-@allow_unverified_2fa
 def get_next_schedule_lesson(request):
-    """Получение ближайшей пары для текущего пользователя."""
     if request.method != "GET":
-        return JsonResponse({"detail": "Метод не разрешён"}, status=405)
+        return JsonResponse({"detail": "РњРµС‚РѕРґ РЅРµ СЂР°Р·СЂРµС€С‘РЅ"}, status=405)
 
-    if not request.session.get("is_authenticated"):
-        return JsonResponse({"detail": "Требуется авторизация"}, status=401)
+    if not is_request_authenticated(request):
+        return JsonResponse({"detail": "РўСЂРµР±СѓРµС‚СЃСЏ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ"}, status=401)
 
-    student_code = request.session.get("student_code")
-    if not student_code:
-        return JsonResponse({"detail": "Отсутствует код студента"}, status=400)
+    user = get_current_user(request)
+    if user is None:
+        return JsonResponse({"detail": "РћС‚СЃСѓС‚СЃС‚РІСѓРµС‚ РєРѕРґ СЃС‚СѓРґРµРЅС‚Р°"}, status=400)
 
+    student_code = user.student_code
     group_id = student_code[:8]
     next_lesson = find_next_lesson_for_group(group_id)
 
@@ -199,7 +169,7 @@ def get_next_schedule_lesson(request):
         return JsonResponse(
             {
                 "success": False,
-                "detail": f"Следующая пара для группы {group_id} не найдена",
+                "detail": f"РЎР»РµРґСѓСЋС‰Р°СЏ РїР°СЂР° РґР»СЏ РіСЂСѓРїРїС‹ {group_id} РЅРµ РЅР°Р№РґРµРЅР°",
             },
             status=404,
         )

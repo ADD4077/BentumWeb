@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 
 import { API_ENDPOINTS } from '../config/api.js';
+import { openExternalUrl } from '../utils/url.js';
 
 const FALLBACK_STATS = {
   totalUsers: 1000,
@@ -174,7 +175,7 @@ export function CTASection({ setActiveTab }) {
 
           <div className="flex flex-col items-center justify-center gap-3 px-4 sm:flex-row sm:gap-4">
             <button
-              onClick={() => window.open('https://t.me/BNTUnity', '_blank')}
+              onClick={() => openExternalUrl('https://t.me/BNTUnity')}
               className="flex items-center gap-2 rounded-2xl bg-[#0088cc] px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-1 hover:bg-[#0077b3] sm:rounded-3xl sm:px-8 sm:py-4 sm:text-base"
             >
               <Send className="h-4 w-4 sm:h-5 sm:w-5" />

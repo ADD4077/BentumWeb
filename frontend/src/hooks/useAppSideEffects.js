@@ -5,7 +5,6 @@ import { safeGetItem, safeRemoveItem, safeSetItem } from '../utils/storage.js';
 export function useAppSideEffects({
   activeTab,
   setActiveTab,
-  setIsSupportModalOpen,
   setIsLoginModalOpen,
   setIsProfileModalOpen,
   isProfileSettingsOpen,
@@ -32,14 +31,11 @@ export function useAppSideEffects({
       safeRemoveItem('activeTab');
     }
 
-    if (activeTab === 'support') {
-      setIsSupportModalOpen(true);
-      setActiveTab('home');
-    } else if (activeTab === 'login') {
+    if (activeTab === 'login') {
       setIsLoginModalOpen(true);
       setActiveTab('home');
     }
-  }, [activeTab, setActiveTab, setIsLoginModalOpen, setIsSupportModalOpen]);
+  }, [activeTab, setActiveTab, setIsLoginModalOpen]);
 
   useEffect(() => {
     const shouldOpenProfileModal = safeGetItem('openProfileModal', false);

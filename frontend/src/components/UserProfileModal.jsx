@@ -6,16 +6,22 @@ import {
   Calendar,
   Clock,
   GraduationCap,
+  Lock,
+  Send,
   ShieldAlert,
 } from 'lucide-react';
 
-import { API_ENDPOINTS } from '../config/api.js';
 import { calculateCourseOrDefault } from '../utils/calculateCourse.js';
 import { formatDateOnly, formatDateTime } from '../utils/dates.js';
 import { buildMediaUrl } from '../utils/media.js';
 import { getRoleLabel } from '../utils/roles.js';
+import { fetchAdminUserProfile, fetchUserProfileByCode } from '../services/userProfiles.js';
 
 function InfoRow({ icon: Icon, label, value, className = '' }) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
   return (
     <div className={`flex items-center gap-3 text-left ${className}`.trim()}>
       <Icon className="h-5 w-5 shrink-0 self-center text-emerald-600 dark:text-emerald-400" />
@@ -32,6 +38,10 @@ function InfoRow({ icon: Icon, label, value, className = '' }) {
 }
 
 function AlertInfoRow({ icon: Icon, label, value, className = '' }) {
+  if (!value) {
+    return null;
+  }
+
   return (
     <div
       className={`rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-left dark:border-red-500/30 dark:bg-red-500/10 ${className}`.trim()}
@@ -51,12 +61,30 @@ function AlertInfoRow({ icon: Icon, label, value, className = '' }) {
   );
 }
 
+function getTwoFactorLabel(user) {
+  if (!user) {
+    return null;
+  }
+
+  if (!user.twofa_enabled) {
+    return 'Выключена';
+  }
+
+  if (user.twofa_method === 'telegram') {
+    return 'Telegram';
+  }
+
+  return 'Включена';
+}
+
 export default function UserProfileModal({
   isOpen,
   onClose,
   studentCode,
+  userId = null,
   darkMode: _darkMode,
   showActivityMeta = false,
+  adminView = false,
 }) {
   const [user, setUser] = useState(null);
   const [userMedia, setUserMedia] = useState({
@@ -68,35 +96,38 @@ export default function UserProfileModal({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isOpen && studentCode) {
+    if (!isOpen) {
+      return;
+    }
+
+    if (adminView && userId) {
+      loadUserProfile();
+      return;
+    }
+
+    if (studentCode) {
       loadUserProfile();
     }
-  }, [isOpen, studentCode]);
+  }, [adminView, isOpen, studentCode, userId]);
 
   const loadUserProfile = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_ENDPOINTS.BASE_URL}/api/user/by-code/${studentCode}`, {
-        credentials: 'include',
-      });
+      const profile = adminView
+        ? await fetchAdminUserProfile(userId)
+        : await fetchUserProfileByCode(studentCode);
 
-      if (!response.ok) {
+      if (!profile) {
         onClose();
         return;
       }
 
-      const data = await response.json();
-      if (!data?.success || !data?.user) {
-        onClose();
-        return;
-      }
-
-      setUser(data.user);
+      setUser(profile);
       setUserMedia({
-        avatar_url: data.user.avatar_url,
-        banner_url: data.user.banner_url,
-        avatar_placeholder: data.user.avatar_placeholder,
-        banner_placeholder: data.user.banner_placeholder,
+        avatar_url: profile.avatar_url,
+        banner_url: profile.banner_url,
+        avatar_placeholder: profile.avatar_placeholder,
+        banner_placeholder: profile.banner_placeholder,
       });
     } catch {
       onClose();
@@ -164,26 +195,26 @@ export default function UserProfileModal({
               </h3>
 
               <div className="mb-6 text-center text-xs text-slate-500 dark:text-slate-400">
-                ID: {user?.id || 'не определен'}
+                ID: {user?.id || 'Не определен'}
               </div>
 
               <div className="w-full space-y-6">
                 <InfoRow
+                  icon={Book}
+                  label="Студенческий код"
+                  value={user?.student_code || 'Не указан'}
+                />
+
+                <InfoRow
                   icon={GraduationCap}
                   label="Факультет"
-                  value={user?.faculty || 'Не указан'}
+                  value={user?.faculty}
                 />
 
                 <InfoRow
                   icon={Book}
                   label="Роль"
-                  value={getRoleLabel(user?.role)}
-                />
-
-                <InfoRow
-                  icon={Book}
-                  label="Студенческий код"
-                  value={user?.student_code?.slice(0, 8) || 'Не указан'}
+                  value={user?.role ? getRoleLabel(user.role) : null}
                 />
 
                 <InfoRow
@@ -192,7 +223,21 @@ export default function UserProfileModal({
                   value={calculateCourseOrDefault(user?.student_code)}
                 />
 
-                {showActivityMeta ? (
+                <InfoRow
+                  icon={Send}
+                  label="Telegram"
+                  value={user?.telegram_display}
+                />
+
+                {adminView ? (
+                  <InfoRow
+                    icon={Lock}
+                    label="Двухфакторная защита"
+                    value={getTwoFactorLabel(user)}
+                  />
+                ) : null}
+
+                {showActivityMeta && user?.last_login ? (
                   <>
                     <InfoRow
                       icon={Calendar}
@@ -206,18 +251,26 @@ export default function UserProfileModal({
                       value={formatDateTime(user?.last_login)}
                     />
                   </>
-                ) : (
+                ) : user?.created_at ? (
                   <InfoRow
                     icon={Calendar}
                     label="Дата регистрации"
                     value={formatDateOnly(user?.created_at)}
                   />
-                )}
+                ) : null}
+
+                {adminView && user?.is_admin ? (
+                  <InfoRow
+                    icon={ShieldAlert}
+                    label="Права доступа"
+                    value="Администратор"
+                  />
+                ) : null}
 
                 {user?.is_banned ? (
                   <AlertInfoRow
                     icon={ShieldAlert}
-                    label="Срок бана"
+                    label="Срок блокировки"
                     value={formatDateTime(user?.ban_info?.ban_end_date)}
                     className="mb-2"
                   />

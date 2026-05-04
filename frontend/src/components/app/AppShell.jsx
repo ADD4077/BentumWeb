@@ -12,6 +12,7 @@ import {
 
 import Header from '../Header.jsx';
 import CookieNotice from '../CookieNotice.jsx';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 
 const QUICK_LINKS = [
   { id: 'schedule', label: 'Расписание', icon: GraduationCap },
@@ -41,7 +42,6 @@ export const AppShell = ({
   darkMode,
   toggleTheme,
   setIsLoginModalOpen,
-  setIsSupportModalOpen,
   isMobileMenuOpen,
   setIsMobileMenuOpen,
   isProfileModalOpen,
@@ -49,6 +49,8 @@ export const AppShell = ({
   userMedia,
   children,
 }) => {
+  const { isAuthenticated } = useAuth();
+
   const handleFooterNavigation = (tab) => {
     setActiveTab(tab);
 
@@ -67,7 +69,6 @@ export const AppShell = ({
           darkMode={darkMode}
           toggleTheme={toggleTheme}
           setIsLoginModalOpen={setIsLoginModalOpen}
-          setIsSupportModalOpen={setIsSupportModalOpen}
           isMobileMenuOpen={isMobileMenuOpen}
           setIsMobileMenuOpen={setIsMobileMenuOpen}
           isProfileModalOpen={isProfileModalOpen}
@@ -76,13 +77,13 @@ export const AppShell = ({
         />
       ) : null}
 
-      <main className="app-shell-main relative z-10 container mx-auto flex-1 px-4 pb-12 pt-8">
+      <main className="app-shell-main relative z-10 container mx-auto flex-1 px-4 pb-12">
         {children}
       </main>
 
       <footer className="border-t border-slate-300/70 bg-slate-100 px-4 pb-6 pt-8 dark:border-slate-800/70 dark:bg-[#0B0F19]">
         <div className="mx-auto max-w-7xl px-2 py-4 lg:px-4">
-          <div className="grid gap-8 lg:grid-cols-[1.15fr,0.85fr,0.9fr]">
+          <div className={`grid gap-8 ${isAuthenticated ? 'lg:grid-cols-[1.15fr,0.85fr,0.9fr]' : 'lg:grid-cols-[1.2fr,0.95fr]'}`}>
             <div className="space-y-4">
               <div>
                 <h3 className="text-2xl font-bold tracking-tight text-slate-950 dark:text-white">
@@ -103,6 +104,7 @@ export const AppShell = ({
               </button>
             </div>
 
+            {isAuthenticated ? (
             <div>
               <div className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
                 <ScrollText className="h-4 w-4" />
@@ -130,6 +132,7 @@ export const AppShell = ({
                 })}
               </div>
             </div>
+            ) : null}
 
             <div>
               <div className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
@@ -174,7 +177,7 @@ export const AppShell = ({
                   return (
                     <button
                       key={item.label}
-                      onClick={() => setIsSupportModalOpen(true)}
+                      onClick={() => handleFooterNavigation('support')}
                       className="group flex items-center justify-between rounded-xl border border-slate-300/70 bg-white/82 px-4 py-3 text-left transition-colors duration-300 hover:border-emerald-300 hover:bg-white dark:border-slate-800/70 dark:bg-[#141c28]/70 dark:hover:border-emerald-500/30"
                     >
                       {body}

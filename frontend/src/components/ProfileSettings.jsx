@@ -5,6 +5,7 @@ import { API_ENDPOINTS } from '../config/api.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { buildCsrfHeaders, ensureCsrfToken } from '../utils/http.js';
 import { showError, showSuccess } from '../utils/notifications.js';
+import { sanitizeTelegramUrl } from '../utils/url.js';
 import TwoFARecoveryModal from './TwoFARecoveryModal.jsx';
 import DeleteMediaModal from './profile-settings/DeleteMediaModal.jsx';
 import PreferenceSettingsSection from './profile-settings/PreferenceSettingsSection.jsx';
@@ -12,9 +13,22 @@ import ProfileOverviewSection from './profile-settings/ProfileOverviewSection.js
 import ProfileSettingsShell from './profile-settings/ProfileSettingsShell.jsx';
 import SecuritySettingsSection from './profile-settings/SecuritySettingsSection.jsx';
 
+const DEFAULT_NOTIFICATION_SETTINGS = {
+  notifySuccessfulLogin: true,
+  notifySupportReplies: true,
+  notifySecurityEvents: true,
+};
+
+const DEFAULT_PRIVACY_SETTINGS = {
+  showProfileInCommunity: true,
+  showFaculty: true,
+  allowTelegramDiscovery: false,
+};
+
 function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, onForceRefresh, onLogout }) {
   const { isAuthenticated, logout, checkAuth } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
+  const [isMobileMode, setIsMobileMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [avatarPreview, setAvatarPreview] = useState(null);
@@ -34,20 +48,52 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
-  const [notificationSettings, setNotificationSettings] = useState({
-    importantUpdates: true,
-    newsDigest: true,
-    sessionAlerts: Boolean(user?.notify_successful_login ?? true),
-  });
-  const [privacySettings, setPrivacySettings] = useState({
-    showProfileInCommunity: true,
-    showFaculty: true,
-    allowTelegramDiscovery: false,
-  });
+  const [notificationSettings, setNotificationSettings] = useState(DEFAULT_NOTIFICATION_SETTINGS);
+  const [privacySettings, setPrivacySettings] = useState(DEFAULT_PRIVACY_SETTINGS);
   const avatarInputRef = useRef(null);
   const bannerInputRef = useRef(null);
 
   const isTelegramLinked = Boolean(telegramBinding?.is_linked);
+
+  const syncPreferenceStateFromUser = (nextUser) => {
+    setNotificationSettings({
+      notifySuccessfulLogin: Boolean(nextUser?.notify_successful_login ?? true),
+      notifySupportReplies: Boolean(nextUser?.notify_support_replies ?? true),
+      notifySecurityEvents: Boolean(nextUser?.notify_security_events ?? true),
+    });
+    setPrivacySettings({
+      showProfileInCommunity: Boolean(nextUser?.show_profile_in_community ?? true),
+      showFaculty: Boolean(nextUser?.show_faculty ?? true),
+      allowTelegramDiscovery: Boolean(nextUser?.allow_telegram_discovery ?? false),
+    });
+  };
+
+  const applyUpdatedPreferences = async (preferences) => {
+    const nextUser = {
+      ...user,
+      ...preferences,
+      preferences,
+    };
+    onProfileUpdate?.(nextUser);
+    syncPreferenceStateFromUser(nextUser);
+    await checkAuth({ force: true });
+  };
+
+  const persistPreferences = async (payload, successMessage) => {
+    const headers = await buildCsrfHeaders({ 'Content-Type': 'application/json' });
+    const response = await fetch(API_ENDPOINTS.PROFILE_PREFERENCES, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.detail || 'Не удалось сохранить настройки');
+    }
+    await applyUpdatedPreferences(data.preferences || payload);
+    showSuccess(successMessage);
+  };
 
   const getTelegramDisplayName = () => {
     if (!telegramBinding) return null;
@@ -130,19 +176,43 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
   };
 
   useEffect(() => {
+    syncPreferenceStateFromUser(user);
+  }, [
+    user?.notify_successful_login,
+    user?.notify_support_replies,
+    user?.notify_security_events,
+    user?.show_profile_in_community,
+    user?.show_faculty,
+    user?.allow_telegram_discovery,
+  ]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const mediaQuery = window.matchMedia('(max-width: 1023px)');
+    const syncMobileMode = () => {
+      const nextMobile = mediaQuery.matches;
+      setIsMobileMode(nextMobile);
+      setActiveTab((current) => {
+        if (nextMobile) {
+          return current === 'logout' ? null : null;
+        }
+        return current || 'profile';
+      });
+    };
+
+    syncMobileMode();
+    mediaQuery.addEventListener('change', syncMobileMode);
+    return () => mediaQuery.removeEventListener('change', syncMobileMode);
+  }, []);
+
+  useEffect(() => {
     if (user && isAuthenticated) {
       refreshBanInfo();
       refreshSessions();
       refreshTelegramBinding();
     }
   }, [user, isAuthenticated]);
-
-  useEffect(() => {
-    setNotificationSettings((current) => ({
-      ...current,
-      sessionAlerts: Boolean(user?.notify_successful_login ?? true),
-    }));
-  }, [user?.notify_successful_login]);
 
   useEffect(() => {
     if (!telegramLink || isTelegramLinked) return undefined;
@@ -321,9 +391,14 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
 
   const generateTelegramLink = async () => {
     setLoadingTelegram(true);
+    let popup = null;
     try {
       setErrors((current) => ({ ...current, telegram: null }));
-      const popup = window.open('about:blank', '_blank');
+      popup = window.open('about:blank', '_blank');
+      if (!popup) {
+        throw new Error();
+      }
+
       const headers = await buildCsrfHeaders();
       const response = await fetch(API_ENDPOINTS.TELEGRAM_GENERATE_LINK, {
         method: 'POST',
@@ -334,9 +409,17 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
       if (!data.success || !data.data?.binding_link) {
         throw new Error();
       }
-      setTelegramLink(data.data.binding_link);
-      popup.location.href = data.data.binding_link;
+
+      const bindingLink = sanitizeTelegramUrl(data.data.binding_link);
+      if (!bindingLink) {
+        throw new Error();
+      }
+
+      setTelegramLink(bindingLink);
+      popup.opener = null;
+      popup.location.href = bindingLink;
     } catch {
+      popup?.close();
       setErrors({ telegram: 'Не удалось создать ссылку привязки Telegram' });
     } finally {
       setLoadingTelegram(false);
@@ -394,40 +477,64 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
 
   const toggleNotificationSetting = async (key) => {
     const nextValue = !notificationSettings[key];
-    setNotificationSettings((current) => ({ ...current, [key]: nextValue }));
+    const nextState = { ...notificationSettings, [key]: nextValue };
+    setNotificationSettings(nextState);
 
-    if (key !== 'sessionAlerts') {
-      return;
-    }
+    const payloadByKey = {
+      notifySuccessfulLogin: { notify_successful_login: nextValue },
+      notifySupportReplies: { notify_support_replies: nextValue },
+      notifySecurityEvents: { notify_security_events: nextValue },
+    };
+
+    const successMessages = {
+      notifySuccessfulLogin: nextValue
+        ? 'Уведомления об успешном входе включены'
+        : 'Уведомления об успешном входе отключены',
+      notifySupportReplies: nextValue
+        ? 'Уведомления об ответах поддержки включены'
+        : 'Уведомления об ответах поддержки отключены',
+      notifySecurityEvents: nextValue
+        ? 'Уведомления о безопасности включены'
+        : 'Уведомления о безопасности отключены',
+    };
 
     try {
-      const headers = await buildCsrfHeaders({ 'Content-Type': 'application/json' });
-      const response = await fetch(API_ENDPOINTS.PROFILE_PREFERENCES, {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify({ notify_successful_login: nextValue }),
-      });
-
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.detail || 'Не удалось сохранить настройки уведомлений');
-      }
-
-      onProfileUpdate?.({
-        ...user,
-        notify_successful_login: nextValue,
-      });
-      await checkAuth();
-      showSuccess(nextValue ? 'Уведомления о входе включены' : 'Уведомления о входе отключены');
+      await persistPreferences(payloadByKey[key], successMessages[key]);
     } catch (error) {
-      setNotificationSettings((current) => ({ ...current, [key]: !nextValue }));
+      setNotificationSettings(notificationSettings);
       showError(error instanceof Error ? error.message : 'Не удалось сохранить настройки уведомлений');
     }
   };
 
-  const togglePrivacySetting = (key) => {
-    setPrivacySettings((current) => ({ ...current, [key]: !current[key] }));
+  const togglePrivacySetting = async (key) => {
+    const nextValue = !privacySettings[key];
+    const nextState = { ...privacySettings, [key]: nextValue };
+    setPrivacySettings(nextState);
+
+    const payloadByKey = {
+      showProfileInCommunity: { show_profile_in_community: nextValue },
+      showFaculty: { show_faculty: nextValue },
+      allowTelegramDiscovery: { allow_telegram_discovery: nextValue },
+    };
+
+    const successMessages = {
+      showProfileInCommunity: nextValue
+        ? 'Профиль снова виден в сообществе'
+        : 'Профиль скрыт из сообщества',
+      showFaculty: nextValue
+        ? 'Факультет снова показывается в публичном профиле'
+        : 'Факультет скрыт из публичного профиля',
+      allowTelegramDiscovery: nextValue
+        ? 'Информация о привязанном Telegram теперь видна в публичном профиле'
+        : 'Информация о привязанном Telegram скрыта из публичного профиля',
+    };
+
+    try {
+      await persistPreferences(payloadByKey[key], successMessages[key]);
+    } catch (error) {
+      setPrivacySettings(privacySettings);
+      showError(error instanceof Error ? error.message : 'Не удалось сохранить настройки приватности');
+    }
   };
 
   const content = activeTab === 'profile' ? (
@@ -481,52 +588,56 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
   ) : activeTab === 'notifications' ? (
     <PreferenceSettingsSection
       title="Уведомления"
-      description="Настройте, какие уведомления Bentum будет показывать вам в интерфейсе."
+      description={
+        isTelegramLinked
+          ? 'Все уведомления Bentum отправляются в привязанный Telegram. Здесь можно выбрать, какие события будут приходить.'
+          : 'Все уведомления Bentum отправляются в Telegram. Сначала привяжите Telegram во вкладке «Безопасность», чтобы получать их.'
+      }
       items={[
         {
-          key: 'importantUpdates',
-          label: 'Важные обновления',
-          description: 'Сообщения о ключевых изменениях в сервисе и аккаунте.',
+          key: 'notifySuccessfulLogin',
+          label: 'Успешный вход',
+          description: 'Уведомление в Telegram после подтверждённого входа в аккаунт.',
         },
         {
-          key: 'newsDigest',
-          label: 'Новости и объявления',
-          description: 'Подборка новых материалов и важных публикаций.',
+          key: 'notifySupportReplies',
+          label: 'Ответы поддержки',
+          description: 'Сообщение в Telegram, когда модератор отвечает на ваше обращение.',
         },
         {
-          key: 'sessionAlerts',
-          label: 'Успешный вход в аккаунт',
-          description: 'Telegram-уведомление после успешного входа, если у вас включена двухфакторная аутентификация.',
+          key: 'notifySecurityEvents',
+          label: 'События безопасности',
+          description: 'Уведомления о смене пароля и включении или отключении 2FA.',
         },
       ]}
       values={notificationSettings}
       onToggle={toggleNotificationSetting}
     />
-  ) : (
+  ) : activeTab === 'privacy' ? (
     <PreferenceSettingsSection
       title="Приватность"
-      description="Управляйте тем, какая информация о вашем профиле может быть видна в интерфейсе."
+      description="Управляйте тем, что другие пользователи увидят в вашем публичном профиле внутри Bentum."
       items={[
         {
           key: 'showProfileInCommunity',
           label: 'Показывать профиль в сообществе',
-          description: 'Разрешить отображение карточки профиля в общих списках.',
+          description: 'Разрешить открывать вашу карточку профиля по студенческому коду внутри сайта.',
         },
         {
           key: 'showFaculty',
           label: 'Показывать факультет',
-          description: 'Отображать факультет в публичных карточках профиля.',
+          description: 'Отображать факультет в публичной карточке профиля.',
         },
         {
           key: 'allowTelegramDiscovery',
-          label: 'Разрешить поиск через Telegram',
-          description: 'Показывать, что к аккаунту привязан Telegram-профиль.',
+          label: 'Показывать привязку Telegram',
+          description: 'Разрешить видеть в публичном профиле, что к аккаунту привязан Telegram.',
         },
       ]}
       values={privacySettings}
       onToggle={togglePrivacySetting}
     />
-  );
+  ) : null;
 
   return (
     <ProfileSettingsShell
@@ -535,6 +646,7 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
       activeTab={activeTab}
       setActiveTab={setActiveTab}
       content={content}
+      mobileMode={isMobileMode}
     >
       <DeleteMediaModal
         deleteModal={deleteModal}

@@ -5,6 +5,7 @@ import { TagsContainer } from '../components/TagsContainer.jsx';
 import { useModal } from '../contexts/ModalContext.jsx';
 import { useNavigation } from '../hooks/useNavigation.js';
 import { useNews } from '../hooks/useNews.js';
+import { openExternalUrl, sanitizeExternalUrl } from '../utils/url.js';
 
 function formatDate(timestamp) {
   const date = new Date(timestamp * 1000);
@@ -16,7 +17,7 @@ function formatDate(timestamp) {
     minute: '2-digit',
   });
 
-  return formatted.replace(' г. в', '');
+  return formatted.replace(/\s*г\.\s*в\s*/, ' ');
 }
 
 function Pagination({ page, maxPage, onChange }) {
@@ -130,9 +131,11 @@ function Pagination({ page, maxPage, onChange }) {
 }
 
 function NewsCard({ item, compact = false, onTagClick }) {
+  const safeLink = sanitizeExternalUrl(item.link);
+
   return (
     <article
-      className={`glass-card interactive-lift shimmer-surface flex h-full flex-col ${
+      className={`news-card glass-card interactive-lift shimmer-surface flex h-full flex-col ${
         compact
           ? 'rounded-xl border border-gray-200/70 bg-gray-100/50 p-4 shadow-lg shadow-gray-900/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20 sm:rounded-2xl sm:p-6'
           : 'rounded-xl border border-gray-200/70 bg-gray-100/50 p-4 shadow-lg shadow-gray-900/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20 sm:rounded-2xl sm:p-6'
@@ -178,8 +181,10 @@ function NewsCard({ item, compact = false, onTagClick }) {
           <TagsContainer tags={item.tags} onTagClick={onTagClick} />
         </div>
         <button
-          onClick={() => item.link && window.open(item.link, '_blank')}
-          className="flex flex-shrink-0 items-center gap-1 rounded-lg bg-emerald-500 px-2 py-1.5 text-xs font-medium text-white transition-all duration-300 hover:scale-105 hover:bg-emerald-600 sm:px-3 sm:py-2 sm:text-sm"
+          type="button"
+          disabled={!safeLink}
+          onClick={() => openExternalUrl(item.link)}
+          className="flex flex-shrink-0 items-center gap-1 rounded-lg bg-emerald-500 px-2 py-1.5 text-xs font-medium text-white transition-all duration-300 hover:scale-105 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:hover:scale-100 dark:disabled:bg-slate-700 sm:px-3 sm:py-2 sm:text-sm"
         >
           {!compact ? <span className="hidden sm:inline">Читать</span> : null}
           <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -227,8 +232,8 @@ export function NewsPage({ activeTab }) {
   );
 
   const listNews = useMemo(
-    () => (showLatestSection ? filteredNews.slice(2) : filteredNews),
-    [filteredNews, showLatestSection]
+    () => filteredNews,
+    [filteredNews]
   );
 
   return (

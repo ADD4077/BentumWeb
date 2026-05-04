@@ -16,7 +16,6 @@ export const HomePage = ({
   MissionSection,
   teamMembers,
   TeamCarousel,
-  setActiveTab,
   darkMode,
 }) => {
   return (
@@ -36,7 +35,7 @@ export const HomePage = ({
                 yoyo={false}
                 pauseOnHover={false}
                 disabled={false}
-                className="relative inline-flex pt-2 pb-5"
+                className="inline-block pt-2 pb-5"
               />
             </span>
           </h1>

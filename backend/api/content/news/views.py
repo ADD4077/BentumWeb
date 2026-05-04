@@ -1,15 +1,10 @@
-"""Представления для новостей."""
+"""Views for news content."""
 
 from django.db.models import Q
 from django.http import JsonResponse
 
-from ...common.decorators import allow_unverified_2fa
 from ...common.utils import parse_pagination, parse_tags
 from ...models import NewsItem
-
-
-def get_sqlite_connection(_db_name):
-    return None
 
 
 def _build_category_filter(category):
@@ -44,9 +39,7 @@ def _detect_category(item, requested_category):
     return "general"
 
 
-@allow_unverified_2fa
 def get_news(request):
-    """Возвращает список новостей с пагинацией и фильтрацией."""
     if request.method != "GET":
         return JsonResponse({"detail": "Метод не разрешён"}, status=405)
 
@@ -54,93 +47,6 @@ def get_news(request):
     search = (request.GET.get("search") or "").strip()
     category = (request.GET.get("category") or "").strip()
     sort_by = (request.GET.get("sort") or request.GET.get("sort_by") or "date_desc").strip()
-
-    test_connection = get_sqlite_connection("news/times_news.db")
-    if test_connection:
-        where_conditions = []
-        params = []
-
-        category_filter = _build_category_filter(category)
-        if category_filter:
-            if category == "academic":
-                where_conditions.append("(tags LIKE ? OR tags LIKE ?)")
-                params.extend(["%Преподаватели БНТУ%", "%БНТУ%"])
-            elif category == "achievements":
-                where_conditions.append("(tags LIKE ? OR tags LIKE ?)")
-                params.extend(["%Спорт%", "%Культура%"])
-            elif category == "education":
-                where_conditions.append("(tags LIKE ?)")
-                params.append("%Студенты%")
-            elif category == "events":
-                where_conditions.append("(tags LIKE ? OR tags LIKE ?)")
-                params.extend(["%Мероприятие%", "%Преподаватели БНТУ%"])
-            elif category == "sports":
-                where_conditions.append("(tags LIKE ?)")
-                params.append("%Спорт%")
-
-        if search:
-            search_conditions = []
-            for term in search.split():
-                if term:
-                    pattern = f"%{term}%"
-                    search_conditions.append("(LOWER(title) LIKE ? OR LOWER(summary) LIKE ? OR LOWER(tags) LIKE ?)")
-                    params.extend([pattern, pattern, pattern])
-            if search_conditions:
-                where_conditions.append("(" + " OR ".join(search_conditions) + ")")
-
-        where_clause = f"WHERE {' AND '.join(where_conditions)}" if where_conditions else ""
-        order_by = {
-            "date_desc": "timestamp DESC",
-            "date_asc": "timestamp ASC",
-            "title_asc": "title ASC",
-            "title_desc": "title DESC",
-        }.get(sort_by, "timestamp DESC")
-
-        with test_connection as cursor:
-            cursor.execute(f"SELECT COUNT(*) FROM news {where_clause}", params)
-            total = cursor.fetchone()[0]
-            offset = (page - 1) * page_size
-            cursor.execute(
-                f"""
-                SELECT id, title, link, date, summary, tags, image_url, reading_time, timestamp
-                FROM news
-                {where_clause}
-                ORDER BY {order_by}
-                LIMIT {page_size} OFFSET {offset}
-                """,
-                params,
-            )
-            rows = cursor.fetchall()
-
-        items = [
-            {
-                "id": news_id,
-                "title": title or "",
-                "excerpt": summary or "",
-                "content": summary or "",
-                "category": "general",
-                "tags": parse_tags(tags),
-                "author": "БНТУ",
-                "date": date,
-                "timestamp": timestamp,
-                "imageUrl": image_url or "",
-                "link": link or "",
-                "featured": False,
-                "readTime": f"{reading_time or 5} мин",
-            }
-            for news_id, title, link, date, summary, tags, image_url, reading_time, timestamp in rows
-        ]
-        return JsonResponse(
-            {
-                "success": True,
-                "page": page,
-                "page_size": page_size,
-                "total": total,
-                "items": items,
-            },
-            status=200,
-            json_dumps_params={"ensure_ascii": False},
-        )
 
     queryset = NewsItem.objects.all()
     category_filter = _build_category_filter(category)

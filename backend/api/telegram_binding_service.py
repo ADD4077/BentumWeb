@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import logging
 import secrets
 from typing import Any, Dict, Optional, Tuple
@@ -12,8 +13,12 @@ from .models import TelegramBinding, User
 logger = logging.getLogger(__name__)
 
 
+def _token_log_ref(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()[:12] if token else "empty"
+
+
 class TelegramBindingService:
-    """Сервис для управления привязкой Telegram-аккаунтов к пользователям."""
+    """Сервис для привязки Telegram и отправки личных уведомлений пользователю."""
 
     def __init__(self):
         self.bot_token = getattr(settings, "TELEGRAM_BOT_TOKEN", None)
@@ -21,7 +26,6 @@ class TelegramBindingService:
         self._bot = None
 
     async def _get_bot(self) -> Bot:
-        """Получить экземпляр бота и при необходимости определить username."""
         if not self._bot and self.bot_token:
             self._bot = Bot(token=self.bot_token)
 
@@ -39,7 +43,6 @@ class TelegramBindingService:
         return self._bot
 
     def generate_binding_token(self, user: User) -> str:
-        """Сгенерировать токен для привязки Telegram."""
         try:
             TelegramBinding.objects.filter(user=user, is_active=False).delete()
             token = secrets.token_urlsafe(32)
@@ -56,14 +59,13 @@ class TelegramBindingService:
                 },
             )
 
-            logger.info("Generated binding token for user %s: %s", user.student_code, token)
+            logger.info("Generated binding token for user %s", user.student_code)
             return token
         except Exception as error:
             logger.error("Error generating binding token for user %s: %s", user.student_code, error)
             raise
 
     async def generate_binding_token_async(self, user: User) -> str:
-        """Асинхронная генерация токена для привязки Telegram."""
         try:
             from asgiref.sync import sync_to_async
 
@@ -89,14 +91,13 @@ class TelegramBindingService:
             token = secrets.token_urlsafe(32)
             await create_or_update_binding(token)
 
-            logger.info("Generated binding token for user %s: %s", user.student_code, token)
+            logger.info("Generated binding token for user %s", user.student_code)
             return token
         except Exception as error:
             logger.error("Error generating binding token for user %s: %s", user.student_code, error)
             raise
 
     async def get_binding_link(self, token: str) -> str:
-        """Сгенерировать ссылку для привязки Telegram."""
         await self._get_bot()
 
         if not self.bot_username:
@@ -105,7 +106,6 @@ class TelegramBindingService:
         return f"https://t.me/{self.bot_username}?start={token}"
 
     def get_binding_link_sync(self, token: str) -> str:
-        """Синхронная обертка для генерации ссылки."""
         try:
             loop = asyncio.get_event_loop()
         except RuntimeError:
@@ -115,7 +115,6 @@ class TelegramBindingService:
         return loop.run_until_complete(self.get_binding_link(token))
 
     async def bind_telegram_account(self, token: str, telegram_data: Dict[str, Any]) -> Tuple[bool, str]:
-        """Привязать Telegram-аккаунт к пользователю по токену."""
         try:
             from asgiref.sync import sync_to_async
 
@@ -164,11 +163,10 @@ class TelegramBindingService:
             )
             return True, f"Telegram аккаунт успешно привязан к {user.fullname}"
         except Exception as error:
-            logger.error("Error binding Telegram account with token %s: %s", token, error)
+            logger.error("Error binding Telegram account with token ref %s: %s", _token_log_ref(token), error)
             return False, "Внутренняя ошибка сервера"
 
     def bind_telegram_account_sync(self, token: str, telegram_data: Dict[str, Any]) -> Tuple[bool, str]:
-        """Синхронная обертка для привязки аккаунта."""
         try:
             loop = asyncio.get_event_loop()
         except RuntimeError:
@@ -178,7 +176,6 @@ class TelegramBindingService:
         return loop.run_until_complete(self.bind_telegram_account(token, telegram_data))
 
     def get_user_binding(self, user: User) -> Optional[TelegramBinding]:
-        """Получить информацию о привязке Telegram для пользователя."""
         try:
             return TelegramBinding.objects.filter(user=user, is_active=True).first()
         except Exception as error:
@@ -186,7 +183,6 @@ class TelegramBindingService:
             return None
 
     async def get_user_binding_async(self, user: User) -> Optional[TelegramBinding]:
-        """Асинхронная версия получения информации о привязке."""
         try:
             from asgiref.sync import sync_to_async
 
@@ -199,8 +195,38 @@ class TelegramBindingService:
             logger.error("Error getting Telegram binding for user %s: %s", user.student_code, error)
             return None
 
+    async def send_message(self, telegram_id: int, text: str) -> Tuple[bool, str]:
+        try:
+            if not self.bot_token:
+                return False, "Telegram bot token is not configured"
+
+            bot = await self._get_bot()
+            if not bot:
+                return False, "Telegram bot is unavailable"
+
+            await bot.send_message(chat_id=telegram_id, text=text)
+            return True, "sent"
+        except Exception as error:
+            logger.error("Error sending Telegram message to %s: %s", telegram_id, error)
+            return False, str(error)
+
+    def send_message_sync(self, telegram_id: int, text: str) -> Tuple[bool, str]:
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        return loop.run_until_complete(self.send_message(telegram_id, text))
+
+    def send_user_notification_sync(self, user: User, text: str) -> Tuple[bool, str]:
+        binding = self.get_user_binding(user)
+        if not binding or not binding.telegram_id or binding.telegram_id == 0:
+            return False, "Telegram account is not linked"
+
+        return self.send_message_sync(binding.telegram_id, text)
+
     def unlink_telegram_account(self, user: User) -> Tuple[bool, str]:
-        """Отвязать Telegram-аккаунт от пользователя."""
         try:
             binding = TelegramBinding.objects.filter(user=user, is_active=True).first()
             if not binding:
@@ -217,7 +243,6 @@ class TelegramBindingService:
             return False, "Внутренняя ошибка сервера"
 
     async def unlink_telegram_account_async(self, user: User) -> Tuple[bool, str]:
-        """Асинхронная версия отвязки аккаунта."""
         try:
             from asgiref.sync import sync_to_async
 
@@ -244,7 +269,6 @@ class TelegramBindingService:
             return False, "Внутренняя ошибка сервера"
 
     def get_user_by_telegram_id(self, telegram_id: int) -> Optional[User]:
-        """Получить пользователя по Telegram ID."""
         try:
             binding = (
                 TelegramBinding.objects.filter(telegram_id=telegram_id, is_active=True)
@@ -257,7 +281,6 @@ class TelegramBindingService:
             return None
 
     async def get_user_by_telegram_id_async(self, telegram_id: int) -> Optional[User]:
-        """Асинхронная версия получения пользователя по Telegram ID."""
         try:
             from asgiref.sync import sync_to_async
 
@@ -280,7 +303,6 @@ class TelegramBindingService:
             return None
 
     def cleanup_expired_tokens(self):
-        """Очистить просроченные токены привязки старше 24 часов."""
         try:
             from datetime import timedelta
 

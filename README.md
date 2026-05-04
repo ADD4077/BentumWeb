@@ -13,8 +13,10 @@ BentumWeb — full-stack платформа для студентов с Django 
 - `backend/` — Django-приложение, API, фоновые задачи, тесты
 - `frontend/` — React/Vite-приложение
 - `compose.yaml` — локальное multi-service окружение
+- `compose.vps.yaml` — production-oriented Docker Compose для VPS
 - `scripts/` — helper-скрипты для локальных проверок
 - `.env.example` — шаблон переменных окружения
+- `.env.vps.example` — шаблон production-переменных для VPS
 
 ## Что нужно для запуска
 
@@ -67,6 +69,19 @@ docker compose up --build
 
 - frontend: `http://localhost:5173`
 - backend: `http://localhost:1337`
+
+## VPS deployment
+
+Render для проекта не нужен, если целевая среда — VPS. Для VPS используйте:
+
+```bash
+cp .env.vps.example .env
+docker compose -f compose.vps.yaml up -d --build
+```
+
+На VPS наружу должен смотреть только host nginx/caddy с TLS. Он проксирует домен на `127.0.0.1:8080`, а backend, MySQL и Redis остаются закрытыми внутри Docker-сети.
+
+Подробности: `docs/vps-deployment.md`.
 
 ## Что делает backend при старте
 

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import UserProfileModal from './UserProfileModal.jsx';
-import { API_ENDPOINTS } from '../config/api.js';
+import { fetchUserProfileByCode } from '../services/userProfiles.js';
+import { buildMediaUrl } from '../utils/media.js';
 
 function TeamCarousel({ teamMembers, darkMode }) {
+  const safeTeamMembers = Array.isArray(teamMembers) ? teamMembers : [];
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [touchStart, setTouchStart] = useState(null);
@@ -14,62 +16,52 @@ function TeamCarousel({ teamMembers, darkMode }) {
   const timeoutRef = useRef(null);
   const carouselRef = useRef(null);
 
-  // Маппинг имен администраторов на их студенческие коды
-  const adminMapping = {
-    'Свиридович Павел': '1090352523',
-    'Смоленский Андрей': '1090372523', 
-    'Гончарик Александр': '1090352506',
-    'Абраменко Александр': '1090352501',
-    'Альшевский Алексей': '1030522501'
-  };
-
-  // Загрузка аватарок пользователей
   useEffect(() => {
+    if (safeTeamMembers.length === 0) {
+      setMemberAvatars({});
+      return undefined;
+    }
+
+    let cancelled = false;
+
     const loadMemberAvatars = async () => {
       const avatars = {};
-      
-      for (const member of teamMembers) {
-        const studentCode = adminMapping[member.name];
-        if (studentCode) {
-          try {
-            const response = await fetch(`${API_ENDPOINTS.BASE_URL}/api/user/by-code/${studentCode}`, {
-              credentials: 'include',
-            });
+      const membersWithCodes = safeTeamMembers
+        .map((member) => ({ member, studentCode: member.studentCode }))
+        .filter(({ studentCode }) => Boolean(studentCode));
 
-            const data = await response.json();
-            if (data?.success && data?.user) {
-              // Проверяем avatar_url на верхнем уровне ответа
-              if (data.user.avatar_url) {
-                avatars[member.name] = data.user.avatar_url;
-              }
-            } else {
-              // Пользователь не найден, оставляем плейсхолдер
-            }
-          } catch {
-            // Игнорируем ошибки, оставляем плейсхолдер
-          }
+      const profiles = await Promise.all(
+        membersWithCodes.map(({ studentCode }) => fetchUserProfileByCode(studentCode)),
+      );
+
+      membersWithCodes.forEach(({ member }, index) => {
+        const profile = profiles[index];
+        if (profile?.avatar_url) {
+          avatars[member.name] = profile.avatar_url;
         }
+      });
+
+      if (!cancelled) {
+        setMemberAvatars(avatars);
       }
-      
-      setMemberAvatars(avatars);
     };
 
-    if (teamMembers.length > 0) {
+    if (safeTeamMembers.length > 0) {
       loadMemberAvatars();
     }
-  }, [teamMembers]);
 
-  const handleAvatarClick = async (memberName) => {
-    const studentCode = adminMapping[memberName];
+    return () => {
+      cancelled = true;
+    };
+  }, [safeTeamMembers]);
+
+  const handleAvatarClick = async (member) => {
+    const studentCode = member.studentCode;
     if (!studentCode) return;
 
     try {
-      const response = await fetch(`${API_ENDPOINTS.BASE_URL}/api/user/by-code/${studentCode}`, {
-        credentials: 'include',
-      });
-
-      const data = await response.json();
-      if (!data?.success || !data?.user) {
+      const profile = await fetchUserProfileByCode(studentCode);
+      if (!profile) {
         return;
       }
 
@@ -79,17 +71,18 @@ function TeamCarousel({ teamMembers, darkMode }) {
       return;
     }
   };
+
   const startAutoPlay = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
     intervalRef.current = setInterval(() => {
-      setCurrentIndex((prevIndex) => 
-        prevIndex === teamMembers.length - 1 ? 0 : prevIndex + 1
-      );
+      setCurrentIndex((prevIndex) => (
+        prevIndex === safeTeamMembers.length - 1 ? 0 : prevIndex + 1
+      ));
     }, 4000);
-  }, [teamMembers.length]);
-  
+  }, [safeTeamMembers.length]);
+
   const stopAutoPlay = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -98,7 +91,7 @@ function TeamCarousel({ teamMembers, darkMode }) {
       clearTimeout(timeoutRef.current);
     }
   }, []);
-  
+
   const resumeAutoPlay = useCallback(() => {
     stopAutoPlay();
     timeoutRef.current = setTimeout(() => {
@@ -108,37 +101,36 @@ function TeamCarousel({ teamMembers, darkMode }) {
   }, [stopAutoPlay, startAutoPlay]);
 
   const nextSlide = useCallback(() => {
-    setCurrentIndex((prevIndex) => 
-      prevIndex === teamMembers.length - 1 ? 0 : prevIndex + 1
-    );
+    setCurrentIndex((prevIndex) => (
+      prevIndex === safeTeamMembers.length - 1 ? 0 : prevIndex + 1
+    ));
     resumeAutoPlay();
-  }, [teamMembers.length, resumeAutoPlay]);
-  
+  }, [safeTeamMembers.length, resumeAutoPlay]);
+
   const prevSlide = useCallback(() => {
-    setCurrentIndex((prevIndex) => 
-      prevIndex === 0 ? teamMembers.length - 1 : prevIndex - 1
-    );
+    setCurrentIndex((prevIndex) => (
+      prevIndex === 0 ? safeTeamMembers.length - 1 : prevIndex - 1
+    ));
     resumeAutoPlay();
-  }, [teamMembers.length, resumeAutoPlay]);
-  
+  }, [safeTeamMembers.length, resumeAutoPlay]);
+
   const goToSlide = useCallback((index) => {
     setCurrentIndex(index);
     resumeAutoPlay();
   }, [resumeAutoPlay]);
 
-  // Touch handlers for swipe
-  const handleTouchStart = useCallback((e) => {
+  const handleTouchStart = useCallback((event) => {
     setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
+    setTouchStart(event.targetTouches[0].clientX);
   }, []);
 
-  const handleTouchMove = useCallback((e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
+  const handleTouchMove = useCallback((event) => {
+    setTouchEnd(event.targetTouches[0].clientX);
   }, []);
 
-  const handleTouchEnd = useCallback(() => {
+  const handleTouchSlideEnd = useCallback(() => {
     if (!touchStart || !touchEnd) return;
-    
+
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > 50;
     const isRightSwipe = distance < -50;
@@ -149,72 +141,92 @@ function TeamCarousel({ teamMembers, darkMode }) {
       prevSlide();
     }
   }, [touchStart, touchEnd, nextSlide, prevSlide]);
+
   useEffect(() => {
-    if (isAutoPlaying && teamMembers.length > 1) {
+    if (isAutoPlaying && safeTeamMembers.length > 1) {
       startAutoPlay();
     }
     return () => {
       stopAutoPlay();
     };
-  }, [isAutoPlaying, teamMembers.length]);
+  }, [isAutoPlaying, safeTeamMembers.length, startAutoPlay, stopAutoPlay]);
+
+  useEffect(() => {
+    if (currentIndex >= safeTeamMembers.length) {
+      setCurrentIndex(0);
+    }
+  }, [currentIndex, safeTeamMembers.length]);
+
+  if (!safeTeamMembers.length) {
+    return null;
+  }
+
   return (
     <div className="w-full max-w-6xl mx-auto mt-0">
-      <h2 className="text-3xl font-bold text-center text-slate-900 dark:text-white mb-12">
+      <h2 className="mb-12 text-center text-3xl font-bold text-slate-900 dark:text-white">
         Наша команда
       </h2>
       <div className="relative overflow-visible">
         <div className="mx-auto max-w-4xl overflow-visible px-2 pb-8 pt-3">
-          <div 
+          <div
             ref={carouselRef}
-            className="overflow-hidden rounded-2xl" 
-            style={{ 
+            className="overflow-hidden rounded-2xl"
+            style={{
               padding: '36px 28px 42px',
-              touchAction: 'pan-y pinch-zoom'
+              touchAction: 'pan-y pinch-zoom',
             }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
+            onTouchEnd={handleTouchSlideEnd}
           >
-            <div 
+            <div
               className="flex transition-transform duration-500 ease-in-out"
               style={{ transform: `translateX(-${currentIndex * 100}%)` }}
             >
-              {teamMembers.map((member, index) => (
+              {safeTeamMembers.map((member, index) => (
                 <div key={index} className="w-full flex-shrink-0 px-4">
-                  <div className="glass-card interactive-lift shimmer-surface max-w-md mx-auto bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/50 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-500 backdrop-blur-md">
+                  <div className="glass-card interactive-lift shimmer-surface mx-auto max-w-md rounded-3xl border border-white/50 bg-white/40 p-8 shadow-lg backdrop-blur-md transition-all duration-500 hover:shadow-xl dark:border-slate-700/50 dark:bg-slate-800/40">
                     <div className="flex flex-col items-center text-center">
-                      <div 
-                        className="floating-slow w-32 h-32 rounded-3xl overflow-hidden bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg flex items-center justify-center mb-6 transition-all duration-500 ease-out transform translate-y-0 rotate-0 hover:shadow-2xl hover:shadow-gray-400/50 group cursor-pointer hover:-translate-y-2 hover:rotate-6"
-                        onClick={() => handleAvatarClick(member.name)}
+                      <button
+                        type="button"
+                        className="group floating-slow mb-6 flex h-32 w-32 items-center justify-center overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg transition-all duration-500 ease-out hover:-translate-y-2 hover:rotate-6 hover:shadow-2xl hover:shadow-gray-400/50"
+                        onClick={() => handleAvatarClick(member)}
                       >
                         {memberAvatars[member.name] ? (
-                          <img 
-                            src={memberAvatars[member.name].startsWith('/') ? `${API_ENDPOINTS.BASE_URL}${memberAvatars[member.name]}` : memberAvatars[member.name]}
+                          <img
+                            src={buildMediaUrl(memberAvatars[member.name])}
                             alt={member.name}
-                            className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:contrast-105"
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              if (e.target.nextSibling) {
-                                e.target.nextSibling.style.display = 'flex';
-                              }
+                            className="h-full w-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:contrast-105"
+                            onError={(event) => {
+                              event.currentTarget.style.display = 'none';
                             }}
                           />
-                        ) : null}
-                        {!memberAvatars[member.name] && (
-                          <span className="text-white text-4xl font-bold transition-all duration-300 group-hover:text-white group-hover:scale-110">
-                            {member.name.split(' ').map(n => n[0]).join('')}
+                        ) : (
+                          <span className="text-4xl font-bold text-white transition-all duration-300 group-hover:scale-110">
+                            {member.name.split(' ').map((name) => name[0]).join('')}
                           </span>
                         )}
-                      </div>
-                      <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                      </button>
+
+                      <h3 className="mb-2 text-2xl font-bold text-slate-900 dark:text-white">
                         {member.name}
                       </h3>
-                      <p className="text-emerald-600 dark:text-emerald-400 font-semibold mb-4">
+                      <p className="mb-4 font-semibold text-emerald-600 dark:text-emerald-400">
                         {member.role}
                       </p>
-                      <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                      <p className="leading-relaxed text-slate-600 dark:text-slate-400">
                         {member.description}
                       </p>
+
+                      {member.studentCode ? (
+                        <button
+                          type="button"
+                          onClick={() => handleAvatarClick(member)}
+                          className="mt-5 inline-flex items-center gap-2 rounded-2xl border border-emerald-300/70 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-300 dark:hover:bg-emerald-500/15"
+                        >
+                          Открыть профиль
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -223,35 +235,35 @@ function TeamCarousel({ teamMembers, darkMode }) {
           </div>
         </div>
       </div>
+
       <div className="flex items-center justify-center gap-4">
         <button
           onClick={prevSlide}
-          className="interactive-lift w-12 h-12 bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/50 rounded-full flex items-center justify-center shadow-lg hover:bg-white/60 dark:hover:bg-slate-800/60 transition-all duration-500 backdrop-blur-md"
+          className="interactive-lift flex h-12 w-12 items-center justify-center rounded-full border border-white/50 bg-white/40 shadow-lg backdrop-blur-md transition-all duration-500 hover:bg-white/60 dark:border-slate-700/50 dark:bg-slate-800/40 dark:hover:bg-slate-800/60"
         >
-          <span className="text-slate-900 dark:text-white text-xl">‹</span>
+          <span className="text-xl text-slate-900 dark:text-white">‹</span>
         </button>
         <div className="flex gap-2">
-          {teamMembers.map((_, index) => (
+          {safeTeamMembers.map((_, index) => (
             <button
               key={index}
               onClick={() => goToSlide(index)}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                index === currentIndex 
-                  ? 'bg-gray-500/60 w-8' 
-                  : 'bg-gray-300/40 dark:bg-gray-600/40 hover:bg-gray-400/60 dark:hover:bg-gray-500/60'
+              className={`h-2 w-2 rounded-full transition-all duration-300 ${
+                index === currentIndex
+                  ? 'w-8 bg-gray-500/60'
+                  : 'bg-gray-300/40 hover:bg-gray-400/60 dark:bg-gray-600/40 dark:hover:bg-gray-500/60'
               }`}
             />
           ))}
         </div>
         <button
           onClick={nextSlide}
-          className="interactive-lift w-12 h-12 bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/50 rounded-full flex items-center justify-center shadow-lg hover:bg-white/60 dark:hover:bg-slate-800/60 transition-all duration-500 backdrop-blur-md"
+          className="interactive-lift flex h-12 w-12 items-center justify-center rounded-full border border-white/50 bg-white/40 shadow-lg backdrop-blur-md transition-all duration-500 hover:bg-white/60 dark:border-slate-700/50 dark:bg-slate-800/40 dark:hover:bg-slate-800/60"
         >
-          <span className="text-slate-900 dark:text-white text-xl">›</span>
+          <span className="text-xl text-slate-900 dark:text-white">›</span>
         </button>
       </div>
-      
-      {/* Модальное окно профиля пользователя */}
+
       <UserProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => {
@@ -264,4 +276,5 @@ function TeamCarousel({ teamMembers, darkMode }) {
     </div>
   );
 }
+
 export default TeamCarousel;

@@ -2,7 +2,7 @@ import React from 'react';
 
 function ToggleRow({ item, value, onChange }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200/70 bg-white/80 px-4 py-4 shadow-sm dark:border-slate-700/60 dark:bg-[#17202d]">
+    <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-300/70 bg-white/92 px-4 py-4 shadow-sm dark:border-slate-800/60 dark:bg-[#17202d]">
       <div className="min-w-0">
         <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
           {item.label}
@@ -38,7 +38,7 @@ export default function PreferenceSettingsSection({
   onToggle,
 }) {
   return (
-    <div className="rounded-3xl border border-slate-200/60 bg-white/80 p-6 shadow-lg backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-900/60 sm:p-8">
+    <div className="rounded-3xl border border-slate-300/70 bg-white/92 p-6 shadow-lg backdrop-blur-xl dark:border-slate-800/60 dark:bg-[#121927] sm:p-8">
       <h2 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
       <p className="mb-6 text-sm text-slate-600 dark:text-slate-400">{description}</p>
 

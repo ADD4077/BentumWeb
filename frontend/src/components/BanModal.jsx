@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Ban, AlertTriangle, User, Calendar } from 'lucide-react';
 
+import { buildMediaUrl } from '../utils/media.js';
+
 const DURATION_MODE_PRESET = 'preset';
 const DURATION_MODE_CUSTOM = 'custom';
 const CUSTOM_UNIT_SECONDS = {
@@ -139,9 +141,23 @@ const BanModal = ({ isOpen, onClose, user, onBan, darkMode: _darkMode }) => {
         <form onSubmit={handleSubmit} className="space-y-4 p-6">
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-slate-700 dark:bg-slate-700/20">
             <div className="mb-3 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200 dark:bg-slate-600">
-                <User className="h-6 w-6 text-gray-500 dark:text-gray-400" />
-              </div>
+              {user?.avatar_url ? (
+                <img
+                  src={buildMediaUrl(user.avatar_url)}
+                  alt={user?.fullname || 'Пользователь'}
+                  className="h-12 w-12 rounded-full object-cover ring-2 ring-white/70 dark:ring-slate-700"
+                />
+              ) : (
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200 dark:bg-slate-600">
+                  {user?.fullname ? (
+                    <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">
+                      {user.fullname.charAt(0).toUpperCase()}
+                    </span>
+                  ) : (
+                    <User className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+                  )}
+                </div>
+              )}
               <div>
                 <p className="font-medium text-gray-900 dark:text-white">
                   {user?.fullname || 'Пользователь'}
@@ -164,7 +180,7 @@ const BanModal = ({ isOpen, onClose, user, onBan, darkMode: _darkMode }) => {
               value={reason}
               onChange={(event) => setReason(event.target.value)}
               placeholder="Укажите причину блокировки пользователя..."
-              className={`h-24 w-full resize-none rounded-xl border px-4 py-3 transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 ${
+              className={`h-24 w-full resize-none rounded-xl border px-4 py-3 text-slate-900 transition-all placeholder:text-slate-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 dark:text-slate-100 dark:placeholder:text-slate-400 ${
                 errors.reason
                   ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
                   : 'border-gray-300 bg-white dark:border-slate-600 dark:bg-slate-800'

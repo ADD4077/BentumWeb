@@ -3,6 +3,7 @@ export const ROLE_LABELS = {
   teacher: 'Преподаватель',
   chairperson: 'Председатель',
   moderator: 'Модератор',
+  admin: 'Администратор',
 };
 
 export const USER_ROLE_OPTIONS = [

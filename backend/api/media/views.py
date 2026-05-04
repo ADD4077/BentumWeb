@@ -5,6 +5,7 @@ from datetime import datetime
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 
+from ..common.utils import get_current_user, is_request_authenticated
 from ..media_service import MediaStorage, MediaValidator
 from ..models import User, UserProfileMedia
 from ..placeholder_service import PlaceholderGenerator
@@ -13,14 +14,13 @@ logger = logging.getLogger(__name__)
 
 
 def _get_authenticated_user(request):
-    if not request.session.get("is_authenticated"):
+    if not is_request_authenticated(request):
         return None, JsonResponse(
             {"success": False, "detail": "Требуется авторизация"},
             status=401,
         )
 
-    student_code = request.session.get("student_code")
-    user = User.objects.filter(student_code=student_code).first()
+    user = get_current_user(request)
     if not user:
         return None, JsonResponse(
             {"success": False, "detail": "Пользователь не найден"},

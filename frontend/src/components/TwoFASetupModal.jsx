@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AlertCircle, Check, Shield, Smartphone, X } from 'lucide-react';
 
+import { API_ENDPOINTS } from '../config/api.js';
 import { api } from '../services/api.js';
 
 function TwoFASetupModal({ isOpen, onClose, darkMode, onSuccess }) {
@@ -24,7 +25,7 @@ function TwoFASetupModal({ isOpen, onClose, darkMode, onSuccess }) {
         setSelectedMethod(configResponse.data.method || '');
       }
 
-      const telegramResponse = await fetch('/api/telegram/binding-status', {
+      const telegramResponse = await fetch(API_ENDPOINTS.TELEGRAM_BINDING_STATUS, {
         credentials: 'include',
       });
       if (telegramResponse.ok) {

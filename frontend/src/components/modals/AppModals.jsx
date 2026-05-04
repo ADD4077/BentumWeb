@@ -1,9 +1,7 @@
 import React from 'react';
 import LoginModal from '../LoginModal.jsx';
-import SupportModal from '../SupportModal.jsx';
 import InstructionModal from '../InstructionModal.jsx';
 import ProfileEditModal from '../ProfileEditModal.jsx';
-import SupportSuccessModal from '../SupportSuccessModal.jsx';
 import TwoFAModal from '../TwoFAModal.jsx';
 import TwoFASetupModal from '../TwoFASetupModal.jsx';
 import { useModal } from '../../contexts/ModalContext.jsx';
@@ -22,8 +20,6 @@ export const AppModals = () => {
   
   const {
     isLoginModalOpen, setIsLoginModalOpen,
-    isSupportModalOpen, setIsSupportModalOpen,
-    isSupportSuccessModalOpen, setIsSupportSuccessModalOpen,
     isInstructionModalOpen, setIsInstructionModalOpen,
     isProfileEditModalOpen, setIsProfileEditModalOpen,
     is2FAModalOpen, setIs2FAModalOpen,
@@ -50,20 +46,11 @@ export const AppModals = () => {
         onClose={() => setIsLoginModalOpen(false)}
         onInstructionOpen={() => setIsInstructionModalOpen(true)}
       />
-      <SupportModal 
-        isOpen={isSupportModalOpen}
-        onClose={() => setIsSupportModalOpen(false)}
-        darkMode={darkMode}
-        onSuccess={() => setIsSupportSuccessModalOpen(true)}
-      />
       <InstructionModal 
         isOpen={isInstructionModalOpen}
         onClose={() => setIsInstructionModalOpen(false)}
         darkMode={darkMode}
-        onSupportOpen={() => {
-          setIsInstructionModalOpen(false);
-          setIsSupportModalOpen(true);
-        }}
+        onSupportOpen={() => setIsInstructionModalOpen(false)}
       />
       {isProfileEditModalOpen && (
         <ProfileEditModal 
@@ -73,13 +60,6 @@ export const AppModals = () => {
           user={user}
           onProfileUpdate={userMedia.handleProfileUpdate}
           onForceRefresh={userMedia.forceRefresh}
-        />
-      )}
-      {isSupportSuccessModalOpen && (
-        <SupportSuccessModal 
-          isOpen={isSupportSuccessModalOpen}
-          onClose={() => setIsSupportSuccessModalOpen(false)}
-          darkMode={darkMode}
         />
       )}
       <TwoFAModal 

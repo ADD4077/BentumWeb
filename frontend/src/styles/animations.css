@@ -66,24 +66,18 @@ body {
   }
 }
 
-@keyframes shinyTextLoop {
+@keyframes bentumGradient {
   0% {
-    background-position: 180% 50%;
-  }
-  100% {
-    background-position: -180% 50%;
-  }
-}
-
-@keyframes shinyTextYoyo {
-  0% {
-    background-position: 180% 50%;
+    background-position: 0% 50%;
+    filter: saturate(0.98);
   }
   50% {
-    background-position: -180% 50%;
+    background-position: 100% 50%;
+    filter: saturate(1.08);
   }
   100% {
-    background-position: 180% 50%;
+    background-position: 0% 50%;
+    filter: saturate(0.98);
   }
 }
 
@@ -256,53 +250,73 @@ body {
 }
 
 .shiny-text {
-  position: relative;
-  display: inline-grid;
-  place-items: center;
+  display: inline-block;
+  line-height: 1.22;
+  white-space: nowrap;
+  color: var(--shiny-base, #10b981);
+  padding-bottom: 0.24em;
   overflow: visible;
-  line-height: 1.08;
-}
-
-.shiny-text > * {
-  grid-area: 1 / 1;
 }
 
 .shiny-text__base {
+  display: inline-block;
   color: var(--shiny-base, #10b981);
-  padding-bottom: 0.08em;
+  text-shadow: 0 8px 24px rgba(16, 185, 129, 0.14);
+  padding-bottom: 0.04em;
 }
 
-.shiny-text__shine {
-  color: transparent;
-  padding-bottom: 0.08em;
-  background-image: linear-gradient(
-    100deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0) 38%,
-    var(--shiny-glow, #22d3ee) 50%,
-    rgba(255, 255, 255, 0) 62%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  background-size: var(--shiny-spread, 210%) 100%;
-  background-repeat: no-repeat;
-  background-position: 180% 50%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation-name: var(--shiny-animation, shinyTextLoop);
-  animation-duration: var(--shiny-duration, 2.9s);
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .shiny-text__base {
+    background-image: linear-gradient(
+      120deg,
+      var(--shiny-base, #10b981) 0%,
+      #34d399 24%,
+      var(--shiny-glow, #22d3ee) 50%,
+      #2dd4bf 74%,
+      var(--shiny-base, #10b981) 100%
+    );
+    background-size: 220% 100%;
+    background-position: 0% 50%;
+    background-repeat: repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    animation-name: bentumGradient;
+    animation-duration: var(--shiny-duration, 4.8s);
+    animation-delay: var(--shiny-delay, 0s);
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+  }
+}
+
+.shiny-text__base {
+  animation-duration: var(--shiny-duration, 4.8s);
   animation-delay: var(--shiny-delay, 0s);
   animation-iteration-count: infinite;
-  animation-timing-function: linear;
+  animation-timing-function: ease-in-out;
 }
 
-.shiny-text--pause-hover:hover .shiny-text__shine {
+.shiny-text--pause-hover:hover .shiny-text__base {
   animation-play-state: paused;
 }
 
-.shiny-text--disabled .shiny-text__shine {
+.shiny-text--disabled {
+  color: var(--shiny-base, #10b981);
+}
+
+.shiny-text__base--static,
+.shiny-text--disabled .shiny-text__base {
   animation: none;
+  text-shadow: none;
+  filter: none;
   background-image: none;
+  color: var(--shiny-base, #10b981);
+  -webkit-text-fill-color: currentColor;
+}
+
+.dark .news-card:hover {
+  box-shadow: 0 24px 70px rgba(2, 6, 23, 0.4) !important;
 }
 
 .interactive-lift,

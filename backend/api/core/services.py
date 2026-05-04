@@ -3,9 +3,12 @@ Authentication and session services.
 """
 
 import logging
+import re
 from typing import Optional, Tuple
 
 from django.conf import settings
+from django.contrib.auth import login as django_login
+from django.contrib.auth import logout as django_logout
 from django.contrib.auth.hashers import check_password, identify_hasher, make_password
 from django.contrib.sessions.models import Session
 from django.core.cache import cache
@@ -13,13 +16,31 @@ from django.utils import timezone
 
 from ..background_jobs import BackgroundJobService, BackgroundJobType
 from ..common.permissions import is_system_administrator
-from ..common.utils import get_user_settings, serialize_datetime
+from ..common.utils import get_user_media, get_user_settings, serialize_datetime, serialize_user_preferences
 from ..models import User, UserSession
 from ..user_agent_parser import UserAgentParser
 
 logger = logging.getLogger(__name__)
 
 SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
+_CLIENT_KEY_UNSAFE_CHARS = re.compile(r"[^a-zA-Z0-9:._-]+")
+
+
+def get_client_ip(request) -> str:
+    if not request:
+        return ""
+
+    if getattr(settings, "TRUST_X_FORWARDED_FOR", False):
+        forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
+        forwarded_parts = [part.strip() for part in forwarded_for.split(",") if part.strip()]
+        if forwarded_parts:
+            return forwarded_parts[0]
+
+    return (request.META.get("REMOTE_ADDR", "") or "").strip()
+
+
+def _safe_cache_key_part(value: str) -> str:
+    return _CLIENT_KEY_UNSAFE_CHARS.sub("_", value or "")[:160]
 
 
 class AuthService:
@@ -39,20 +60,20 @@ class AuthService:
         if not request:
             return keys
 
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
-        ip_address = (
-            x_forwarded_for.split(",")[0].strip()
-            if x_forwarded_for
-            else request.META.get("REMOTE_ADDR", "")
-        ).strip()
+        ip_address = get_client_ip(request)
         session_key = request.session.session_key or "anonymous"
         user_agent = (request.META.get("HTTP_USER_AGENT", "") or "")[:120]
 
         if ip_address:
-            keys.append(f"login_attempts_ip:{ip_address}")
+            keys.append(f"login_attempts_ip:{_safe_cache_key_part(ip_address)}")
 
         if ip_address or user_agent:
-            keys.append(f"login_attempts_client:{ip_address}:{session_key}:{user_agent}")
+            keys.append(
+                "login_attempts_client:"
+                f"{_safe_cache_key_part(ip_address)}:"
+                f"{_safe_cache_key_part(session_key)}:"
+                f"{_safe_cache_key_part(user_agent)}"
+            )
 
         return keys
 
@@ -141,6 +162,8 @@ class AuthService:
     @staticmethod
     def build_auth_user_payload(user: User) -> dict:
         user_settings = get_user_settings(user)
+        media = get_user_media(user)
+        preferences = serialize_user_preferences(user_settings)
         return {
             "id": user.id,
             "fullname": user.fullname,
@@ -149,9 +172,11 @@ class AuthService:
             "role": user.role,
             "twofa_enabled": user.twofa_enabled,
             "twofa_method": user.twofa_method,
-            "notify_successful_login": user_settings.notify_successful_login,
+            **preferences,
+            "preferences": preferences,
             "created_at": serialize_datetime(user.created_at),
             "last_login": serialize_datetime(user.last_login),
+            **media,
         }
 
     @staticmethod
@@ -163,15 +188,36 @@ class SessionService:
     """Session lifecycle and active session tracking."""
 
     @staticmethod
-    def create_authenticated_session(request, user: User) -> None:
-        request.session.cycle_key()
+    def _write_product_session(request, user: User, *, twofa_pending: bool, twofa_verified: bool) -> None:
         request.session["student_code"] = user.student_code
         request.session["fullname"] = user.fullname
         request.session["faculty"] = user.faculty
         request.session["is_authenticated"] = True
-        request.session["twofa_pending"] = False
-        request.session["twofa_verified"] = False
+        request.session["twofa_pending"] = twofa_pending
+        request.session["twofa_verified"] = twofa_verified
         request.session.set_expiry(SESSION_MAX_AGE_SECONDS)
+
+    @staticmethod
+    def begin_authenticated_session(request, user: User) -> None:
+        request.session.cycle_key()
+        SessionService._write_product_session(
+            request,
+            user,
+            twofa_pending=False,
+            twofa_verified=False,
+        )
+        request.session.save()
+
+    @staticmethod
+    def finalize_authenticated_session(request, user: User) -> None:
+        backend_path = getattr(user, "backend", None) or "django.contrib.auth.backends.ModelBackend"
+        django_login(request, user, backend=backend_path)
+        SessionService._write_product_session(
+            request,
+            user,
+            twofa_pending=False,
+            twofa_verified=True,
+        )
         request.session.save()
 
     @staticmethod
@@ -183,12 +229,7 @@ class SessionService:
         ip_address = None
 
         if request:
-            x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-            if x_forwarded_for:
-                ip_address = x_forwarded_for.split(",")[0].strip()
-            else:
-                ip_address = request.META.get("REMOTE_ADDR")
-
+            ip_address = get_client_ip(request) or None
             browser_info = UserAgentParser.parse(request.META.get("HTTP_USER_AGENT", ""))
 
         session, created = UserSession.objects.get_or_create(
@@ -217,7 +258,7 @@ class SessionService:
     @staticmethod
     def logout(request) -> None:
         session_key = request.session.session_key
-        request.session.flush()
+        django_logout(request)
         if session_key:
             UserSession.objects.filter(session_key=session_key).delete()
 
@@ -229,7 +270,6 @@ class SessionService:
             sessions_data.append(
                 {
                     "id": session.id,
-                    "session_key": session.session_key,
                     "browser": session.browser or "Неизвестный браузер",
                     "os": session.os or "Неизвестная ОС",
                     "ip_address": session.ip_address or "Неизвестный IP",

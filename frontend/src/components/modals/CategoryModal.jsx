@@ -6,6 +6,9 @@ import { useLiterature } from '../../hooks/useLiterature.js';
 export const CategoryModal = () => {
   const { isCategoryModalOpen, setIsCategoryModalOpen, selectedCategories, setSelectedCategories } = useModal();
   const literature = useLiterature('literature', '', { selectedCategories, setSelectedCategories });
+  const filteredCategories = literature.categories.filter((category) =>
+    category.name.toLowerCase().includes(literature.categorySearchQuery.toLowerCase()),
+  );
 
   if (!isCategoryModalOpen) return null;
 
@@ -39,10 +42,35 @@ export const CategoryModal = () => {
           </div>
         </div>
         <div className="px-6 pt-1 pb-6 overflow-y-auto flex-1 custom-scrollbar">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {literature.categories
-              .filter(cat => cat.name.toLowerCase().includes(literature.categorySearchQuery.toLowerCase()))
-              .map((category) => (
+          <div className="mb-4 flex flex-wrap gap-2">
+            {selectedCategories.includes('all') ? (
+              <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-300">
+                Все категории
+              </span>
+            ) : (
+              selectedCategories.map((categoryId) => {
+                const category = literature.categories.find((item) => item.id === categoryId);
+                if (!category) {
+                  return null;
+                }
+
+                return (
+                  <span
+                    key={category.id}
+                    className="inline-flex items-center rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-300"
+                  >
+                    {category.name}
+                  </span>
+                );
+              })
+            )}
+          </div>
+
+          <div className="space-y-2">
+            {filteredCategories.map((category) => {
+              const isSelected = selectedCategories.includes(category.id);
+
+              return (
                 <button
                   key={category.id}
                   onClick={() => {
@@ -57,24 +85,47 @@ export const CategoryModal = () => {
                       setSelectedCategories(newSelected.length > 0 ? newSelected : ['all']);
                     }
                   }}
-                  className={`p-4 rounded-2xl border-2 transition-all duration-200 text-left hover:scale-105 relative ${
-                    selectedCategories.includes(category.id)
-                      ? 'border-emerald-500 bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
-                      : 'border-white/50 dark:border-slate-700/50 bg-white/80 dark:bg-slate-800/40 hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-slate-700 dark:text-slate-300'
+                  className={`flex w-full items-center gap-4 rounded-2xl border px-4 py-3 text-left transition-all duration-200 ${
+                    isSelected
+                      ? 'border-emerald-400 bg-emerald-500/12 shadow-lg shadow-emerald-950/10'
+                      : 'border-white/50 bg-white/70 hover:border-emerald-300 hover:bg-emerald-50/80 dark:border-slate-700/50 dark:bg-slate-800/40 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/20'
                   }`}
                 >
-                  {selectedCategories.includes(category.id) && (
-                    <div className="absolute top-2 right-2 w-5 h-5 bg-white text-emerald-500 rounded-full flex items-center justify-center">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div
+                    className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border ${
+                      isSelected
+                        ? 'border-emerald-400 bg-emerald-500 text-white'
+                        : 'border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-500'
+                    }`}
+                  >
+                    {isSelected ? (
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                       </svg>
+                    ) : (
+                      <Filter className="h-4 w-4" />
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className={`text-sm font-semibold leading-5 ${isSelected ? 'text-slate-900 dark:text-white' : 'text-slate-800 dark:text-slate-100'}`}>
+                      {category.name}
                     </div>
-                  )}
-                  <div className="w-full">
-                    <div className="font-medium text-slate-900 dark:text-white break-words text-center">{category.name}</div>
+                    {typeof category.count === 'number' ? (
+                      <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        {category.count} материалов
+                      </div>
+                    ) : null}
                   </div>
                 </button>
-              ))}
+              );
+            })}
+
+            {filteredCategories.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-300/80 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                Ничего не найдено по этому запросу
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="flex items-center justify-between p-6 border-t border-white/20 dark:border-slate-700/50 mb-0">

@@ -1,6 +1,8 @@
 from django.http import JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 
+from ...common.utils import get_current_user, is_request_authenticated
+
 
 class TwoFAAuthenticationMiddleware(MiddlewareMixin):
     """
@@ -26,26 +28,14 @@ class TwoFAAuthenticationMiddleware(MiddlewareMixin):
         if getattr(view_func, "_allow_unverified_2fa", False):
             return None
 
-        if not request.session.get("is_authenticated"):
+        if not is_request_authenticated(request):
             return None
 
-        student_code = request.session.get("student_code")
-        if not student_code:
+        user = get_current_user(request)
+        if user is None:
             return None
 
         try:
-            from ...models import User
-
-            user = User.objects.filter(student_code=student_code).first()
-            if not user:
-                return JsonResponse(
-                    {
-                        "success": False,
-                        "detail": "Authenticated user not found",
-                    },
-                    status=401,
-                )
-
             if not getattr(user, "twofa_enabled", False):
                 return None
 

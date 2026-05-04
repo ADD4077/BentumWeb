@@ -1,69 +1,41 @@
 export const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
 export const quickDayButtons = [
   { id: 'today', name: 'Сегодня' },
-  { id: 'tomorrow', name: 'Завтра' }
+  { id: 'tomorrow', name: 'Завтра' },
 ];
+
 export const lessonTypes = {
-  'Лекция': 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-100 dark:border-blue-900/30',
-  'Лабораторная': 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-300 border border-red-100 dark:border-red-900/30',
-  'Практика': 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-300 border border-yellow-100 dark:border-yellow-900/30',
-  'Семинар': 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-300 border border-green-100 dark:border-green-900/30'
+  Лекция: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-100 dark:border-blue-900/30',
+  Лабораторная: 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-300 border border-red-100 dark:border-red-900/30',
+  Практика: 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-300 border border-yellow-100 dark:border-yellow-900/30',
+  Семинар: 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-300 border border-green-100 dark:border-green-900/30',
 };
+
 export const groupInfo = {
   group: '10701120',
-  faculty: 'ФИТР'
+  faculty: 'ФИТР',
 };
-export const teamMembers = [
-  {
-    name: 'Свиридович Павел',
-    role: 'Тимлид / Разработчик',
-    description: 'Организовал процесс разработки и следит за качеством.',
-    image: '/src/assets/team/teamlead.png'
-  },
-  {
-    name: 'Смоленский Андрей',
-    role: 'Разработчик / Системный администратор',
-    description: 'Python специалист. Разработал API и обеспечил быструю работу серверной части.',
-    image: '/src/assets/team/developer.jpg'
-  },
-  {
-    name: 'Гончарик Александр',
-    role: 'Промоутер / Frontend-разработчик',
-    description: 'React эксперт, создал интерфейс. Любит создавать красивые и функциональные компоненты.',
-    image: '/src/assets/team/frontend.jpg'
-  },
-  {
-    name: 'Абраменко Александр',
-    role: '2D / 3D Дизайнер',
-    description: 'Дизайнер с душой. Создал современный интерфейс и продумал пользовательский опыт.',
-    image: '/src/assets/team/designer.jpg'
-  },
-  {
-    name: 'Альшевский Алексей',
-    role: 'Тестировщик',
-    description: 'Тестировщик с вниманием к деталям. Обеспечивает качество продукта и находит баги.',
-    image: '/src/assets/team/tester.jpg'
-  }
-];
+
 export const features = [
   {
     icon: 'Zap',
     title: 'Молниеносная скорость',
-    description: 'Молниеносная загрузка и мгновенный доступ ко всем функциям платформы.'
+    description: 'Быстрая загрузка и мгновенный доступ ко всем функциям платформы.',
   },
   {
     icon: 'TabletSmartphone',
     title: 'Адаптивность',
-    description: 'Идеальное отображение на любых устройствах - от смартфонов до десктопов.'
+    description: 'Удобное отображение на любых устройствах: от смартфонов до десктопов.',
   },
   {
     icon: 'Shield',
     title: 'Приватность',
-    description: 'Полная защита ваших данных и конфиденциальность учебной информации.'
+    description: 'Надёжная защита ваших данных и конфиденциальность учебной информации.',
   },
   {
     icon: 'AlarmClock',
     title: 'Умные уведомления',
-    description: 'Своевременные напоминания о занятиях и важных событиях учебного процесса.'
-  }
+    description: 'Своевременные напоминания о занятиях и важных событиях учебного процесса.',
+  },
 ];

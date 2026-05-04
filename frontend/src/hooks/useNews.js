@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { API_ENDPOINTS } from '../config/api.js';
 
 const PAGE_SIZE = 6;
+const NEWS_CACHE_TTL_MS = 30_000;
 
 const NEWS_CATEGORY_TO_BACKEND = {
   all: 'all',
@@ -13,6 +14,27 @@ const NEWS_CATEGORY_TO_BACKEND = {
   sports: 'sports',
 };
 
+const newsResponseCache = new Map();
+const newsInflightRequests = new Map();
+
+function getNewsCacheKey(page, search, sortBy, category) {
+  return JSON.stringify([page, search, sortBy, category]);
+}
+
+function readCachedNews(key) {
+  const cached = newsResponseCache.get(key);
+  if (!cached) {
+    return null;
+  }
+
+  if (Date.now() - cached.createdAt > NEWS_CACHE_TTL_MS) {
+    newsResponseCache.delete(key);
+    return null;
+  }
+
+  return cached.data;
+}
+
 export const useNews = (activeTab, externalState = {}) => {
   const [newsData, setNewsData] = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
@@ -21,16 +43,27 @@ export const useNews = (activeTab, externalState = {}) => {
   const [newsTotal, setNewsTotal] = useState(0);
   const [selectedNewsCategory, setSelectedNewsCategory] = useState('all');
   const [internalNewsSortBy, setInternalNewsSortBy] = useState('date_desc');
+  const previousFiltersRef = useRef(null);
 
   const newsSortBy = externalState.sortBy ?? internalNewsSortBy;
   const setNewsSortBy = externalState.setSortBy ?? setInternalNewsSortBy;
 
-  const newsMaxPage = useMemo(() =>
-    Math.max(1, Math.ceil(newsTotal / PAGE_SIZE)),
+  const newsMaxPage = useMemo(
+    () => Math.max(1, Math.ceil(newsTotal / PAGE_SIZE)),
     [newsTotal]
   );
 
   const loadNews = useCallback(async (page = 1, search = '', sortBy = 'date_desc', category = 'all') => {
+    const cacheKey = getNewsCacheKey(page, search, sortBy, category);
+    const cached = readCachedNews(cacheKey);
+
+    if (cached) {
+      setNewsData(cached.items || []);
+      setNewsTotal(cached.total || 0);
+      setNewsPage(cached.page || page);
+      return;
+    }
+
     setNewsLoading(true);
     try {
       const backendCategory = NEWS_CATEGORY_TO_BACKEND[category] || 'all';
@@ -41,13 +74,21 @@ export const useNews = (activeTab, externalState = {}) => {
       if (sortBy !== 'date_desc') params.set('sort_by', sortBy);
       if (backendCategory !== 'all') params.set('category', backendCategory);
 
-      const response = await fetch(`${API_ENDPOINTS.NEWS}?${params.toString()}`, {
-        credentials: 'include'
-      });
+      let request = newsInflightRequests.get(cacheKey);
+      if (!request) {
+        request = fetch(`${API_ENDPOINTS.NEWS}?${params.toString()}`, {
+          credentials: 'include',
+        }).then((response) => response.json());
+        newsInflightRequests.set(cacheKey, request);
+      }
 
-      const data = await response.json();
+      const data = await request;
 
       if (data.success) {
+        newsResponseCache.set(cacheKey, {
+          data,
+          createdAt: Date.now(),
+        });
         setNewsData(data.items || []);
         setNewsTotal(data.total || 0);
         setNewsPage(data.page || page);
@@ -55,24 +96,33 @@ export const useNews = (activeTab, externalState = {}) => {
     } catch (error) {
       console.error('News load error:', error);
     } finally {
+      newsInflightRequests.delete(cacheKey);
       setNewsLoading(false);
     }
   }, []);
 
-  // Загрузка при смене страницы/фильтров
   useEffect(() => {
-    if (activeTab === 'news') {
-      loadNews(newsPage, newsSearchQuery, newsSortBy, selectedNewsCategory);
+    if (activeTab !== 'news') {
+      return;
     }
-  }, [activeTab, newsPage, newsSearchQuery, newsSortBy, selectedNewsCategory, loadNews]);
 
-  // Сброс на первую страницу при смене поиска/сортировки/категории
-  useEffect(() => {
-    if (activeTab === 'news') {
-      setNewsPage(1);
-      loadNews(1, newsSearchQuery, newsSortBy, selectedNewsCategory);
+    const filtersSignature = JSON.stringify([
+      newsSearchQuery,
+      newsSortBy,
+      selectedNewsCategory,
+    ]);
+
+    if (previousFiltersRef.current !== filtersSignature) {
+      previousFiltersRef.current = filtersSignature;
+
+      if (newsPage !== 1) {
+        setNewsPage(1);
+        return;
+      }
     }
-  }, [activeTab, newsSearchQuery, newsSortBy, selectedNewsCategory, loadNews]);
+
+    loadNews(newsPage, newsSearchQuery, newsSortBy, selectedNewsCategory);
+  }, [activeTab, newsPage, newsSearchQuery, newsSortBy, selectedNewsCategory, loadNews]);
 
   const newsCategories = useMemo(() => [
     { id: 'all', name: 'Все' },
@@ -81,15 +131,12 @@ export const useNews = (activeTab, externalState = {}) => {
     { id: 'events', name: 'События' },
     { id: 'achievements', name: 'Достижения' },
     { id: 'career', name: 'Карьера' },
-    { id: 'sports', name: 'Спорт' }
+    { id: 'sports', name: 'Спорт' },
   ], []);
-
-  // Фильтрация на фронтенде не нужна - делается на бэкенде
-  const filteredNews = newsData;
 
   return {
     newsData,
-    filteredNews,
+    filteredNews: newsData,
     newsLoading,
     newsSearchQuery,
     setNewsSearchQuery,
@@ -102,7 +149,7 @@ export const useNews = (activeTab, externalState = {}) => {
     selectedNewsCategory,
     setSelectedNewsCategory,
     newsCategories,
-    loadNews
+    loadNews,
   };
 };
 

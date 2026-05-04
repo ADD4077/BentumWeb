@@ -1,18 +1,23 @@
 import asyncio
 import io
+import json
 import requests
 import shutil
 import sqlite3
 import tempfile
 from datetime import datetime, timedelta
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 from unittest.mock import patch
 
 from django.contrib.auth.hashers import check_password, make_password
+from django.contrib.auth.models import AnonymousUser
+from django.contrib.auth import get_user_model
+from django.contrib.sessions.middleware import SessionMiddleware
 from django.core.cache import cache
 from django.core.management import call_command
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client, TestCase
+from django.test import Client, RequestFactory, TestCase
 from django.test.utils import override_settings
 from django.utils import timezone
 from PIL import Image
@@ -21,8 +26,11 @@ from api.background_jobs import BackgroundJobService, BackgroundJobType
 from api.ban_service import BanService
 from api.content_parser_service import BNTUContentParserService
 from api.content.schedule.views import WEEKDAY_NAMES, get_week_value_for_date
+from api.core.services import SessionService, get_client_ip
 from api.func import authorize
+from api.support import views as support_views
 from api.models import (
+    ActivityEvent,
     Administration,
     BackgroundJob,
     LiteratureItem,
@@ -35,6 +43,115 @@ from api.models import (
 )
 from api.twofa_service import TwoFAService
 from api.validators import LoginRequest, TwoFAVerifyRequest
+
+
+class ClientIpTests(TestCase):
+    @override_settings(TRUST_X_FORWARDED_FOR=False)
+    def test_client_ip_ignores_forwarded_for_by_default(self):
+        request = SimpleNamespace(
+            META={
+                "HTTP_X_FORWARDED_FOR": "203.0.113.10, 10.0.0.5",
+                "REMOTE_ADDR": "10.0.0.9",
+            },
+        )
+
+        self.assertEqual(get_client_ip(request), "10.0.0.9")
+
+    @override_settings(TRUST_X_FORWARDED_FOR=True)
+    def test_client_ip_uses_forwarded_for_when_proxy_is_trusted(self):
+        request = SimpleNamespace(
+            META={
+                "HTTP_X_FORWARDED_FOR": "203.0.113.10, 10.0.0.5",
+                "REMOTE_ADDR": "10.0.0.9",
+            },
+        )
+
+        self.assertEqual(get_client_ip(request), "203.0.113.10")
+
+
+class AuthUserModelTests(TestCase):
+    def test_django_auth_uses_api_user_model(self):
+        user_model = get_user_model()
+        self.assertEqual(user_model._meta.label, "api.User")
+        self.assertEqual(user_model.USERNAME_FIELD, "student_code")
+
+    def test_create_superuser_uses_student_code_identifier(self):
+        user_model = get_user_model()
+        user = user_model.objects.create_superuser(
+            student_code="admin001",
+            password="super-secret-123",
+            fullname="Admin Root",
+            faculty="ADMIN",
+        )
+
+        self.assertTrue(user.is_staff)
+        self.assertTrue(user.is_superuser)
+        self.assertTrue(user.check_password("super-secret-123"))
+
+    def test_administration_syncs_staff_and_superuser_flags(self):
+        user = User.objects.create(
+            fullname="Managed Admin",
+            faculty="FITR",
+            student_code="1000000001",
+            password=make_password("password123"),
+        )
+
+        self.assertFalse(user.is_staff)
+        self.assertFalse(user.is_superuser)
+        self.assertFalse(user.auth_sync_managed)
+
+    def test_pending_session_does_not_create_django_auth_session(self):
+        user = User.objects.create(
+            fullname="TwoFA Pending",
+            faculty="FITR",
+            student_code="1000000002",
+            password=make_password("password123"),
+        )
+        request = RequestFactory().get("/api/login")
+        SessionMiddleware(lambda req: None).process_request(request)
+        request.session.save()
+        request.user = AnonymousUser()
+
+        SessionService.begin_authenticated_session(request, user)
+
+        self.assertTrue(request.session.get("is_authenticated"))
+        self.assertEqual(request.session.get("student_code"), user.student_code)
+        self.assertIsNone(request.session.get("_auth_user_id"))
+
+    def test_finalize_session_creates_django_auth_session(self):
+        user = User.objects.create(
+            fullname="TwoFA Completed",
+            faculty="FITR",
+            student_code="1000000003",
+            password=make_password("password123"),
+        )
+        request = RequestFactory().get("/api/login")
+        SessionMiddleware(lambda req: None).process_request(request)
+        request.session.save()
+        request.user = AnonymousUser()
+
+        SessionService.finalize_authenticated_session(request, user)
+
+        self.assertEqual(request.session.get("_auth_user_id"), str(user.pk))
+        self.assertEqual(
+            request.session.get("_auth_user_backend"),
+            "django.contrib.auth.backends.ModelBackend",
+        )
+        self.assertTrue(request.session.get("twofa_verified"))
+
+        Administration.objects.create(administrator=user, is_active=True)
+        user.refresh_from_db()
+
+        self.assertTrue(user.is_staff)
+        self.assertTrue(user.is_superuser)
+        self.assertTrue(user.auth_sync_managed)
+
+        Administration.objects.filter(administrator=user).delete()
+        user.refresh_from_db()
+
+        self.assertFalse(user.is_staff)
+        self.assertFalse(user.is_superuser)
+        self.assertFalse(user.auth_sync_managed)
 
 
 class TwoFAServiceTests(TestCase):
@@ -329,6 +446,32 @@ class BanServiceTests(TestCase):
 
 
 class BackgroundJobTests(TestCase):
+    def test_enqueue_once_reuses_active_job_key(self):
+        first_job = BackgroundJobService.enqueue_once(
+            BackgroundJobType.NEWS_INCREMENTAL_SYNC,
+            {},
+            job_key="news-sync:active",
+        )
+        second_job = BackgroundJobService.enqueue_once(
+            BackgroundJobType.NEWS_INCREMENTAL_SYNC,
+            {},
+            job_key="news-sync:active",
+        )
+
+        self.assertEqual(first_job.id, second_job.id)
+        self.assertEqual(BackgroundJob.objects.count(), 1)
+
+    def test_failed_job_error_redacts_sensitive_values(self):
+        job = BackgroundJobService.enqueue(BackgroundJobType.NEWS_BOOTSTRAP, {})
+        error = RuntimeError("failed url=https://example.test/?token=secret-token")
+
+        BackgroundJobService._mark_failed(job, error)
+
+        job.refresh_from_db()
+        self.assertIn("RuntimeError", job.last_error)
+        self.assertIn("token=[redacted]", job.last_error)
+        self.assertNotIn("secret-token", job.last_error)
+
     def test_process_pending_support_notification_job(self):
         BackgroundJobService.enqueue(
             BackgroundJobType.SUPPORT_REQUEST_NOTIFICATION,
@@ -523,6 +666,65 @@ class ContentParserServiceTests(TestCase):
         self.assertEqual(created, 1)
         self.assertEqual(ScheduleEntry.objects.count(), 1)
 
+    def test_sync_schedule_keeps_existing_schedule_when_source_is_empty(self):
+        ScheduleEntry.objects.create(
+            group_number="10903525",
+            week=0,
+            day="Понедельник",
+            time="08:00",
+            matter="История",
+        )
+
+        async def fake_collect():
+            return []
+
+        with patch.object(self.service, "_collect_schedule", side_effect=fake_collect):
+            created = self.service.sync_schedule()
+
+        self.assertEqual(created, 0)
+        self.assertEqual(ScheduleEntry.objects.count(), 1)
+
+    @override_settings(SCHEDULE_SYNC_MIN_EXISTING_RATIO=0.5, SCHEDULE_SYNC_MIN_ENTRIES=1)
+    def test_sync_schedule_rejects_suspicious_partial_update(self):
+        for index in range(10):
+            ScheduleEntry.objects.create(
+                group_number=f"109035{index:02d}",
+                week=0,
+                day="Понедельник",
+                time="08:00",
+                matter="История",
+            )
+
+        async def fake_collect():
+            return [
+                {
+                    "group_number": "10903525",
+                    "week": 0,
+                    "day": "Понедельник",
+                    "time": "08:00",
+                    "matter": "История",
+                    "teacher": "",
+                    "frame": "",
+                    "classroom": "",
+                },
+                {
+                    "group_number": "10903526",
+                    "week": 0,
+                    "day": "Вторник",
+                    "time": "09:45",
+                    "matter": "Математика",
+                    "teacher": "",
+                    "frame": "",
+                    "classroom": "",
+                },
+            ]
+
+        with patch.object(self.service, "_collect_schedule", side_effect=fake_collect):
+            with self.assertRaises(RuntimeError):
+                self.service.sync_schedule()
+
+        self.assertEqual(ScheduleEntry.objects.count(), 10)
+
     def test_news_bootstrap_does_not_stop_after_single_stale_page(self):
         async def fake_fetch_page(_session, page):
             return [{"title": f"Page {page}", "link": f"https://times.bntu.by/news/{page}", "tags": ["#БНТУ"]}]
@@ -580,36 +782,12 @@ class ContentParserServiceTests(TestCase):
         self.assertEqual(parsed.month, 3)
         self.assertEqual(parsed.day, 27)
 
-    def test_sync_literature_incremental_uses_source_ids(self):
-        LiteratureItem.objects.create(
-            source_id=200,
-            handle="12345/200",
-            title="Known literature",
-        )
-
-        async def fake_collect(existing_source_ids):
-            self.assertIn(200, existing_source_ids)
-            return [
-                {
-                    "source_id": 201,
-                    "handle": "12345/201",
-                    "title": "New literature",
-                    "faculty": "ФИТР",
-                    "category": "Учебные материалы",
-                    "authors": "Иванов И.И.",
-                    "publishing_date": "2026",
-                    "description": "desc",
-                    "image_url": "",
-                    "download_size": "1024",
-                    "download_link": "https://rep.bntu.by/bitstream/12345/201/file.pdf",
-                }
-            ]
-
-        with patch.object(self.service, "_collect_literature_incremental", side_effect=fake_collect):
+    def test_sync_literature_incremental_delegates_to_bootstrap(self):
+        with patch.object(self.service, "sync_literature_bootstrap", return_value=7) as bootstrap_mock:
             created = self.service.sync_literature_incremental()
 
-        self.assertEqual(created, 1)
-        self.assertTrue(LiteratureItem.objects.filter(source_id=201).exists())
+        self.assertEqual(created, 7)
+        bootstrap_mock.assert_called_once_with()
 
     def test_collect_literature_incremental_stops_on_existing_source_id(self):
         async def fake_fetch_page(_session, offset):
@@ -666,6 +844,59 @@ class AuthAndSupportEndpointTests(TestCase):
         )
 
 
+class SupportDebugEndpointTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    @override_settings(DEBUG=True, TELEGRAM_INTERNAL_API_TOKEN="test-debug-token")
+    def test_test_notification_requires_internal_token_when_configured(self):
+        forbidden_request = self.factory.get("/api/support/test-notification")
+        forbidden_request.META["REMOTE_ADDR"] = "203.0.113.10"
+        forbidden_response = support_views.test_new_user_notification(forbidden_request)
+        self.assertEqual(forbidden_response.status_code, 403)
+
+        with patch(
+            "api.support.views.UserNotificationService.test_connection",
+            return_value={"success": True, "message": "ok"},
+        ) as connection_mock:
+            allowed_request = self.factory.get(
+                "/api/support/test-notification",
+                HTTP_X_INTERNAL_TOKEN="test-debug-token",
+            )
+            allowed_request.META["REMOTE_ADDR"] = "203.0.113.10"
+            allowed_response = support_views.test_new_user_notification(allowed_request)
+
+        self.assertEqual(allowed_response.status_code, 200)
+        self.assertTrue(json.loads(allowed_response.content)["success"])
+        connection_mock.assert_called_once()
+
+    @override_settings(DEBUG=True, TELEGRAM_INTERNAL_API_TOKEN="test-debug-token")
+    def test_send_new_user_notification_requires_internal_token_when_configured(self):
+        forbidden_request = self.factory.post(
+            "/api/support/notify",
+            data='{"fullname":"Test User","student_code":"1234567890"}',
+            content_type="application/json",
+        )
+        forbidden_request.META["REMOTE_ADDR"] = "203.0.113.10"
+        forbidden_response = support_views.send_new_user_notification(forbidden_request)
+        self.assertEqual(forbidden_response.status_code, 403)
+
+        allowed_request = self.factory.post(
+            "/api/support/notify",
+            data='{"fullname":"Test User","student_code":"1234567890"}',
+            content_type="application/json",
+            HTTP_X_INTERNAL_TOKEN="test-debug-token",
+        )
+        allowed_request.META["REMOTE_ADDR"] = "203.0.113.10"
+        allowed_response = support_views.send_new_user_notification(allowed_request)
+
+        self.assertEqual(allowed_response.status_code, 200)
+        self.assertTrue(json.loads(allowed_response.content)["success"])
+        self.assertTrue(
+            BackgroundJob.objects.filter(job_type=BackgroundJobType.NEW_USER_NOTIFICATION).exists()
+        )
+
+
 class AuthFlowEndpointTests(TestCase):
     def setUp(self):
         self.client = Client()
@@ -698,6 +929,28 @@ class AuthFlowEndpointTests(TestCase):
         self.assertTrue(session.get("is_authenticated"))
         self.assertEqual(session.get("student_code"), self.user.student_code)
         self.assertNotEqual(session.session_key, old_session_key)
+
+    def test_banned_existing_user_cannot_login(self):
+        UserBan.objects.create(
+            student_code=self.user.student_code,
+            user_id=self.user.id,
+            banned_by_id=None,
+            ban_duration_seconds=3600,
+            ban_reason="Policy violation",
+            is_active=True,
+        )
+
+        response = self.client.post(
+            "/api/save_data",
+            data='{"studentCode":"1234567890","password":"password123"}',
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        payload = response.json()
+        self.assertFalse(payload["success"])
+        self.assertTrue(payload["is_banned"])
+        self.assertFalse(self.client.session.get("is_authenticated", False))
 
     def test_legacy_save_data_subpaths_are_not_routed(self):
         response = self.client.get("/api/save_data/auth/check")
@@ -1003,6 +1256,22 @@ class AdminEndpointTests(TestCase):
         self.assertTrue(unban_response.json()["success"])
         self.assertFalse(BanService.check_ban_status(self.regular_user.student_code)["is_banned"])
 
+    def test_admin_ban_requires_csrf_token_when_checks_are_enforced(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        session = csrf_client.session
+        session["is_authenticated"] = True
+        session["student_code"] = self.admin_user.student_code
+        session.save()
+
+        response = csrf_client.post(
+            "/api/admin/users/ban",
+            data=f'{{"user_id":{self.regular_user.id},"reason":"Violation","duration":7}}',
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(BanService.check_ban_status(self.regular_user.student_code)["is_banned"])
+
     def test_admin_can_ban_user_forever(self):
         ban_response = self.client.post(
             "/api/admin/users/ban",
@@ -1050,6 +1319,40 @@ class AdminEndpointTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertFalse(User.objects.filter(student_code="2222222222").exists())
+
+    def test_non_admin_cannot_access_admin_activity(self):
+        other_client = Client()
+        session = other_client.session
+        session["is_authenticated"] = True
+        session["student_code"] = self.regular_user.student_code
+        session.save()
+
+        response = other_client.get("/api/admin/activity")
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_activity_returns_paginated_items(self):
+        for index in range(12):
+            ActivityEvent.objects.create(
+                event_type=ActivityEvent.EVENT_TWOFA_ENABLED,
+                user=self.regular_user,
+                actor=self.admin_user,
+                details=f"security event {index}",
+                metadata={"details": f"security event {index}"},
+            )
+
+        response = self.client.get(
+            "/api/admin/activity",
+            {"page": 2, "page_size": 10, "event_type": ActivityEvent.EVENT_TWOFA_ENABLED},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["total"], 12)
+        self.assertEqual(payload["page"], 2)
+        self.assertEqual(payload["total_pages"], 2)
+        self.assertEqual(len(payload["items"]), 2)
 
 
 class MediaSessionAndEdgeCaseTests(TestCase):
@@ -1120,6 +1423,7 @@ class MediaSessionAndEdgeCaseTests(TestCase):
         sessions_payload = sessions_response.json()
         self.assertTrue(sessions_payload["success"])
         self.assertEqual(sessions_payload["total_count"], 1)
+        self.assertNotIn("session_key", sessions_payload["sessions"][0])
 
         logout_response = self.client.post("/api/logout")
         self.assertEqual(logout_response.status_code, 200)
@@ -1271,7 +1575,17 @@ class ContentEndpointTests(TestCase):
             password=make_password("password123"),
         )
 
-    def test_public_user_by_code_omits_sensitive_fields(self):
+    def test_user_by_code_requires_authentication(self):
+        response = self.client.get(f"/api/user/by-code/{self.user.student_code}")
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_authenticated_user_by_code_omits_sensitive_fields(self):
+        session = self.client.session
+        session["is_authenticated"] = True
+        session["student_code"] = self.user.student_code
+        session.save()
+
         response = self.client.get(f"/api/user/by-code/{self.user.student_code}")
 
         self.assertEqual(response.status_code, 200)
@@ -1288,8 +1602,28 @@ class ContentEndpointTests(TestCase):
         self.assertNotIn("ban_info", payload["user"])
 
     def test_news_endpoint_returns_paginated_items(self):
-        with patch("api.content.news.views.get_sqlite_connection", return_value=_FakeSQLiteConnection(_NewsCursor())):
-            response = self.client.get("/api/news", {"page": 1, "page_size": 6, "sort": "date_desc"})
+        NewsItem.objects.create(
+            title="Первая новость",
+            link="https://example.com/1",
+            date="2026-04-01",
+            timestamp=200,
+            summary="Кратко 1",
+            tags="#БНТУ",
+            image_url="https://example.com/1.jpg",
+            reading_time=5,
+        )
+        NewsItem.objects.create(
+            title="Вторая новость",
+            link="https://example.com/2",
+            date="2026-04-02",
+            timestamp=100,
+            summary="Кратко 2",
+            tags="#Спорт",
+            image_url="https://example.com/2.jpg",
+            reading_time=7,
+        )
+
+        response = self.client.get("/api/news", {"page": 1, "page_size": 6, "sort": "date_desc"})
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
@@ -1299,14 +1633,29 @@ class ContentEndpointTests(TestCase):
         self.assertEqual(payload["items"][0]["title"], "Первая новость")
 
     def test_literature_endpoint_returns_items(self):
-        with patch("api.content.literature.views.get_sqlite_connection", return_value=_FakeSQLiteConnection(_LiteratureCursor())):
-            response = self.client.get("/api/literature", {"page": 1, "page_size": 6, "sort": "title_asc"})
+        from api.content_parser_service import LITERATURE_TOP_LEVEL_SECTIONS
+
+        LiteratureItem.objects.create(
+            source_id=1,
+            handle="12345/1",
+            title="Р’С‹СЃС€Р°СЏ РјР°С‚РµРјР°С‚РёРєР°",
+            faculty="Р¤РРўР ",
+            category=next(iter(LITERATURE_TOP_LEVEL_SECTIONS.keys())),
+            authors="РРІР°РЅ РРІР°РЅРѕРІ",
+            publishing_date="2024",
+            description="РЈС‡РµР±РЅРѕРµ РїРѕСЃРѕР±РёРµ",
+            image_url="https://example.com/book.jpg",
+            download_size="12 MB",
+            download_link="https://example.com/book.pdf",
+        )
+
+        response = self.client.get("/api/literature", {"page": 1, "page_size": 6, "sort": "title_asc"})
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertTrue(payload["success"])
         self.assertEqual(payload["total"], 1)
-        self.assertEqual(payload["items"][0]["title"], "Высшая математика")
+        self.assertEqual(payload["items"][0]["title"], LiteratureItem.objects.first().title)
 
     def test_schedule_requires_authentication(self):
         response = self.client.get("/api/schedule")
@@ -1318,8 +1667,28 @@ class ContentEndpointTests(TestCase):
         session["student_code"] = self.user.student_code
         session.save()
 
-        with patch("api.content.schedule.views.get_sqlite_connection", return_value=_FakeSQLiteConnection(_ScheduleCursor())):
-            response = self.client.get("/api/schedule")
+        ScheduleEntry.objects.create(
+            group_number="12345678",
+            week=1,
+            day="monday",
+            time="09:00",
+            matter="РњР°С‚РµРјР°С‚РёРєР°",
+            frame="Р›РµРєС†РёСЏ",
+            teacher="РРІР°РЅРѕРІ Р.Р.",
+            classroom="101",
+        )
+        ScheduleEntry.objects.create(
+            group_number="12345678",
+            week=0,
+            day="monday",
+            time="11:00",
+            matter="Р¤РёР·РёРєР°",
+            frame="РџСЂР°РєС‚РёРєР°",
+            teacher="РџРµС‚СЂРѕРІ Рџ.Рџ.",
+            classroom="202",
+        )
+
+        response = self.client.get("/api/schedule")
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
@@ -1327,7 +1696,7 @@ class ContentEndpointTests(TestCase):
         self.assertEqual(payload["student_code"], self.user.student_code)
         self.assertIn("monday", payload["schedule"])
         self.assertIn("upper", payload["schedule"]["monday"])
-        self.assertEqual(payload["schedule"]["monday"]["upper"][0]["subject"], "Математика")
+        self.assertEqual(payload["schedule"]["monday"]["upper"][0]["subject"], ScheduleEntry.objects.filter(group_number="12345678", week=1).first().matter)
 
     def test_schedule_returns_404_when_no_rows_found(self):
         session = self.client.session
@@ -1335,11 +1704,7 @@ class ContentEndpointTests(TestCase):
         session["student_code"] = self.user.student_code
         session.save()
 
-        empty_cursor = _ScheduleCursor()
-        empty_cursor.fetchall = lambda: []
-
-        with patch("api.content.schedule.views.get_sqlite_connection", return_value=_FakeSQLiteConnection(empty_cursor)):
-            response = self.client.get("/api/schedule")
+        response = self.client.get("/api/schedule")
 
         self.assertEqual(response.status_code, 404)
 
@@ -1496,20 +1861,15 @@ class ContentEndpointTests(TestCase):
         self.assertEqual(response.json()["next_lesson"]["subject"], "Mathematics")
 
 
-    def test_schedule_handles_sqlite_error(self):
+    def test_schedule_missing_group_returns_404_without_side_effect_jobs(self):
         session = self.client.session
         session["is_authenticated"] = True
         session["student_code"] = self.user.student_code
         session.save()
 
-        class BrokenCursor:
-            def execute(self, query, params=None):
-                raise sqlite3.Error("broken")
+        response = self.client.get("/api/schedule")
 
-        with patch("api.content.schedule.views.get_sqlite_connection", return_value=_FakeSQLiteConnection(BrokenCursor())):
-            response = self.client.get("/api/schedule")
-
-        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.status_code, 404)
         self.assertFalse(
             BackgroundJob.objects.filter(job_type=BackgroundJobType.SUPPORT_REQUEST_NOTIFICATION).exists()
         )
@@ -1526,6 +1886,26 @@ class ContentEndpointTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertFalse(response.json()["success"])
+
+
+class HealthEndpointTests(TestCase):
+    def test_health_check_does_not_expose_internal_counts(self):
+        response = self.client.get("/api/health")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["status"], "healthy")
+        self.assertNotIn("users_count", payload)
+        self.assertNotIn("method", payload)
+
+    @patch("api.common_views.connection.ensure_connection", side_effect=Exception("database secret details"))
+    def test_health_check_does_not_expose_internal_errors(self, _ensure_connection):
+        response = self.client.get("/api/health")
+
+        self.assertEqual(response.status_code, 500)
+        payload = response.json()
+        self.assertEqual(payload["status"], "unhealthy")
+        self.assertNotIn("error", payload)
 
 
 class TelegramBindingEndpointTests(TestCase):

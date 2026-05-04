@@ -1,4 +1,6 @@
 import React from 'react';
+import titleLogo from '../assets/logo/title_logo.png';
+import teamLeadImage from '../assets/team/teamlead.png';
 
 /**
  * Утилиты для оптимизации bundle и производительности
@@ -206,8 +208,8 @@ export const preloadCriticalResources = () => {
   document.head.appendChild(fontLink);
 
   const criticalImages = [
-    '/src/assets/logo/logo.png',
-    '/src/assets/team/teamlead.png',
+    titleLogo,
+    teamLeadImage,
   ];
 
   criticalImages.forEach((src) => {
