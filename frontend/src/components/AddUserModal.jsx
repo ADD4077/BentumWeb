@@ -1,89 +1,107 @@
 import React, { useState } from 'react';
-import { UserPlus, X, User, GraduationCap, Building, Calendar, Shield } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import {
+  GraduationCap,
+  Shield,
+  User,
+  UserPlus,
+  X,
+} from 'lucide-react';
+import { USER_ROLE_OPTIONS } from '../utils/roles.js';
+
+const FACULTIES = [
+  'АТФ',
+  'ФГДИЭ',
+  'МСФ',
+  'МТФ',
+  'ФММП',
+  'ЭФ',
+  'ФИТР',
+  'ФТУГ',
+  'ИПФ',
+  'ФЭС',
+  'АФ',
+  'СФ',
+  'ПСФ',
+  'ФТК',
+  'ВТФ',
+  'СТФ',
+  'ФМС',
+];
+
+const buildInitialState = () => ({
+  fullname: '',
+  student_code: '',
+  faculty: '',
+  role: 'student',
+  registration_date: new Date().toISOString().split('T')[0],
+  password: '',
+  confirm_password: '',
+});
 
 function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
-  const [formData, setFormData] = useState({
-    fullname: '',
-    student_code: '',
-    faculty: '',
-    registration_date: new Date().toISOString().split('T')[0],
-    password: '',
-    confirm_password: ''
-  });
-
+  const [formData, setFormData] = useState(buildInitialState);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const faculties = [
-    'АТФ',
-    'ФГДИЭ',
-    'МСФ',
-    'МТФ',
-    'ФММП',
-    'ЭФ',
-    'ФИТР',
-    'ФТУГ',
-    'ИПФ',
-    'ФЭС',
-    'АФ',
-    'СФ',
-    'ПСФ',
-    'ФТК',
-    'ВТФ',
-    'СТФ',
-    'ФМС'
-  ];
+  if (!isOpen) {
+    return null;
+  }
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
-    
-    // Очищаем ошибку при изменении поля
+
     if (errors[name]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [name]: ''
+        [name]: '',
       }));
     }
   };
 
   const validateForm = () => {
-    const newErrors = {};
+    const nextErrors = {};
 
     if (!formData.fullname.trim()) {
-      newErrors.fullname = 'Полное имя обязательно';
+      nextErrors.fullname = 'Полное имя обязательно';
     }
 
     if (!formData.student_code.trim()) {
-      newErrors.student_code = 'Код студента обязателен';
+      nextErrors.student_code = 'Код студента обязателен';
     } else if (!/^\d{10}$/.test(formData.student_code)) {
-      newErrors.student_code = 'Код студента должен содержать 10 цифр';
+      nextErrors.student_code = 'Код студента должен содержать 10 цифр';
     }
 
     if (!formData.faculty) {
-      newErrors.faculty = 'Факультет обязателен';
+      nextErrors.faculty = 'Факультет обязателен';
+    }
+
+    if (!formData.role) {
+      nextErrors.role = 'Роль обязательна';
     }
 
     if (!formData.password) {
-      newErrors.password = 'Пароль обязателен';
+      nextErrors.password = 'Пароль обязателен';
     } else if (formData.password.length < 7) {
-      newErrors.password = 'Пароль должен содержать минимум 7 символов';
+      nextErrors.password = 'Пароль должен содержать минимум 7 символов';
     }
 
     if (formData.password !== formData.confirm_password) {
-      newErrors.confirm_password = 'Пароли не совпадают';
+      nextErrors.confirm_password = 'Пароли не совпадают';
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
     if (!validateForm()) {
       return;
     }
@@ -91,28 +109,19 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
     setIsLoading(true);
 
     try {
-      const userData = {
+      await onAddUser({
         fullname: formData.fullname,
         student_code: formData.student_code,
         faculty: formData.faculty,
+        role: formData.role,
         registration_date: formData.registration_date,
-        password: formData.password
-      };
-
-      await onAddUser(userData);
-      
-      // Сброс формы после успешного добавления
-      setFormData({
-        fullname: '',
-        student_code: '',
-        faculty: '',
-        registration_date: new Date().toISOString().split('T')[0],
-        password: '',
-        confirm_password: ''
+        password: formData.password,
       });
-      
+
+      setFormData(buildInitialState());
+      setErrors({});
       onClose();
-    } catch (error) {
+    } catch {
       setErrors({ submit: 'Ошибка при добавлении пользователя' });
     } finally {
       setIsLoading(false);
@@ -120,265 +129,233 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
   };
 
   const handleClose = () => {
-    setFormData({
-      fullname: '',
-      student_code: '',
-      faculty: '',
-      registration_date: new Date().toISOString().split('T')[0],
-      password: '',
-      confirm_password: ''
-    });
+    setFormData(buildInitialState());
     setErrors({});
     onClose();
   };
 
-  if (!isOpen) return null;
+  const inputClassName = `w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+    darkMode
+      ? 'border-slate-600 bg-slate-700 text-white'
+      : 'border-gray-300 bg-white text-gray-900'
+  }`;
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className={`w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl ${
-        darkMode ? 'bg-slate-800' : 'bg-white'
-      } border ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
-        
-        {/* Заголовок */}
-        <div className={`p-6 border-b ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
+  const modalContent = (
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div
+        className={`modal-panel max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border shadow-2xl ${
+          darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-300/70 bg-white/96'
+        }`}
+      >
+        <div className={`border-b p-6 ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${darkMode ? 'bg-emerald-900/20' : 'bg-emerald-100'}`}>
-                <UserPlus className={`w-5 h-5 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
+              <div className={`rounded-lg p-2 ${darkMode ? 'bg-emerald-900/20' : 'bg-emerald-100'}`}>
+                <UserPlus className={`h-5 w-5 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
               </div>
               <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                 Добавление пользователя
               </h2>
             </div>
+
             <button
               onClick={handleClose}
-              className={`p-2 rounded-lg transition-colors ${
-                darkMode 
-                  ? 'hover:bg-slate-700 text-slate-400 hover:text-white' 
-                  : 'hover:bg-gray-100 text-gray-400 hover:text-gray-600'
+              aria-label="Закрыть модальное окно"
+              className={`rounded-lg p-2 transition-colors ${
+                darkMode
+                  ? 'text-slate-400 hover:bg-slate-700 hover:text-white'
+                  : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
               }`}
             >
-              <X className="w-5 h-5" />
+              <X className="h-5 w-5" />
             </button>
           </div>
         </div>
 
-        {/* Форма */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {errors.submit && (
-            <div className={`p-4 rounded-lg ${
-              darkMode ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200'
-            } border`}>
+        <form onSubmit={handleSubmit} className="space-y-6 p-6">
+          {errors.submit ? (
+            <div
+              className={`rounded-lg border p-4 ${
+                darkMode ? 'border-red-800 bg-red-900/20' : 'border-red-200 bg-red-50'
+              }`}
+            >
               <p className="text-red-600 dark:text-red-400">{errors.submit}</p>
             </div>
-          )}
+          ) : null}
 
-          {/* Основная информация */}
-          <div className="space-y-4">
-            <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} flex items-center gap-2`}>
-              <User className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+          <section className="space-y-4">
+            <h3 className={`flex items-center gap-2 text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              <User className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               Основная информация
             </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${
-                  darkMode ? 'text-slate-300' : 'text-gray-700'
-                }`}>
-                  Полное имя *
-                </label>
-                <input
-                  type="text"
-                  name="fullname"
-                  value={formData.fullname}
-                  onChange={handleInputChange}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    darkMode 
-                      ? 'bg-slate-700 border-slate-600 text-white' 
-                      : 'bg-white border-gray-300 text-gray-900'
-                  } focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                    errors.fullname ? 'border-red-500' : ''
-                  }`}
-                  placeholder="Введите полное имя"
-                />
-                {errors.fullname && (
-                  <p className="text-red-500 text-sm mt-1">{errors.fullname}</p>
-                )}
-              </div>
-            </div>
-          </div>
 
-          {/* Учебная информация */}
-          <div className="space-y-4">
-            <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} flex items-center gap-2`}>
-              <GraduationCap className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            <div>
+              <label className={`mb-2 block text-sm font-medium ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>
+                Полное имя *
+              </label>
+              <input
+                type="text"
+                name="fullname"
+                aria-label="Полное имя *"
+                value={formData.fullname}
+                onChange={handleInputChange}
+                placeholder="Введите полное имя"
+                className={`${inputClassName} ${errors.fullname ? 'border-red-500' : ''}`}
+              />
+              {errors.fullname ? <p className="mt-1 text-sm text-red-500">{errors.fullname}</p> : null}
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <h3 className={`flex items-center gap-2 text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              <GraduationCap className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               Учебная информация
             </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className={`block text-sm font-medium mb-2 ${
-                  darkMode ? 'text-slate-300' : 'text-gray-700'
-                }`}>
+                <label className={`mb-2 block text-sm font-medium ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                   Код студента *
                 </label>
                 <input
                   type="text"
                   name="student_code"
+                  aria-label="Код студента *"
                   value={formData.student_code}
                   onChange={handleInputChange}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    darkMode 
-                      ? 'bg-slate-700 border-slate-600 text-white' 
-                      : 'bg-white border-gray-300 text-gray-900'
-                  } focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                    errors.student_code ? 'border-red-500' : ''
-                  }`}
+                  maxLength={10}
                   placeholder="1234567890"
-                  maxLength="10"
+                  className={`${inputClassName} ${errors.student_code ? 'border-red-500' : ''}`}
                 />
-                {errors.student_code && (
-                  <p className="text-red-500 text-sm mt-1">{errors.student_code}</p>
-                )}
+                {errors.student_code ? <p className="mt-1 text-sm text-red-500">{errors.student_code}</p> : null}
               </div>
 
               <div>
-                <label className={`block text-sm font-medium mb-2 ${
-                  darkMode ? 'text-slate-300' : 'text-gray-700'
-                }`}>
+                <label className={`mb-2 block text-sm font-medium ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                   Факультет *
                 </label>
                 <select
                   name="faculty"
+                  aria-label="Факультет *"
                   value={formData.faculty}
                   onChange={handleInputChange}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    darkMode 
-                      ? 'bg-slate-700 border-slate-600 text-white' 
-                      : 'bg-white border-gray-300 text-gray-900'
-                  } focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                    errors.faculty ? 'border-red-500' : ''
-                  }`}
+                  className={`${inputClassName} ${errors.faculty ? 'border-red-500' : ''}`}
                 >
                   <option value="">Выберите факультет</option>
-                  {faculties.map(faculty => (
-                    <option key={faculty} value={faculty}>{faculty}</option>
+                  {FACULTIES.map((faculty) => (
+                    <option key={faculty} value={faculty}>
+                      {faculty}
+                    </option>
                   ))}
                 </select>
-                {errors.faculty && (
-                  <p className="text-red-500 text-sm mt-1">{errors.faculty}</p>
-                )}
+                {errors.faculty ? <p className="mt-1 text-sm text-red-500">{errors.faculty}</p> : null}
               </div>
 
               <div>
-                <label className={`block text-sm font-medium mb-2 ${
-                  darkMode ? 'text-slate-300' : 'text-gray-700'
-                }`}>
+                <label className={`mb-2 block text-sm font-medium ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>
+                  Роль *
+                </label>
+                <select
+                  name="role"
+                  aria-label="Роль *"
+                  value={formData.role}
+                  onChange={handleInputChange}
+                  className={`${inputClassName} ${errors.role ? 'border-red-500' : ''}`}
+                >
+                  {USER_ROLE_OPTIONS.map((role) => (
+                    <option key={role.value} value={role.value}>
+                      {role.label}
+                    </option>
+                  ))}
+                </select>
+                {errors.role ? <p className="mt-1 text-sm text-red-500">{errors.role}</p> : null}
+              </div>
+
+              <div>
+                <label className={`mb-2 block text-sm font-medium ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                   Дата регистрации
                 </label>
                 <input
                   type="date"
                   name="registration_date"
+                  aria-label="Дата регистрации"
                   value={formData.registration_date}
                   onChange={handleInputChange}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    darkMode 
-                      ? 'bg-slate-700 border-slate-600 text-white' 
-                      : 'bg-white border-gray-300 text-gray-900'
-                  } focus:outline-none focus:ring-2 focus:ring-emerald-500`}
+                  className={inputClassName}
                 />
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Пароль */}
-          <div className="space-y-4">
-            <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} flex items-center gap-2`}>
-              <Shield className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+          <section className="space-y-4">
+            <h3 className={`flex items-center gap-2 text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              <Shield className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               Безопасность
             </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className={`block text-sm font-medium mb-2 ${
-                  darkMode ? 'text-slate-300' : 'text-gray-700'
-                }`}>
+                <label className={`mb-2 block text-sm font-medium ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                   Пароль *
                 </label>
                 <input
                   type="password"
                   name="password"
+                  aria-label="Пароль *"
                   value={formData.password}
                   onChange={handleInputChange}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    darkMode 
-                      ? 'bg-slate-700 border-slate-600 text-white' 
-                      : 'bg-white border-gray-300 text-gray-900'
-                  } focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                    errors.password ? 'border-red-500' : ''
-                  }`}
                   placeholder="Минимум 7 символов"
+                  className={`${inputClassName} ${errors.password ? 'border-red-500' : ''}`}
                 />
-                {errors.password && (
-                  <p className="text-red-500 text-sm mt-1">{errors.password}</p>
-                )}
+                {errors.password ? <p className="mt-1 text-sm text-red-500">{errors.password}</p> : null}
               </div>
 
               <div>
-                <label className={`block text-sm font-medium mb-2 ${
-                  darkMode ? 'text-slate-300' : 'text-gray-700'
-                }`}>
+                <label className={`mb-2 block text-sm font-medium ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                   Подтверждение пароля *
                 </label>
                 <input
                   type="password"
                   name="confirm_password"
+                  aria-label="Подтверждение пароля *"
                   value={formData.confirm_password}
                   onChange={handleInputChange}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    darkMode 
-                      ? 'bg-slate-700 border-slate-600 text-white' 
-                      : 'bg-white border-gray-300 text-gray-900'
-                  } focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                    errors.confirm_password ? 'border-red-500' : ''
-                  }`}
                   placeholder="Повторите пароль"
+                  className={`${inputClassName} ${errors.confirm_password ? 'border-red-500' : ''}`}
                 />
-                {errors.confirm_password && (
-                  <p className="text-red-500 text-sm mt-1">{errors.confirm_password}</p>
-                )}
+                {errors.confirm_password ? (
+                  <p className="mt-1 text-sm text-red-500">{errors.confirm_password}</p>
+                ) : null}
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Кнопки */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
+          <div className={`flex justify-end gap-3 border-t pt-4 ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
             <button
               type="button"
               onClick={handleClose}
               disabled={isLoading}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                darkMode 
-                  ? 'bg-slate-700 hover:bg-slate-600 text-slate-300' 
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`rounded-lg px-6 py-2 font-medium transition-colors ${
+                darkMode
+                  ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              } disabled:cursor-not-allowed disabled:opacity-50`}
             >
               Отмена
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="flex items-center gap-2 rounded-lg bg-emerald-600 px-6 py-2 font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isLoading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   Добавление...
                 </>
               ) : (
                 <>
-                  <UserPlus className="w-4 h-4" />
+                  <UserPlus className="h-4 w-4" />
                   Добавить пользователя
                 </>
               )}
@@ -388,6 +365,12 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') {
+    return modalContent;
+  }
+
+  return createPortal(modalContent, document.body);
 }
 
 export default AddUserModal;

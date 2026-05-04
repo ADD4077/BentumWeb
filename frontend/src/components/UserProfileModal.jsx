@@ -1,0 +1,291 @@
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  Backpack,
+  Book,
+  Calendar,
+  Clock,
+  GraduationCap,
+  Lock,
+  Send,
+  ShieldAlert,
+} from 'lucide-react';
+
+import { calculateCourseOrDefault } from '../utils/calculateCourse.js';
+import { formatDateOnly, formatDateTime } from '../utils/dates.js';
+import { buildMediaUrl } from '../utils/media.js';
+import { getRoleLabel } from '../utils/roles.js';
+import { fetchAdminUserProfile, fetchUserProfileByCode } from '../services/userProfiles.js';
+
+function InfoRow({ icon: Icon, label, value, className = '' }) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  return (
+    <div className={`flex items-center gap-3 text-left ${className}`.trim()}>
+      <Icon className="h-5 w-5 shrink-0 self-center text-emerald-600 dark:text-emerald-400" />
+      <div>
+        <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          {label}
+        </p>
+        <p className="text-base font-medium text-slate-900 dark:text-white">
+          {value}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function AlertInfoRow({ icon: Icon, label, value, className = '' }) {
+  if (!value) {
+    return null;
+  }
+
+  return (
+    <div
+      className={`rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-left dark:border-red-500/30 dark:bg-red-500/10 ${className}`.trim()}
+    >
+      <div className="flex items-start gap-3">
+        <Icon className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-red-500 dark:text-red-300">
+            {label}
+          </p>
+          <p className="text-base font-semibold text-red-700 dark:text-red-200">
+            {value}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function getTwoFactorLabel(user) {
+  if (!user) {
+    return null;
+  }
+
+  if (!user.twofa_enabled) {
+    return 'Выключена';
+  }
+
+  if (user.twofa_method === 'telegram') {
+    return 'Telegram';
+  }
+
+  return 'Включена';
+}
+
+export default function UserProfileModal({
+  isOpen,
+  onClose,
+  studentCode,
+  userId = null,
+  darkMode: _darkMode,
+  showActivityMeta = false,
+  adminView = false,
+}) {
+  const [user, setUser] = useState(null);
+  const [userMedia, setUserMedia] = useState({
+    avatar_url: null,
+    banner_url: null,
+    avatar_placeholder: null,
+    banner_placeholder: null,
+  });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    if (adminView && userId) {
+      loadUserProfile();
+      return;
+    }
+
+    if (studentCode) {
+      loadUserProfile();
+    }
+  }, [adminView, isOpen, studentCode, userId]);
+
+  const loadUserProfile = async () => {
+    setLoading(true);
+    try {
+      const profile = adminView
+        ? await fetchAdminUserProfile(userId)
+        : await fetchUserProfileByCode(studentCode);
+
+      if (!profile) {
+        onClose();
+        return;
+      }
+
+      setUser(profile);
+      setUserMedia({
+        avatar_url: profile.avatar_url,
+        banner_url: profile.banner_url,
+        avatar_placeholder: profile.avatar_placeholder,
+        banner_placeholder: profile.banner_placeholder,
+      });
+    } catch {
+      onClose();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) {
+    return null;
+  }
+
+  const modalContent = (
+    <div className="modal-backdrop fixed inset-0 z-[150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="modal-panel flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-slate-300/70 bg-white/96 shadow-2xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-800/90">
+        <div className="relative h-32">
+          {userMedia.banner_url ? (
+            <img
+              src={buildMediaUrl(userMedia.banner_url)}
+              alt="Profile Banner"
+              className="h-full w-full object-cover"
+            />
+          ) : userMedia.banner_placeholder ? (
+            <div className="h-full w-full bg-gray-200 dark:bg-slate-700" />
+          ) : (
+            <div className="h-full w-full bg-gray-200" />
+          )}
+
+          <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 transform">
+            {userMedia.avatar_url ? (
+              <img
+                src={buildMediaUrl(userMedia.avatar_url)}
+                alt="Profile Avatar"
+                className="h-32 w-32 rounded-2xl border-4 border-white object-cover dark:border-slate-800"
+              />
+            ) : (
+              <div
+                className="flex h-32 w-32 items-center justify-center rounded-2xl border-4 border-white bg-gray-300 font-semibold text-gray-600 dark:border-slate-800"
+                style={{ fontSize: '300%' }}
+              >
+                {user?.fullname?.charAt(0)?.toUpperCase() || 'U'}
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-2xl border border-white/30 bg-white/20 text-white backdrop-blur-sm transition-all duration-300 hover:bg-white/30"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="custom-scrollbar flex-1 overflow-y-auto p-6 pt-20">
+          {loading ? (
+            <div className="flex w-full items-center justify-center py-10">
+              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-emerald-600" />
+            </div>
+          ) : (
+            <>
+              <h3 className="mb-2 text-center text-xl font-bold text-slate-900 dark:text-white">
+                {user?.fullname || 'Пользователь'}
+              </h3>
+
+              <div className="mb-6 text-center text-xs text-slate-500 dark:text-slate-400">
+                ID: {user?.id || 'Не определен'}
+              </div>
+
+              <div className="w-full space-y-6">
+                <InfoRow
+                  icon={Book}
+                  label="Студенческий код"
+                  value={user?.student_code || 'Не указан'}
+                />
+
+                <InfoRow
+                  icon={GraduationCap}
+                  label="Факультет"
+                  value={user?.faculty}
+                />
+
+                <InfoRow
+                  icon={Book}
+                  label="Роль"
+                  value={user?.role ? getRoleLabel(user.role) : null}
+                />
+
+                <InfoRow
+                  icon={Backpack}
+                  label="Курс"
+                  value={calculateCourseOrDefault(user?.student_code)}
+                />
+
+                <InfoRow
+                  icon={Send}
+                  label="Telegram"
+                  value={user?.telegram_display}
+                />
+
+                {adminView ? (
+                  <InfoRow
+                    icon={Lock}
+                    label="Двухфакторная защита"
+                    value={getTwoFactorLabel(user)}
+                  />
+                ) : null}
+
+                {showActivityMeta && user?.last_login ? (
+                  <>
+                    <InfoRow
+                      icon={Calendar}
+                      label="Дата регистрации"
+                      value={formatDateTime(user?.created_at)}
+                    />
+
+                    <InfoRow
+                      icon={Clock}
+                      label="Последний вход"
+                      value={formatDateTime(user?.last_login)}
+                    />
+                  </>
+                ) : user?.created_at ? (
+                  <InfoRow
+                    icon={Calendar}
+                    label="Дата регистрации"
+                    value={formatDateOnly(user?.created_at)}
+                  />
+                ) : null}
+
+                {adminView && user?.is_admin ? (
+                  <InfoRow
+                    icon={ShieldAlert}
+                    label="Права доступа"
+                    value="Администратор"
+                  />
+                ) : null}
+
+                {user?.is_banned ? (
+                  <AlertInfoRow
+                    icon={ShieldAlert}
+                    label="Срок блокировки"
+                    value={formatDateTime(user?.ban_info?.ban_end_date)}
+                    className="mb-2"
+                  />
+                ) : null}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  if (typeof document === 'undefined') {
+    return modalContent;
+  }
+
+  return createPortal(modalContent, document.body);
+}

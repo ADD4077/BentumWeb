@@ -1,6 +1,7 @@
 /**
  * Утилиты для безопасной навигации и обновления состояния
  */
+import { API_ENDPOINTS } from '../config/api.js';
 
 /**
  * Безопасная навигация с обновлением URL
@@ -51,7 +52,7 @@ export const navigateToSupport = (setActiveTab) => {
  */
 export const refreshMediaData = async (setUserMedia, onRefresh) => {
   try {
-    const response = await fetch('/api/profile/update', {
+    const response = await fetch(API_ENDPOINTS.PROFILE_UPDATE, {
       method: 'GET',
       credentials: 'include'
     });

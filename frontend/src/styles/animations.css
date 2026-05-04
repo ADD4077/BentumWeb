@@ -1,0 +1,506 @@
+:root {
+  --motion-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-smooth: cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+html {
+  scrollbar-gutter: stable;
+  scroll-behavior: smooth;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -8px, 0);
+  }
+}
+
+@keyframes colorShift {
+  0% {
+    background-position: 200% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes revealUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 26px, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes revealSoft {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes shimmerSweep {
+  0% {
+    transform: translateX(-160%) skewX(-16deg);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.22;
+  }
+  100% {
+    transform: translateX(180%) skewX(-16deg);
+    opacity: 0;
+  }
+}
+
+@keyframes bentumGradient {
+  0% {
+    background-position: 0% 50%;
+    filter: saturate(0.98);
+  }
+  50% {
+    background-position: 100% 50%;
+    filter: saturate(1.08);
+  }
+  100% {
+    background-position: 0% 50%;
+    filter: saturate(0.98);
+  }
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalPanelIn {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 26px, 0) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes microPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.app-stage {
+  position: relative;
+  isolation: isolate;
+}
+
+.app-stage:not(.dark) {
+  color: #0f172a;
+}
+
+.app-stage:not(.dark) .bg-slate-100 {
+  background-color: #eef2f7 !important;
+}
+
+.app-stage:not(.dark) .glass-card,
+.app-stage:not(.dark) .glass-surface,
+.app-stage:not(.dark) .modal-panel {
+  border-color: rgba(148, 163, 184, 0.34);
+  box-shadow:
+    0 18px 44px rgba(15, 23, 42, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.8) inset;
+}
+
+.app-stage:not(.dark) [class*="bg-gray-100/50"] {
+  background-color: rgba(248, 250, 252, 0.88) !important;
+}
+
+.app-stage:not(.dark) [class*="bg-gray-100/40"] {
+  background-color: rgba(248, 250, 252, 0.8) !important;
+}
+
+.app-stage:not(.dark) [class*="bg-white/82"] {
+  background-color: rgba(255, 255, 255, 0.94) !important;
+}
+
+.app-stage:not(.dark) [class*="bg-white/90"] {
+  background-color: rgba(255, 255, 255, 0.97) !important;
+}
+
+.app-stage:not(.dark) [class*="bg-white/96"] {
+  background-color: rgba(255, 255, 255, 0.985) !important;
+}
+
+.app-stage:not(.dark) [class*="border-gray-200/70"] {
+  border-color: rgba(148, 163, 184, 0.34) !important;
+}
+
+.app-stage:not(.dark) [class*="border-slate-300/70"] {
+  border-color: rgba(148, 163, 184, 0.34) !important;
+}
+
+.app-stage:not(.dark) [class*="border-white/60"] {
+  border-color: rgba(148, 163, 184, 0.24) !important;
+}
+
+.app-stage:not(.dark) .text-slate-500,
+.app-stage:not(.dark) .placeholder-slate-500::placeholder {
+  color: #64748b !important;
+}
+
+.app-stage:not(.dark) .text-slate-600,
+.app-stage:not(.dark) .placeholder-slate-400::placeholder {
+  color: #475569 !important;
+}
+
+.app-stage:not(.dark) .text-slate-700 {
+  color: #334155 !important;
+}
+
+.app-stage:not(.dark) input,
+.app-stage:not(.dark) textarea,
+.app-stage:not(.dark) select {
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.app-shell-main {
+  position: relative;
+  z-index: 1;
+}
+
+.app-shell-main > * {
+  opacity: 0;
+  animation: revealUp 900ms var(--motion-spring) forwards;
+}
+
+.app-shell-main > *:nth-child(1) {
+  animation-delay: 90ms;
+}
+
+.app-shell-main > *:nth-child(2) {
+  animation-delay: 180ms;
+}
+
+.app-shell-main > *:nth-child(3) {
+  animation-delay: 270ms;
+}
+
+.app-shell-main > *:nth-child(4) {
+  animation-delay: 360ms;
+}
+
+.glass-surface,
+.glass-card,
+.nav-shell,
+.footer-shell {
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-surface::before,
+.glass-card::before,
+.nav-shell::before,
+.footer-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: none;
+  opacity: 0;
+}
+
+.footer-shell::after,
+.nav-shell::after {
+  content: "";
+  position: absolute;
+  top: -25%;
+  bottom: -25%;
+  width: 24%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.12) 50%, transparent 100%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  transform: translateX(-160%) skewX(-16deg);
+}
+
+.footer-shell:hover::after,
+.nav-shell:hover::after {
+  animation: shimmerSweep 1.35s var(--motion-smooth);
+}
+
+.shiny-text {
+  display: inline-block;
+  line-height: 1.22;
+  white-space: nowrap;
+  color: var(--shiny-base, #10b981);
+  padding-bottom: 0.24em;
+  overflow: visible;
+}
+
+.shiny-text__base {
+  display: inline-block;
+  color: var(--shiny-base, #10b981);
+  text-shadow: 0 8px 24px rgba(16, 185, 129, 0.14);
+  padding-bottom: 0.04em;
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .shiny-text__base {
+    background-image: linear-gradient(
+      120deg,
+      var(--shiny-base, #10b981) 0%,
+      #34d399 24%,
+      var(--shiny-glow, #22d3ee) 50%,
+      #2dd4bf 74%,
+      var(--shiny-base, #10b981) 100%
+    );
+    background-size: 220% 100%;
+    background-position: 0% 50%;
+    background-repeat: repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    animation-name: bentumGradient;
+    animation-duration: var(--shiny-duration, 4.8s);
+    animation-delay: var(--shiny-delay, 0s);
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+  }
+}
+
+.shiny-text__base {
+  animation-duration: var(--shiny-duration, 4.8s);
+  animation-delay: var(--shiny-delay, 0s);
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+.shiny-text--pause-hover:hover .shiny-text__base {
+  animation-play-state: paused;
+}
+
+.shiny-text--disabled {
+  color: var(--shiny-base, #10b981);
+}
+
+.shiny-text__base--static,
+.shiny-text--disabled .shiny-text__base {
+  animation: none;
+  text-shadow: none;
+  filter: none;
+  background-image: none;
+  color: var(--shiny-base, #10b981);
+  -webkit-text-fill-color: currentColor;
+}
+
+.dark .news-card:hover {
+  box-shadow: 0 24px 70px rgba(2, 6, 23, 0.4) !important;
+}
+
+.interactive-lift,
+.glass-card,
+.nav-shell,
+.footer-shell {
+  transition:
+    transform 500ms var(--motion-spring),
+    box-shadow 500ms var(--motion-spring),
+    border-color 400ms ease,
+    background-color 400ms ease,
+    filter 400ms ease;
+  transform: translateZ(0);
+  will-change: transform, box-shadow;
+}
+
+.interactive-lift:hover,
+.glass-card:hover,
+.nav-shell:hover,
+.footer-shell:hover {
+  transform: translate3d(0, -6px, 0);
+}
+
+.nav-shell:hover {
+  box-shadow:
+    0 20px 60px rgba(15, 23, 42, 0.16),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+}
+
+.dark .nav-shell:hover,
+.dark .footer-shell:hover,
+.dark .glass-card:hover {
+  box-shadow:
+    0 24px 70px rgba(2, 6, 23, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+}
+
+.section-reveal {
+  animation: revealSoft 850ms var(--motion-spring) both;
+}
+
+.section-reveal:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.section-reveal:nth-child(3) {
+  animation-delay: 220ms;
+}
+
+.section-reveal:nth-child(4) {
+  animation-delay: 320ms;
+}
+
+.mission-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.mission-sweep::after {
+  content: "";
+  position: absolute;
+  top: -25%;
+  bottom: -25%;
+  width: 24%;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(148, 163, 184, 0.08) 18%,
+    rgba(226, 232, 240, 0.92) 38%,
+    rgba(148, 163, 184, 0.42) 50%,
+    rgba(255, 255, 255, 0.94) 62%,
+    rgba(148, 163, 184, 0.1) 80%,
+    transparent 100%
+  );
+  opacity: 0;
+  transform: translateX(-160%) skewX(-16deg);
+}
+
+.dark .mission-sweep::after {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.16) 50%, transparent 100%);
+}
+
+.mission-sweep:hover::after {
+  animation: shimmerSweep 1.55s var(--motion-smooth);
+}
+
+.hero-badge,
+.hero-cta {
+  animation: revealSoft 900ms var(--motion-spring) both;
+}
+
+.hero-cta {
+  animation-delay: 160ms;
+}
+
+.floating-slow {
+  animation: float 6s ease-in-out infinite;
+}
+
+.floating-slower {
+  animation: float 8.5s ease-in-out infinite;
+}
+
+.modal-backdrop {
+  animation: modalFadeIn 260ms var(--motion-smooth) both;
+}
+
+.modal-panel {
+  animation: modalPanelIn 420ms var(--motion-spring) both;
+}
+
+.app-shell-main :is(button, a[href]),
+.modal-panel :is(button, a[href]),
+footer :is(button, a[href]) {
+  transition:
+    transform 220ms var(--motion-smooth),
+    box-shadow 240ms var(--motion-smooth),
+    background-color 220ms ease,
+    border-color 220ms ease,
+    color 220ms ease,
+    opacity 220ms ease;
+  will-change: transform;
+}
+
+.app-shell-main :is(button, a[href]):not(:disabled):hover,
+.modal-panel :is(button, a[href]):not(:disabled):hover,
+footer :is(button, a[href]):not(:disabled):hover {
+  transform: translate3d(0, -1px, 0);
+}
+
+.app-shell-main :is(button, a[href]):not(:disabled):active,
+.modal-panel :is(button, a[href]):not(:disabled):active,
+footer :is(button, a[href]):not(:disabled):active {
+  transform: translate3d(0, 0, 0) scale(0.985);
+}
+
+.app-shell-main :is(button, a[href]) svg,
+.modal-panel :is(button, a[href]) svg,
+footer :is(button, a[href]) svg {
+  transition: transform 220ms var(--motion-smooth), opacity 220ms ease;
+}
+
+.app-shell-main :is(button, a[href]):not(:disabled):hover svg,
+.modal-panel :is(button, a[href]):not(:disabled):hover svg,
+footer :is(button, a[href]):not(:disabled):hover svg {
+  transform: translate3d(1px, -1px, 0);
+}
+
+.app-shell-main :is(input, textarea, select),
+.modal-panel :is(input, textarea, select) {
+  transition:
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    background-color 220ms ease,
+    color 220ms ease,
+    transform 220ms var(--motion-smooth);
+}
+
+.app-shell-main :is(input, textarea, select):focus,
+.modal-panel :is(input, textarea, select):focus {
+  transform: translate3d(0, -1px, 0);
+}
+
+.app-shell-main .hero-cta,
+.app-shell-main .mission-sweep button,
+.app-shell-main .mission-sweep a[href] {
+  animation: microPulse 5.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+
+  .app-shell-main > * {
+    opacity: 1;
+  }
+}

@@ -1,0 +1,155 @@
+services:
+  app:
+    restart: unless-stopped
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ""
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+        VITE_SENTRY_ENVIRONMENT: ${VITE_SENTRY_ENVIRONMENT:-production}
+        VITE_SENTRY_TRACES_SAMPLE_RATE: ${VITE_SENTRY_TRACES_SAMPLE_RATE:-0}
+        VITE_APP_VERSION: ${APP_VERSION:-}
+    ports:
+      - "127.0.0.1:${FRONTEND_BIND_PORT:-8080}:80"
+    depends_on:
+      server:
+        condition: service_healthy
+
+  server-init:
+    restart: "no"
+    build:
+      context: ./backend
+    command: ["true"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      DJANGO_ENV: production
+      DEBUG: "False"
+      DJANGO_SETTINGS_MODULE: backend.settings
+      DATABASE_ENGINE: mysql
+      DATABASE_HOST: db
+      DATABASE_PORT: 3306
+      REDIS_URL: redis://redis:6379/0
+      RUN_INIT_TASKS_ONLY: "1"
+    volumes:
+      - media_data:/app/media
+      - books_data:/app/books
+      - news_data:/app/news
+      - schedules_data:/app/schedules
+
+  server:
+    restart: unless-stopped
+    build:
+      context: ./backend
+    expose:
+      - "1337"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:1337/api/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 6
+      start_period: 45s
+    depends_on:
+      server-init:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      DJANGO_ENV: production
+      DEBUG: "False"
+      DJANGO_SETTINGS_MODULE: backend.settings
+      DATABASE_ENGINE: mysql
+      DATABASE_HOST: db
+      DATABASE_PORT: 3306
+      REDIS_URL: redis://redis:6379/0
+      SESSION_COOKIE_SECURE: "True"
+      CSRF_COOKIE_SECURE: "True"
+      SKIP_INIT_TASKS: "1"
+    volumes:
+      - media_data:/app/media
+      - books_data:/app/books
+      - news_data:/app/news
+      - schedules_data:/app/schedules
+
+  worker:
+    restart: unless-stopped
+    build:
+      context: ./backend
+    command: python manage.py process_background_jobs --loop --sleep 5 --limit 20
+    depends_on:
+      server-init:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      DJANGO_ENV: production
+      DEBUG: "False"
+      DJANGO_SETTINGS_MODULE: backend.settings
+      DATABASE_ENGINE: mysql
+      DATABASE_HOST: db
+      DATABASE_PORT: 3306
+      REDIS_URL: redis://redis:6379/0
+      SKIP_INIT_TASKS: "1"
+    volumes:
+      - media_data:/app/media
+      - books_data:/app/books
+      - news_data:/app/news
+      - schedules_data:/app/schedules
+
+  telegram-bot:
+    restart: unless-stopped
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.bot
+    env_file:
+      - .env
+    environment:
+      BACKEND_BASE_URL: http://server:1337
+    depends_on:
+      server:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DATABASE_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DATABASE_NAME}
+      MYSQL_USER: ${DATABASE_USERNAME}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+volumes:
+  mysql_data:
+  redis_data:
+  media_data:
+  books_data:
+  news_data:
+  schedules_data:

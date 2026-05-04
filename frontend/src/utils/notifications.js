@@ -9,15 +9,27 @@
  * @param {number} duration - время показа в мс
  */
 export const showNotification = (message, type = 'info', duration = 5000) => {
+  const safeType = ['success', 'error', 'warning', 'info'].includes(type) ? type : 'info';
+
   // Создаем элемент уведомления
   const notification = document.createElement('div');
-  notification.className = `notification notification-${type}`;
-  notification.innerHTML = `
-    <div class="notification-content">
-      <span class="notification-message">${message}</span>
-      <button class="notification-close">&times;</button>
-    </div>
-  `;
+  notification.className = `notification notification-${safeType}`;
+
+  const content = document.createElement('div');
+  content.className = 'notification-content';
+
+  const messageElement = document.createElement('span');
+  messageElement.className = 'notification-message';
+  messageElement.textContent = String(message ?? '');
+
+  const closeButton = document.createElement('button');
+  closeButton.className = 'notification-close';
+  closeButton.type = 'button';
+  closeButton.setAttribute('aria-label', 'Закрыть уведомление');
+  closeButton.textContent = '×';
+
+  content.append(messageElement, closeButton);
+  notification.appendChild(content);
   
   // Добавляем стили если еще не добавлены
   if (!document.getElementById('notification-styles')) {
@@ -134,7 +146,7 @@ export const showNotification = (message, type = 'info', duration = 5000) => {
   };
   
   // Закрытие по клику на крестик
-  notification.querySelector('.notification-close').addEventListener('click', closeNotification);
+  closeButton.addEventListener('click', closeNotification);
   
   // Автоматическое закрытие
   if (duration > 0) {

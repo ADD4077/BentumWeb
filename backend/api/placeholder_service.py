@@ -98,3 +98,14 @@ class PlaceholderGenerator:
             }
         
         return None
+
+    @staticmethod
+    def get_or_create_placeholder(user, media_type):
+        """
+        Legacy compatibility shim.
+
+        The current placeholder system is CSS/data-based and does not create
+        a media file in storage, so there is nothing to return here.
+        """
+        del user, media_type
+        return None

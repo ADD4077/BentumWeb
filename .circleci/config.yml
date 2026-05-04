@@ -1,0 +1,94 @@
+version: 2.1
+
+executors:
+  node:
+    docker:
+      - image: cimg/node:20.19
+  python:
+    docker:
+      - image: cimg/python:3.13
+
+jobs:
+  frontend:
+    executor: node
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - frontend-npm-{{ checksum "frontend/package-lock.json" }}
+      - run:
+          name: Install frontend dependencies
+          command: cd frontend && npm ci
+      - save_cache:
+          key: frontend-npm-{{ checksum "frontend/package-lock.json" }}
+          paths:
+            - ~/.npm
+      - run:
+          name: Audit frontend dependencies
+          command: cd frontend && npm audit --audit-level=moderate
+      - run:
+          name: Lint frontend
+          command: cd frontend && npm run lint
+      - run:
+          name: Test frontend
+          command: cd frontend && npm run test
+      - run:
+          name: Build frontend
+          command: cd frontend && npm run build
+
+  backend:
+    executor: python
+    environment:
+      DJANGO_SETTINGS_MODULE: backend.settings
+      DJANGO_ENV: dev
+      DJANGO_TEST_USE_SQLITE: "1"
+      DJANGO_SECRET_KEY: test-secret-key
+      DEBUG: "True"
+      DJANGO_ALLOWED_HOSTS: 127.0.0.1,localhost
+      DATABASE_ENGINE: sqlite3
+      DATABASE_NAME: test.sqlite3
+      DATABASE_USERNAME: ""
+      DATABASE_PASSWORD: ""
+      DATABASE_HOST: ""
+      DATABASE_PORT: ""
+      REDIS_URL: ""
+      TELEGRAM_BOT_TOKEN: test-token
+      TELEGRAM_CHAT_ID: test-chat
+      TELEGRAM_INTERNAL_API_TOKEN: test-internal-token
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - backend-pip-{{ checksum "backend/requirements.txt" }}
+      - run:
+          name: Install system dependencies
+          command: sudo apt-get update && sudo apt-get install -y default-libmysqlclient-dev pkg-config
+      - run:
+          name: Install backend dependencies
+          command: |
+            cd backend
+            python -m venv .venv
+            . .venv/bin/activate
+            pip install -r requirements.txt pip-audit
+      - save_cache:
+          key: backend-pip-{{ checksum "backend/requirements.txt" }}
+          paths:
+            - ~/.cache/pip
+      - run:
+          name: Audit backend dependencies
+          command: cd backend && . .venv/bin/activate && python -m pip_audit -r requirements.txt
+      - run:
+          name: Django system check
+          command: cd backend && . .venv/bin/activate && python manage.py check
+      - run:
+          name: Check migration drift
+          command: cd backend && . .venv/bin/activate && python manage.py makemigrations api --check --dry-run
+      - run:
+          name: Test backend
+          command: cd backend && . .venv/bin/activate && python manage.py test api.tests -v 1
+
+workflows:
+  quality:
+    jobs:
+      - frontend
+      - backend

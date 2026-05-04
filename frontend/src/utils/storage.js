@@ -70,15 +70,11 @@ export const safeRemoveItem = (key) => {
  * Очищает все данные приложения из localStorage
  * @returns {boolean} успешно ли очищено
  */
-export const clearAppStorage = () => {
+export const clearAuthStorage = () => {
   const keysToRemove = [
     'token',
-    'user', 
     'banEndDate',
-    'activeTab',
-    'openProfileModal',
     'admin_users',
-    'darkMode'
   ];
   
   let success = true;
@@ -92,50 +88,26 @@ export const clearAppStorage = () => {
 };
 
 /**
- * Проверяет валидность пользовательских данных
- * @param {any} userData - данные пользователя
- * @returns {boolean} валидны ли данные
+ * Очищает все данные приложения из localStorage
+ * @returns {boolean} успешно ли очищено
  */
-export const isValidUserData = (userData) => {
-  if (!userData || typeof userData !== 'object') {
-    return false;
-  }
-  
-  // Проверяем обязательные поля
-  const requiredFields = ['id', 'fullname'];
-  return requiredFields.every(field => 
-    userData.hasOwnProperty(field) && userData[field] !== null && userData[field] !== undefined
-  );
-};
+export const clearAppStorage = () => {
+  clearAuthStorage();
 
-/**
- * Безопасно сохраняет пользовательские данные с валидацией
- * @param {object} userData - данные пользователя
- * @returns {boolean} успешно ли сохранено
- */
-export const safeSetUserData = (userData) => {
-  if (!isValidUserData(userData)) {
-    safeLogWarning('Попытка сохранить невалидные данные пользователя:', userData);
-    return false;
-  }
+  const keysToRemove = [
+    'openProfileModal',
+    'admin_users',
+    'darkMode'
+  ];
   
-  return safeSetItem('user', userData);
-};
-
-/**
- * Безопасно получает пользовательские данные с валидацией
- * @returns {object|null} данные пользователя или null
- */
-export const safeGetUserData = () => {
-  const userData = safeGetItem('user', null);
+  let success = true;
+  keysToRemove.forEach(key => {
+    if (!safeRemoveItem(key)) {
+      success = false;
+    }
+  });
   
-  if (userData && !isValidUserData(userData)) {
-    safeLogWarning('Обнаружены невалидные данные пользователя, очищаю...');
-    safeRemoveItem('user');
-    return null;
-  }
-  
-  return userData;
+  return success;
 };
 
 /**

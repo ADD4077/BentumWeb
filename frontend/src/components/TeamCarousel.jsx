@@ -1,24 +1,88 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import UserProfileModal from './UserProfileModal.jsx';
+import { fetchUserProfileByCode } from '../services/userProfiles.js';
+import { buildMediaUrl } from '../utils/media.js';
 
-function TeamCarousel({ teamMembers }) {
+function TeamCarousel({ teamMembers, darkMode }) {
+  const safeTeamMembers = Array.isArray(teamMembers) ? teamMembers : [];
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [selectedStudentCode, setSelectedStudentCode] = useState(null);
+  const [memberAvatars, setMemberAvatars] = useState({});
   const intervalRef = useRef(null);
   const timeoutRef = useRef(null);
   const carouselRef = useRef(null);
+
+  useEffect(() => {
+    if (safeTeamMembers.length === 0) {
+      setMemberAvatars({});
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadMemberAvatars = async () => {
+      const avatars = {};
+      const membersWithCodes = safeTeamMembers
+        .map((member) => ({ member, studentCode: member.studentCode }))
+        .filter(({ studentCode }) => Boolean(studentCode));
+
+      const profiles = await Promise.all(
+        membersWithCodes.map(({ studentCode }) => fetchUserProfileByCode(studentCode)),
+      );
+
+      membersWithCodes.forEach(({ member }, index) => {
+        const profile = profiles[index];
+        if (profile?.avatar_url) {
+          avatars[member.name] = profile.avatar_url;
+        }
+      });
+
+      if (!cancelled) {
+        setMemberAvatars(avatars);
+      }
+    };
+
+    if (safeTeamMembers.length > 0) {
+      loadMemberAvatars();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [safeTeamMembers]);
+
+  const handleAvatarClick = async (member) => {
+    const studentCode = member.studentCode;
+    if (!studentCode) return;
+
+    try {
+      const profile = await fetchUserProfileByCode(studentCode);
+      if (!profile) {
+        return;
+      }
+
+      setSelectedStudentCode(studentCode);
+      setIsProfileModalOpen(true);
+    } catch {
+      return;
+    }
+  };
+
   const startAutoPlay = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
     intervalRef.current = setInterval(() => {
-      setCurrentIndex((prevIndex) => 
-        prevIndex === teamMembers.length - 1 ? 0 : prevIndex + 1
-      );
+      setCurrentIndex((prevIndex) => (
+        prevIndex === safeTeamMembers.length - 1 ? 0 : prevIndex + 1
+      ));
     }, 4000);
-  }, [teamMembers.length]);
-  
+  }, [safeTeamMembers.length]);
+
   const stopAutoPlay = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -27,7 +91,7 @@ function TeamCarousel({ teamMembers }) {
       clearTimeout(timeoutRef.current);
     }
   }, []);
-  
+
   const resumeAutoPlay = useCallback(() => {
     stopAutoPlay();
     timeoutRef.current = setTimeout(() => {
@@ -37,37 +101,36 @@ function TeamCarousel({ teamMembers }) {
   }, [stopAutoPlay, startAutoPlay]);
 
   const nextSlide = useCallback(() => {
-    setCurrentIndex((prevIndex) => 
-      prevIndex === teamMembers.length - 1 ? 0 : prevIndex + 1
-    );
+    setCurrentIndex((prevIndex) => (
+      prevIndex === safeTeamMembers.length - 1 ? 0 : prevIndex + 1
+    ));
     resumeAutoPlay();
-  }, [teamMembers.length, resumeAutoPlay]);
-  
+  }, [safeTeamMembers.length, resumeAutoPlay]);
+
   const prevSlide = useCallback(() => {
-    setCurrentIndex((prevIndex) => 
-      prevIndex === 0 ? teamMembers.length - 1 : prevIndex - 1
-    );
+    setCurrentIndex((prevIndex) => (
+      prevIndex === 0 ? safeTeamMembers.length - 1 : prevIndex - 1
+    ));
     resumeAutoPlay();
-  }, [teamMembers.length, resumeAutoPlay]);
-  
+  }, [safeTeamMembers.length, resumeAutoPlay]);
+
   const goToSlide = useCallback((index) => {
     setCurrentIndex(index);
     resumeAutoPlay();
   }, [resumeAutoPlay]);
 
-  // Touch handlers for swipe
-  const handleTouchStart = useCallback((e) => {
+  const handleTouchStart = useCallback((event) => {
     setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
+    setTouchStart(event.targetTouches[0].clientX);
   }, []);
 
-  const handleTouchMove = useCallback((e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
+  const handleTouchMove = useCallback((event) => {
+    setTouchEnd(event.targetTouches[0].clientX);
   }, []);
 
-  const handleTouchEnd = useCallback(() => {
+  const handleTouchSlideEnd = useCallback(() => {
     if (!touchStart || !touchEnd) return;
-    
+
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > 50;
     const isRightSwipe = distance < -50;
@@ -78,96 +141,140 @@ function TeamCarousel({ teamMembers }) {
       prevSlide();
     }
   }, [touchStart, touchEnd, nextSlide, prevSlide]);
+
   useEffect(() => {
-    if (isAutoPlaying && teamMembers.length > 1) {
+    if (isAutoPlaying && safeTeamMembers.length > 1) {
       startAutoPlay();
     }
     return () => {
       stopAutoPlay();
     };
-  }, [isAutoPlaying, teamMembers.length]);
+  }, [isAutoPlaying, safeTeamMembers.length, startAutoPlay, stopAutoPlay]);
+
+  useEffect(() => {
+    if (currentIndex >= safeTeamMembers.length) {
+      setCurrentIndex(0);
+    }
+  }, [currentIndex, safeTeamMembers.length]);
+
+  if (!safeTeamMembers.length) {
+    return null;
+  }
+
   return (
     <div className="w-full max-w-6xl mx-auto mt-0">
-      <h2 className="text-3xl font-bold text-center text-slate-900 dark:text-white mb-12">
+      <h2 className="mb-12 text-center text-3xl font-bold text-slate-900 dark:text-white">
         Наша команда
       </h2>
-      <div className="relative">
-        <div 
-          ref={carouselRef}
-          className="overflow-hidden rounded-2xl max-w-4xl mx-auto" 
-          style={{ 
-            padding: '20px',
-            touchAction: 'pan-y pinch-zoom'
-          }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          <div 
-            className="flex transition-transform duration-500 ease-in-out"
-            style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+      <div className="relative overflow-visible">
+        <div className="mx-auto max-w-4xl overflow-visible px-2 pb-8 pt-3">
+          <div
+            ref={carouselRef}
+            className="overflow-hidden rounded-2xl"
+            style={{
+              padding: '36px 28px 42px',
+              touchAction: 'pan-y pinch-zoom',
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchSlideEnd}
           >
-            {teamMembers.map((member, index) => (
-              <div key={index} className="w-full flex-shrink-0 px-4">
-                <div className="max-w-md mx-auto bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/50 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-md">
-                  <div className="flex flex-col items-center text-center">
-                    <div className="w-32 h-32 rounded-3xl overflow-hidden bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg flex items-center justify-center mb-6 transition-all duration-300 ease-out transform translate-y-0 rotate-0 hover:shadow-2xl hover:shadow-gray-400/50 group cursor-pointer hover:-translate-y-2 hover:rotate-6">
-                      {member.image ? (
-                        <img 
-                          src={member.image} 
-                          alt={member.name}
-                          className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:contrast-105"
-                        />
-                      ) : (
-                        <span className="text-white text-4xl font-bold transition-all duration-300 group-hover:text-white group-hover:scale-110">
-                          {member.name.split(' ').map(n => n[0]).join('')}
-                        </span>
-                      )}
+            <div
+              className="flex transition-transform duration-500 ease-in-out"
+              style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+            >
+              {safeTeamMembers.map((member, index) => (
+                <div key={index} className="w-full flex-shrink-0 px-4">
+                  <div className="glass-card interactive-lift shimmer-surface mx-auto max-w-md rounded-3xl border border-white/50 bg-white/40 p-8 shadow-lg backdrop-blur-md transition-all duration-500 hover:shadow-xl dark:border-slate-700/50 dark:bg-slate-800/40">
+                    <div className="flex flex-col items-center text-center">
+                      <button
+                        type="button"
+                        className="group floating-slow mb-6 flex h-32 w-32 items-center justify-center overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg transition-all duration-500 ease-out hover:-translate-y-2 hover:rotate-6 hover:shadow-2xl hover:shadow-gray-400/50"
+                        onClick={() => handleAvatarClick(member)}
+                      >
+                        {memberAvatars[member.name] ? (
+                          <img
+                            src={buildMediaUrl(memberAvatars[member.name])}
+                            alt={member.name}
+                            className="h-full w-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:contrast-105"
+                            onError={(event) => {
+                              event.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <span className="text-4xl font-bold text-white transition-all duration-300 group-hover:scale-110">
+                            {member.name.split(' ').map((name) => name[0]).join('')}
+                          </span>
+                        )}
+                      </button>
+
+                      <h3 className="mb-2 text-2xl font-bold text-slate-900 dark:text-white">
+                        {member.name}
+                      </h3>
+                      <p className="mb-4 font-semibold text-emerald-600 dark:text-emerald-400">
+                        {member.role}
+                      </p>
+                      <p className="leading-relaxed text-slate-600 dark:text-slate-400">
+                        {member.description}
+                      </p>
+
+                      {member.studentCode ? (
+                        <button
+                          type="button"
+                          onClick={() => handleAvatarClick(member)}
+                          className="mt-5 inline-flex items-center gap-2 rounded-2xl border border-emerald-300/70 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-300 dark:hover:bg-emerald-500/15"
+                        >
+                          Открыть профиль
+                        </button>
+                      ) : null}
                     </div>
-                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                      {member.name}
-                    </h3>
-                    <p className="text-emerald-600 dark:text-emerald-400 font-semibold mb-4">
-                      {member.role}
-                    </p>
-                    <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                      {member.description}
-                    </p>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-center gap-4 mt-6">
+
+      <div className="flex items-center justify-center gap-4">
         <button
           onClick={prevSlide}
-          className="w-12 h-12 bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/50 rounded-full flex items-center justify-center shadow-lg hover:bg-white/60 dark:hover:bg-slate-800/60 transition-all duration-300 backdrop-blur-md"
+          className="interactive-lift flex h-12 w-12 items-center justify-center rounded-full border border-white/50 bg-white/40 shadow-lg backdrop-blur-md transition-all duration-500 hover:bg-white/60 dark:border-slate-700/50 dark:bg-slate-800/40 dark:hover:bg-slate-800/60"
         >
-          <span className="text-slate-900 dark:text-white text-xl">‹</span>
+          <span className="text-xl text-slate-900 dark:text-white">‹</span>
         </button>
         <div className="flex gap-2">
-          {teamMembers.map((_, index) => (
+          {safeTeamMembers.map((_, index) => (
             <button
               key={index}
               onClick={() => goToSlide(index)}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                index === currentIndex 
-                  ? 'bg-gray-500/60 w-8' 
-                  : 'bg-gray-300/40 dark:bg-gray-600/40 hover:bg-gray-400/60 dark:hover:bg-gray-500/60'
+              className={`h-2 w-2 rounded-full transition-all duration-300 ${
+                index === currentIndex
+                  ? 'w-8 bg-gray-500/60'
+                  : 'bg-gray-300/40 hover:bg-gray-400/60 dark:bg-gray-600/40 dark:hover:bg-gray-500/60'
               }`}
             />
           ))}
         </div>
         <button
           onClick={nextSlide}
-          className="w-12 h-12 bg-white/40 dark:bg-slate-800/40 border border-white/50 dark:border-slate-700/50 rounded-full flex items-center justify-center shadow-lg hover:bg-white/60 dark:hover:bg-slate-800/60 transition-all duration-300 backdrop-blur-md"
+          className="interactive-lift flex h-12 w-12 items-center justify-center rounded-full border border-white/50 bg-white/40 shadow-lg backdrop-blur-md transition-all duration-500 hover:bg-white/60 dark:border-slate-700/50 dark:bg-slate-800/40 dark:hover:bg-slate-800/60"
         >
-          <span className="text-slate-900 dark:text-white text-xl">›</span>
+          <span className="text-xl text-slate-900 dark:text-white">›</span>
         </button>
       </div>
+
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => {
+          setIsProfileModalOpen(false);
+          setSelectedStudentCode(null);
+        }}
+        studentCode={selectedStudentCode}
+        darkMode={darkMode}
+      />
     </div>
   );
 }
+
 export default TeamCarousel;

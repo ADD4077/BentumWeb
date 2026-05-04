@@ -1,129 +1,154 @@
 import React, { useState } from 'react';
 import { LogIn } from 'lucide-react';
+
 import { useAuth } from '../contexts/AuthContext.jsx';
+
 function LoginModal({ isOpen, onClose, onInstructionOpen }) {
   const [studentCode, setStudentCode] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
+
   if (!isOpen) return null;
+
   const validateForm = () => {
-    const newErrors = {};
+    const nextErrors = {};
+
     if (!studentCode) {
-      newErrors.studentCode = 'Это поле обязательно';
+      nextErrors.studentCode = 'Это поле обязательно';
     } else if (!/^\d+$/.test(studentCode)) {
-      newErrors.studentCode = 'Некорректные данные';
+      nextErrors.studentCode = 'Некорректные данные';
     } else if (studentCode.length !== 10) {
-      newErrors.studentCode = 'Не менее 10 цифр';
+      nextErrors.studentCode = 'Не менее 10 цифр';
     }
+
     if (!password) {
-      newErrors.password = 'Это поле обязательно';
+      nextErrors.password = 'Это поле обязательно';
     } else if (password.length < 7) {
-      newErrors.password = 'Минимум 7 символов';
+      nextErrors.password = 'Минимум 7 символов';
     }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (validateForm()) {
-      setIsLoading(true);
-      try {
-        const result = await login(studentCode, password);
-        if (result.success) {
-          onClose();
-        } else {
-          setErrors({ general: result.error });
-        }
-      } catch (error) {
-      setErrors({ general: 'Ошибка соединения с сервером' });
-      } finally {
-        setIsLoading(false);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const result = await login(studentCode, password);
+      if (result.success) {
+        onClose();
+      } else {
+        setErrors({ general: result.error });
       }
+    } catch {
+      setErrors({ general: 'Ошибка соединения с сервером' });
+    } finally {
+      setIsLoading(false);
     }
   };
-  const handleStudentCodeChange = (e) => {
-    const value = e.target.value;
+
+  const handleStudentCodeChange = (event) => {
+    const value = event.target.value;
     if (/^\d*$/.test(value)) {
       setStudentCode(value);
       if (errors.studentCode) {
-        setErrors({ ...errors, studentCode: '' });
+        setErrors((current) => ({ ...current, studentCode: '' }));
       }
     }
   };
-  const handlePasswordChange = (e) => {
-    const value = e.target.value;
-    setPassword(value);
+
+  const handlePasswordChange = (event) => {
+    setPassword(event.target.value);
     if (errors.password) {
-      setErrors({ ...errors, password: '' });
+      setErrors((current) => ({ ...current, password: '' }));
     }
   };
+
+  const inputClassName = (hasError) => `w-full rounded-2xl border px-5 py-4 text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.06)] transition-all duration-300 focus:outline-none focus:ring-2 dark:text-white ${
+    hasError
+      ? 'border-red-500 focus:ring-red-500 bg-white dark:bg-slate-800/70'
+      : 'border-slate-300/70 bg-white/90 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-800/70'
+  }`;
+
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#0B0F19] border border-gray-200 dark:border-slate-700 rounded-3xl w-full max-w-md p-8 shadow-2xl relative custom-scrollbar">
-        <button 
+    <div className="modal-backdrop fixed inset-0 z-[150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="modal-panel w-full max-w-md rounded-3xl border border-slate-300/70 bg-white/96 p-8 shadow-2xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-800/90">
+        <button
           onClick={onClose}
-          className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+          className="absolute right-6 top-6 text-slate-400 transition-colors hover:text-slate-700 dark:hover:text-slate-200"
         >
           ✕
         </button>
-        <div className="text-center mb-8">
-          <div className="inline-flex justify-center items-center w-16 h-16 bg-gradient-to-tr from-emerald-400 to-teal-600 rounded-3xl text-white mb-6 shadow-lg shadow-emerald-500/30">
-            <LogIn className="w-8 h-8" />
+
+        <div className="mb-8 text-center">
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-xl shadow-emerald-500/25">
+            <LogIn className="h-8 w-8" />
           </div>
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Вход</h2>
-          <p className="text-slate-500 text-sm mt-3">Войдите в личный кабинет, чтобы получить доступ к функционалу</p>
+          <h2 className="mt-6 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Вход
+          </h2>
+          <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+            Войдите в личный кабинет, чтобы получить доступ к функциям платформы.
+          </p>
         </div>
+
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div>
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 ml-1">Номер студенческого</label>
-            <input 
-              type="text" 
+            <label className="mb-2 ml-1 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Номер студенческого
+            </label>
+            <input
+              type="text"
               value={studentCode}
               onChange={handleStudentCodeChange}
-              className={`w-full px-5 py-4 rounded-2xl bg-gray-50 dark:bg-slate-800/50 border focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent dark:text-white transition-all font-medium ${
-                errors.studentCode 
-                  ? 'border-red-500 focus:ring-red-500' 
-                  : 'border-gray-200 dark:border-slate-700'
-              }`}
-              placeholder="10701120"
+              className={inputClassName(Boolean(errors.studentCode))}
+              placeholder="1070112023"
               maxLength={10}
             />
-            {errors.studentCode && (
-              <p className="text-red-500 text-sm mt-2 ml-1">{errors.studentCode}</p>
-            )}
+            {errors.studentCode ? (
+              <p className="mt-2 ml-1 text-sm text-red-500">{errors.studentCode}</p>
+            ) : null}
           </div>
+
           <div>
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 ml-1">Пароль</label>
-            <input 
-              type="password" 
+            <label className="mb-2 ml-1 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Пароль
+            </label>
+            <input
+              type="password"
               value={password}
               onChange={handlePasswordChange}
-              className={`w-full px-5 py-4 rounded-2xl bg-gray-50 dark:bg-slate-800/50 border focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent dark:text-white transition-all font-medium ${
-                errors.password 
-                  ? 'border-red-500 focus:ring-red-500' 
-                  : 'border-gray-200 dark:border-slate-700'
-              }`}
+              className={inputClassName(Boolean(errors.password))}
               placeholder="Минимум 7 символов"
             />
-            {errors.password && (
-              <p className="text-red-500 text-sm mt-2 ml-1">{errors.password}</p>
-            )}
+            {errors.password ? (
+              <p className="mt-2 ml-1 text-sm text-red-500">{errors.password}</p>
+            ) : null}
           </div>
-          {errors.general && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-3">
-              <p className="text-red-600 dark:text-red-400 text-sm">{errors.general}</p>
+
+          {errors.general ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50/90 p-3 dark:border-red-800 dark:bg-red-900/20">
+              <p className="text-sm text-red-600 dark:text-red-400">{errors.general}</p>
             </div>
-          )}
-          <button 
+          ) : null}
+
+          <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-2xl font-bold text-lg shadow-lg shadow-emerald-500/30 transition-all hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50 mt-2 flex items-center justify-center gap-2"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 py-4 text-lg font-bold text-white shadow-xl shadow-emerald-500/25 transition-all duration-300 hover:from-emerald-500 hover:via-teal-500 hover:to-cyan-400 disabled:opacity-50"
           >
             {isLoading ? (
               <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 Вход...
               </>
             ) : (
@@ -131,11 +156,12 @@ function LoginModal({ isOpen, onClose, onInstructionOpen }) {
             )}
           </button>
         </form>
+
         <div className="mt-8 text-center text-sm">
-          <span className="text-slate-500">Как войти? </span>
-          <button 
+          <span className="text-slate-500 dark:text-slate-400">Как войти? </span>
+          <button
             onClick={onInstructionOpen}
-            className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline transition-colors"
+            className="font-bold text-emerald-600 transition-colors hover:text-emerald-700 hover:underline dark:text-emerald-400 dark:hover:text-emerald-300"
           >
             Инструкция
           </button>
@@ -144,4 +170,5 @@ function LoginModal({ isOpen, onClose, onInstructionOpen }) {
     </div>
   );
 }
+
 export default LoginModal;
