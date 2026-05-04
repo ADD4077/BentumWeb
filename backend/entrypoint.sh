@@ -2,6 +2,8 @@
 set -e
 
 run_init_tasks() {
+  python manage.py makemigrations
+
   python manage.py migrate
 
   if [ -n "$DJANGO_SUPERUSER_USERNAME" ]; then
@@ -45,11 +47,6 @@ if identifier and password and not User.objects.filter(**{lookup_field: identifi
 
   python manage.py collectstatic --noinput
 }
-
-if [ "${RUN_INIT_TASKS_ONLY:-0}" = "1" ]; then
-  run_init_tasks
-  exit 0
-fi
 
 if [ "${SKIP_INIT_TASKS:-0}" = "1" ]; then
   exec "$@"
