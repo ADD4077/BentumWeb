@@ -79,7 +79,6 @@ def require_admin(view_func):
         if not can_access_admin_panel(user):
             return JsonResponse(
                 {
-                    "success": False,
                     "detail": "Недостаточно прав",
                 },
                 status=403,
@@ -98,7 +97,7 @@ def is_request_authenticated(request) -> bool:
     return bool(session and session.get("is_authenticated"))
 
 
-def validate_method(allowed_methods):
+def validate_method(*allowed_methods):
     """Декоратор для валидации HTTP-метода."""
 
     def decorator(view_func):
