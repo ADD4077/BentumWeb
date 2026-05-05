@@ -19,8 +19,6 @@ export default defineConfig({
         secure: false,
       }
     },
-    hmr: {
-      path: process.env.VITE_WS_PATH, 
-    },
+    hmr: false
   }
 })

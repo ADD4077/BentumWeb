@@ -1,2 +1,2 @@
-CREATE USER 'admin'@'%' IDENTIFIED BY 'RllyStrongPassword';
+CREATE USER IF NOT EXISTS 'admin'@'%' IDENTIFIED BY 'RllyStrongPassword';
 CREATE DATABASE IF NOT EXISTS dockerdjango;
