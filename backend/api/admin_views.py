@@ -3,11 +3,17 @@ import logging
 
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 
 from .ban_service import BanService
 from .common.permissions import can_access_admin_panel
+from .common.responses import (
+    auth_required_response,
+    error_response,
+    not_found_response,
+    permission_denied_response,
+    success_response,
+)
 from .common.utils import get_current_user, is_request_authenticated
 from .models import Administration, User
 
@@ -16,33 +22,24 @@ logger = logging.getLogger(__name__)
 
 def _get_admin_user(request):
     if not is_request_authenticated(request):
-        return None, JsonResponse(
-            {"success": False, "detail": "РўСЂРµР±СѓРµС‚СЃСЏ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ"},
-            status=401,
-        )
+        return None, auth_required_response()
 
     current_user = get_current_user(request)
     if current_user is None:
-        return None, JsonResponse(
-            {"success": False, "detail": "РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ"},
-            status=404,
-        )
+        return None, not_found_response("Пользователь не найден")
 
     if not can_access_admin_panel(current_user):
-        return None, JsonResponse(
-            {"success": False, "detail": "РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РїСЂР°РІ"},
-            status=403,
-        )
+        return None, permission_denied_response()
 
     return current_user, None
 
 
 @require_http_methods(["POST"])
 def appoint_administrator(request):
-    """РќР°Р·РЅР°С‡РµРЅРёРµ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°."""
-    current_user, error_response = _get_admin_user(request)
-    if error_response:
-        return error_response
+    """Назначение администратора."""
+    current_user, error_response_obj = _get_admin_user(request)
+    if error_response_obj:
+        return error_response_obj
 
     try:
         data = json.loads(request.body or "{}")
@@ -50,19 +47,16 @@ def appoint_administrator(request):
         notes = data.get("notes", "")
 
         if not target_student_code:
-            return JsonResponse({"success": False, "detail": "РќРµ СѓРєР°Р·Р°РЅ РєРѕРґ СЃС‚СѓРґРµРЅС‚Р°"}, status=400)
+            return error_response("Не указан код студента")
 
         try:
             target_user = User.objects.get(student_code=target_student_code)
         except User.DoesNotExist:
-            return JsonResponse({"success": False, "detail": "РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ"}, status=404)
+            return not_found_response("Пользователь не найден")
 
         already_admin = Administration.objects.filter(administrator=target_user, is_active=True).exists()
         if already_admin:
-            return JsonResponse(
-                {"success": False, "detail": "РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ СѓР¶Рµ СЏРІР»СЏРµС‚СЃСЏ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂРѕРј"},
-                status=400,
-            )
+            return error_response("Пользователь уже является администратором")
 
         with transaction.atomic():
             admin_record = Administration.objects.create(
@@ -71,84 +65,75 @@ def appoint_administrator(request):
                 notes=notes,
             )
 
-        return JsonResponse(
-            {
-                "success": True,
-                "message": f"РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ {target_user.fullname} РЅР°Р·РЅР°С‡РµРЅ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂРѕРј",
-                "administration": {
-                    "id": admin_record.id,
-                    "administrator": {
-                        "id": target_user.id,
-                        "student_code": target_user.student_code,
-                        "fullname": target_user.fullname,
-                        "faculty": target_user.faculty,
-                    },
-                    "appointed_by": {
-                        "id": current_user.id,
-                        "student_code": current_user.student_code,
-                        "fullname": current_user.fullname,
-                    },
-                    "appointed_at": admin_record.appointed_at.isoformat(),
-                    "notes": admin_record.notes,
+        return success_response(
+            message=f"Пользователь {target_user.fullname} назначен администратором",
+            administration={
+                "id": admin_record.id,
+                "administrator": {
+                    "id": target_user.id,
+                    "student_code": target_user.student_code,
+                    "fullname": target_user.fullname,
+                    "faculty": target_user.faculty,
                 },
-            }
+                "appointed_by": {
+                    "id": current_user.id,
+                    "student_code": current_user.student_code,
+                    "fullname": current_user.fullname,
+                },
+                "appointed_at": admin_record.appointed_at.isoformat(),
+                "notes": admin_record.notes,
+            },
         )
     except json.JSONDecodeError:
-        return JsonResponse({"success": False, "detail": "РќРµРІРµСЂРЅС‹Р№ С„РѕСЂРјР°С‚ РґР°РЅРЅС‹С…"}, status=400)
+        return error_response("Неверный формат данных")
     except Exception:
         logger.exception("Failed to appoint administrator")
-        return JsonResponse({"success": False, "detail": "Р’РЅСѓС‚СЂРµРЅРЅСЏСЏ РѕС€РёР±РєР° СЃРµСЂРІРµСЂР°"}, status=500)
+        return error_response("Внутренняя ошибка сервера", http_status=500)
 
 
 @require_http_methods(["POST"])
 def remove_administrator(request):
-    """РЎРЅСЏС‚РёРµ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР° СЃ РґРѕР»Р¶РЅРѕСЃС‚Рё."""
-    current_user, error_response = _get_admin_user(request)
-    if error_response:
-        return error_response
+    """Снятие администратора с должности."""
+    current_user, error_response_obj = _get_admin_user(request)
+    if error_response_obj:
+        return error_response_obj
 
     try:
         data = json.loads(request.body or "{}")
         target_student_code = data.get("student_code")
 
         if not target_student_code:
-            return JsonResponse({"success": False, "detail": "РќРµ СѓРєР°Р·Р°РЅ РєРѕРґ СЃС‚СѓРґРµРЅС‚Р°"}, status=400)
+            return error_response("Не указан код студента")
 
         try:
             target_user = User.objects.get(student_code=target_student_code)
         except User.DoesNotExist:
-            return JsonResponse({"success": False, "detail": "РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ"}, status=404)
+            return not_found_response("Пользователь не найден")
 
         try:
             admin_record = Administration.objects.get(administrator=target_user, is_active=True)
         except Administration.DoesNotExist:
-            return JsonResponse(
-                {"success": False, "detail": "РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ СЏРІР»СЏРµС‚СЃСЏ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂРѕРј"},
-                status=400,
-            )
+            return error_response("Пользователь не является администратором")
 
         admin_record.is_active = False
         admin_record.save(update_fields=["is_active"])
 
-        return JsonResponse(
-            {
-                "success": True,
-                "message": f"РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ {target_user.fullname} СЃРЅСЏС‚ СЃ РґРѕР»Р¶РЅРѕСЃС‚Рё Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°",
-            }
+        return success_response(
+            message=f"Пользователь {target_user.fullname} снят с должности администратора",
         )
     except json.JSONDecodeError:
-        return JsonResponse({"success": False, "detail": "РќРµРІРµСЂРЅС‹Р№ С„РѕСЂРјР°С‚ РґР°РЅРЅС‹С…"}, status=400)
+        return error_response("Неверный формат данных")
     except Exception:
         logger.exception("Failed to remove administrator")
-        return JsonResponse({"success": False, "detail": "Р’РЅСѓС‚СЂРµРЅРЅСЏСЏ РѕС€РёР±РєР° СЃРµСЂРІРµСЂР°"}, status=500)
+        return error_response("Внутренняя ошибка сервера", http_status=500)
 
 
 @require_http_methods(["GET"])
 def get_administrators(request):
-    """РџРѕР»СѓС‡РµРЅРёРµ СЃРїРёСЃРєР° Р°РєС‚РёРІРЅС‹С… Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂРѕРІ."""
-    _, error_response = _get_admin_user(request)
-    if error_response:
-        return error_response
+    """Получение списка активных администраторов."""
+    _, error_response_obj = _get_admin_user(request)
+    if error_response_obj:
+        return error_response_obj
 
     try:
         page = int(request.GET.get("page", 1))
@@ -189,19 +174,16 @@ def get_administrators(request):
                 }
             )
 
-        return JsonResponse(
-            {
-                "success": True,
-                "administrators": administrators,
-                "pagination": {
-                    "current_page": page_obj.number,
-                    "total_pages": paginator.num_pages,
-                    "total_items": paginator.count,
-                    "has_next": page_obj.has_next(),
-                    "has_previous": page_obj.has_previous(),
-                },
-            }
+        return success_response(
+            administrators=administrators,
+            pagination={
+                "current_page": page_obj.number,
+                "total_pages": paginator.num_pages,
+                "total_items": paginator.count,
+                "has_next": page_obj.has_next(),
+                "has_previous": page_obj.has_previous(),
+            },
         )
     except Exception:
         logger.exception("Failed to get administrators")
-        return JsonResponse({"success": False, "detail": "Р’РЅСѓС‚СЂРµРЅРЅСЏСЏ РѕС€РёР±РєР° СЃРµСЂРІРµСЂР°"}, status=500)
+        return error_response("Внутренняя ошибка сервера", http_status=500)

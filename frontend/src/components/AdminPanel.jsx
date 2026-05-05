@@ -423,7 +423,7 @@ export default function AdminPanel({ darkMode, setActiveTab }) {
       return {
         ...item,
         title: item.subject,
-        subtitle: `${item.created_by?.fullname || 'Пользователь'}${item.preview ? ` • ${item.preview}` : ''}`,
+        subtitle: `${item.created_by?.fullname || 'Пользователь'}${item.preview ? ` · ${item.preview}` : ''}`,
         time: formatRelativeTime(item.last_message_at),
         ...tone,
       };
@@ -512,7 +512,7 @@ export default function AdminPanel({ darkMode, setActiveTab }) {
     ]);
 
     const csv = [
-      '\uFEFFИмя;Студенческий ID;Факультет;Роль;Статус;Email;Дата регистрации;Последняя активность',
+      '﻿Имя;Студенческий ID;Факультет;Роль;Статус;Email;Дата регистрации;Последняя активность',
       ...csvRows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(';')),
     ].join('\n');
 
