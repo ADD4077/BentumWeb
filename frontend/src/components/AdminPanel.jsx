@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 import { API_ENDPOINTS } from '../config/api.js';
-import { formatDateOnly, formatDateTime, formatRelativeTime, parseDateValue } from '../utils/dates.js';
+import { formatDateTime, formatRelativeTime, parseDateValue } from '../utils/dates.js';
 import { buildCsrfHeaders } from '../utils/http.js';
 import { showWarning, showError, showSuccess } from '../utils/notifications.js';
 import { getRoleLabel } from '../utils/roles.js';
