@@ -6,7 +6,6 @@ import {
   GraduationCap,
   Loader2,
   MapPinned,
-  Route,
 } from 'lucide-react';
 
 import ScheduleItem from '../components/ScheduleItem.jsx';
