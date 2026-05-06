@@ -6,6 +6,7 @@ import {
   GraduationCap,
   Loader2,
   MapPinned,
+  Route,
 } from 'lucide-react';
 
 import ScheduleItem from '../components/ScheduleItem.jsx';
@@ -499,7 +500,8 @@ export function SchedulePage() {
               </p>
             )}
           </SideCard>
-          {/* НЕ УДАЛЯТЬ
+          {/* НЕ УДАЛЯТЬ */}
+          {false && (
           <SideCard icon={Route} title="РќР°РІРёРіР°С†РёСЏ РїРѕ РєРѕСЂРїСѓСЃР°Рј">
             <div className="mb-4 overflow-hidden rounded-[1.35rem] border border-slate-200/70 bg-slate-100/80 dark:border-slate-800/70 dark:bg-[#0F1522] sm:rounded-[1.5rem]">
               <div className="flex h-32 items-center justify-center bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.18),_transparent_58%),linear-gradient(135deg,rgba(15,23,42,0.95),rgba(30,41,59,0.85))] sm:h-40">
@@ -516,7 +518,7 @@ export function SchedulePage() {
               </button>
             </div>
           </SideCard>
-          */}
+          )}
 
           {scheduleUpdatedAtLabel ? (
             <div className="section-reveal text-[13px] text-slate-600 dark:text-slate-400 sm:hidden">
