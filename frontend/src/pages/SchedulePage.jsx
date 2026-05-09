@@ -35,6 +35,8 @@ const DAY_NAME_MAP = Object.freeze({
   [daysOfWeek[5]]: 'Суббота',
 });
 
+const SHOW_ROUTE_CARD = false;
+
 function getCurrentTimeMinutes() {
   const now = new Date();
   return now.getHours() * 60 + now.getMinutes();
@@ -501,8 +503,8 @@ export function SchedulePage() {
             )}
           </SideCard>
           {/* НЕ УДАЛЯТЬ */}
-          {false && (
-          <SideCard icon={Route} title="РќР°РІРёРіР°С†РёСЏ РїРѕ РєРѕСЂРїСѓСЃР°Рј">
+          {SHOW_ROUTE_CARD && (
+          <SideCard icon={Route} title="Навигация по корпусам">
             <div className="mb-4 overflow-hidden rounded-[1.35rem] border border-slate-200/70 bg-slate-100/80 dark:border-slate-800/70 dark:bg-[#0F1522] sm:rounded-[1.5rem]">
               <div className="flex h-32 items-center justify-center bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.18),_transparent_58%),linear-gradient(135deg,rgba(15,23,42,0.95),rgba(30,41,59,0.85))] sm:h-40">
                 <MapPinned className="h-10 w-10 text-emerald-400 sm:h-12 sm:w-12" />
@@ -510,10 +512,10 @@ export function SchedulePage() {
             </div>
             <div className="space-y-4">
               <p className="text-[13px] font-medium text-slate-600 dark:text-slate-400">
-                {upcomingLocation || 'РљРѕСЂРїСѓСЃ Рё Р°СѓРґРёС‚РѕСЂРёСЏ РїРѕСЏРІСЏС‚СЃСЏ РІРјРµСЃС‚Рµ СЃ Р±Р»РёР¶Р°Р№С€РµР№ РїР°СЂРѕР№'}
+              {upcomingLocation || 'Корпус и аудитория появятся вместе с ближайшей парой'}
               </p>
               <button className="inline-flex w-full items-center justify-between rounded-2xl border border-slate-200/70 bg-white px-4 py-3 text-[13px] font-semibold text-slate-700 transition-all duration-300 hover:border-emerald-300 hover:text-emerald-600 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:border-emerald-500/30 dark:hover:text-emerald-400">
-                <span>РџРѕСЃС‚СЂРѕРёС‚СЊ РјР°СЂС€СЂСѓС‚</span>
+              <span>Построить маршрут</span>
                 <Route className="h-4 w-4" />
               </button>
             </div>

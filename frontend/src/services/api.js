@@ -43,7 +43,7 @@ function buildNetworkErrorPayload() {
   return {
     ok: false,
     status: 0,
-    detail: 'РћС€РёР±РєР° СЃРµС‚Рё',
+      detail: 'Ошибка сети',
   };
 }
 

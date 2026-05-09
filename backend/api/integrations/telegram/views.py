@@ -29,7 +29,7 @@ def _require_completed_2fa(request):
         return JsonResponse(
             {
                 "success": False,
-                "detail": "РўСЂРµР±СѓРµС‚СЃСЏ Р·Р°РІРµСЂС€РёС‚СЊ РїСЂРѕРІРµСЂРєСѓ 2FA",
+                "detail": "Требуется завершить проверку 2FA",
                 "requires_2fa": True,
             },
             status=403,
@@ -39,11 +39,11 @@ def _require_completed_2fa(request):
 
 def _get_session_user(request):
     if not is_request_authenticated(request):
-        return None, JsonResponse({"success": False, "detail": "РўСЂРµР±СѓРµС‚СЃСЏ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ"}, status=401)
+        return None, JsonResponse({"success": False, "detail": "Требуется авторизация"}, status=401)
 
     user = get_current_user(request)
     if user is None:
-        return None, JsonResponse({"success": False, "detail": "РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ"}, status=404)
+        return None, JsonResponse({"success": False, "detail": "Пользователь не найден"}, status=404)
 
     return user, None
 
@@ -72,7 +72,7 @@ def generate_telegram_link(request):
 
         existing_binding = telegram_binding_service.get_user_binding(user)
         if existing_binding:
-            return JsonResponse({"success": False, "detail": "Telegram Р°РєРєР°СѓРЅС‚ СѓР¶Рµ РїСЂРёРІСЏР·Р°РЅ"}, status=400)
+            return JsonResponse({"success": False, "detail": "Telegram аккаунт уже привязан"}, status=400)
 
         allowed, retry_after = consume_rate_limit(
             "telegram-generate-link",
@@ -84,7 +84,7 @@ def generate_telegram_link(request):
             return JsonResponse(
                 {
                     "success": False,
-                    "detail": "Р РЋР В»Р С‘РЎв‚¬Р С”Р С•Р С Р СР Р…Р С•Р С–Р С• Р В·Р В°Р С—РЎР‚Р С•РЎРѓР С•Р Р† Р Р…Р В° Р С—РЎР‚Р С‘Р Р†РЎРЏР В·Р С”РЎС“ Telegram. Р СџР С•Р С—РЎР‚Р С•Р В±РЎС“Р в„–РЎвЂљР Вµ Р С—Р С•Р В·Р В¶Р Вµ.",
+                    "detail": "Слишком много запросов на привязку Telegram. Попробуйте позже.",
                     "retry_after": retry_after,
                 },
                 status=429,
@@ -103,7 +103,7 @@ def generate_telegram_link(request):
         )
     except Exception:
         logger.exception("Failed to generate Telegram binding link")
-        return JsonResponse({"success": False, "detail": "Р’РЅСѓС‚СЂРµРЅРЅСЏСЏ РѕС€РёР±РєР° СЃРµСЂРІРµСЂР°"}, status=500)
+        return JsonResponse({"success": False, "detail": "Внутренняя ошибка сервера"}, status=500)
 
 
 @require_http_methods(["GET"])
@@ -135,7 +135,7 @@ def get_telegram_binding_status(request):
         )
     except Exception:
         logger.exception("Failed to get Telegram binding status")
-        return JsonResponse({"success": False, "detail": "Р’РЅСѓС‚СЂРµРЅРЅСЏСЏ РѕС€РёР±РєР° СЃРµСЂРІРµСЂР°"}, status=500)
+        return JsonResponse({"success": False, "detail": "Внутренняя ошибка сервера"}, status=500)
 
 
 @require_http_methods(["POST"])
@@ -159,7 +159,7 @@ def unlink_telegram_account(request):
             return JsonResponse(
                 {
                     "success": False,
-                    "detail": "Р РЋР В»Р С‘РЎв‚¬Р С”Р С•Р С Р СР Р…Р С•Р С–Р С• Р В·Р В°Р С—РЎР‚Р С•РЎРѓР С•Р Р† Р Р…Р В° Р С•РЎвЂљР Р†РЎРЏР В·Р С”РЎС“ Telegram. Р СџР С•Р С—РЎР‚Р С•Р В±РЎС“Р в„–РЎвЂљР Вµ Р С—Р С•Р В·Р В¶Р Вµ.",
+                    "detail": "Слишком много запросов на отвязку Telegram. Попробуйте позже.",
                     "retry_after": retry_after,
                 },
                 status=429,
@@ -171,13 +171,13 @@ def unlink_telegram_account(request):
                 ActivityEvent.EVENT_TELEGRAM_UNLINKED,
                 user=user,
                 actor=user,
-                details="Telegram Р°РєРєР°СѓРЅС‚ РѕС‚РІСЏР·Р°РЅ РїРѕР»СЊР·РѕРІР°С‚РµР»РµРј",
+                details="Telegram аккаунт отвязан пользователем",
             )
             return JsonResponse({"success": True, "data": {"message": message}})
         return JsonResponse({"success": False, "detail": message}, status=400)
     except Exception:
         logger.exception("Failed to unlink Telegram account")
-        return JsonResponse({"success": False, "detail": "Р’РЅСѓС‚СЂРµРЅРЅСЏСЏ РѕС€РёР±РєР° СЃРµСЂРІРµСЂР°"}, status=500)
+        return JsonResponse({"success": False, "detail": "Внутренняя ошибка сервера"}, status=500)
 
 
 @allow_unverified_2fa
@@ -197,9 +197,9 @@ def process_telegram_callback(request):
         telegram_data = payload.get("telegram")
 
         if not token:
-            return JsonResponse({"success": False, "detail": "РўРѕРєРµРЅ РЅРµ РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅ"}, status=400)
+            return JsonResponse({"success": False, "detail": "Токен не предоставлен"}, status=400)
         if not isinstance(telegram_data, dict):
-            return JsonResponse({"success": False, "detail": "Р”Р°РЅРЅС‹Рµ Telegram РЅРµ РїСЂРµРґРѕСЃС‚Р°РІР»РµРЅС‹"}, status=400)
+            return JsonResponse({"success": False, "detail": "Данные Telegram не предоставлены"}, status=400)
 
         ok, message = telegram_binding_service.bind_telegram_account_sync(token, telegram_data)
         if ok:
@@ -207,4 +207,4 @@ def process_telegram_callback(request):
         return JsonResponse({"success": False, "detail": message}, status=400)
     except Exception:
         logger.exception("Failed to process Telegram callback")
-        return JsonResponse({"success": False, "detail": "Р’РЅСѓС‚СЂРµРЅРЅСЏСЏ РѕС€РёР±РєР° СЃРµСЂРІРµСЂР°"}, status=500)
+        return JsonResponse({"success": False, "detail": "Внутренняя ошибка сервера"}, status=500)
