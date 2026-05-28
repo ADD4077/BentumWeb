@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { LogIn, X } from 'lucide-react';
 
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -13,10 +13,9 @@ function getReferralCodeFromLocation() {
 }
 
 function LoginModal({ isOpen, onClose, onInstructionOpen }) {
-  const initialReferralCode = useMemo(getReferralCodeFromLocation, []);
   const [studentCode, setStudentCode] = useState('');
   const [password, setPassword] = useState('');
-  const [referralCode, setReferralCode] = useState(initialReferralCode);
+  const [referralCode] = useState(() => getReferralCodeFromLocation());
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();

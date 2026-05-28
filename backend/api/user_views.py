@@ -690,11 +690,6 @@ def unban_user(request):
 def get_user_by_code(request, student_code):
     """Получить информацию о пользователе по студенческому коду."""
     try:
-        viewer, error_response = _get_session_user(request)
-        if error_response:
-            request.session.modified = False
-            return error_response
-
         user = User.objects.filter(student_code=student_code).first()
 
         if not user:
@@ -703,8 +698,8 @@ def get_user_by_code(request, student_code):
 
         user_data = get_public_user_profile_data(
             user,
-            viewer=viewer,
-            respect_privacy_strictly=True,
+            viewer=None,
+            respect_privacy_strictly=False,
         )
         request.session.modified = False
 

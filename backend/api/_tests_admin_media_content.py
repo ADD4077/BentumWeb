@@ -489,7 +489,12 @@ class ContentEndpointTests(TestCase):
     def test_user_by_code_requires_authentication(self):
         response = self.client.get(f"/api/user/by-code/{self.user.student_code}")
 
-        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["user"]["student_code"], self.user.student_code)
+        self.assertEqual(payload["user"]["fullname"], self.user.fullname)
+        self.assertEqual(payload["user"]["faculty"], self.user.faculty)
 
     def test_authenticated_user_by_code_omits_sensitive_fields(self):
         session = self.client.session
@@ -503,7 +508,7 @@ class ContentEndpointTests(TestCase):
         payload = response.json()
         self.assertTrue(payload["success"])
         self.assertEqual(payload["user"]["student_code"], self.user.student_code)
-        self.assertNotIn("faculty", payload["user"])
+        self.assertEqual(payload["user"]["faculty"], self.user.faculty)
         self.assertNotIn("role", payload["user"])
         self.assertNotIn("twofa_enabled", payload["user"])
         self.assertNotIn("twofa_method", payload["user"])
