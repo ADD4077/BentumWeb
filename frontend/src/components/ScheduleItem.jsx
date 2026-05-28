@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   BookOpen,
-  ChevronRight,
   FlaskConical,
   MapPinned,
   Presentation,
@@ -36,7 +35,7 @@ const renderLessonIcon = (type) => {
   return <BookOpen className={iconClassName} />;
 };
 
-function ScheduleItem({ item, highlighted = false }) {
+function ScheduleItem({ item, highlighted = false, revealIndex = 0 }) {
   const startTime = String(item.time || '').split(' - ')[0];
   const locationLabel = [item.frame ? `Корпус ${item.frame}` : null, item.classroom ? `ауд. ${item.classroom}` : null]
     .filter(Boolean)
@@ -44,6 +43,7 @@ function ScheduleItem({ item, highlighted = false }) {
 
   return (
     <div
+      style={{ animationDelay: `${Math.max(0, revealIndex) * 110}ms` }}
       className={`section-reveal max-w-full overflow-hidden rounded-[1.25rem] border px-3 py-3 shadow-lg shadow-gray-900/10 transition-all duration-300 dark:shadow-black/20 sm:rounded-[1.5rem] sm:px-5 ${
         highlighted
           ? 'border-emerald-400/50 bg-gray-100/70 dark:border-emerald-500/30 dark:bg-[#162131]'
@@ -120,9 +120,6 @@ function ScheduleItem({ item, highlighted = false }) {
           </div>
         </div>
 
-        <div className="hidden h-10 w-10 flex-none items-center justify-center rounded-full bg-slate-200/90 text-slate-600 dark:bg-slate-800 dark:text-slate-300 lg:flex">
-          <ChevronRight className="h-4 w-4" />
-        </div>
       </div>
     </div>
   );

@@ -47,11 +47,12 @@ export const AuthProvider = ({ children }) => {
     }
   }, [checked]);
 
-  const login = async (studentCode, password) => {
+  const login = async (studentCode, password, referralCode = '') => {
     try {
       const data = await api.saveData({
         studentCode,
         password,
+        referralCode: referralCode || undefined,
       });
 
       if (data.success) {

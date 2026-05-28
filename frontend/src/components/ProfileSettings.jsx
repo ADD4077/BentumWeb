@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, Eye, LogOut, Shield, User } from 'lucide-react';
+import { Bell, Eye, Gift, LogOut, Shield, User } from 'lucide-react';
 
 import { API_ENDPOINTS } from '../config/api.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -10,6 +10,7 @@ import TwoFARecoveryModal from './TwoFARecoveryModal.jsx';
 import DeleteMediaModal from './profile-settings/DeleteMediaModal.jsx';
 import PreferenceSettingsSection from './profile-settings/PreferenceSettingsSection.jsx';
 import ProfileOverviewSection from './profile-settings/ProfileOverviewSection.jsx';
+import ReferralSettingsSection from './profile-settings/ReferralSettingsSection.jsx';
 import ProfileSettingsShell from './profile-settings/ProfileSettingsShell.jsx';
 import SecuritySettingsSection from './profile-settings/SecuritySettingsSection.jsx';
 
@@ -21,7 +22,6 @@ const DEFAULT_NOTIFICATION_SETTINGS = {
 
 const DEFAULT_PRIVACY_SETTINGS = {
   showProfileInCommunity: true,
-  showFaculty: true,
   allowTelegramDiscovery: false,
 };
 
@@ -63,7 +63,6 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
     });
     setPrivacySettings({
       showProfileInCommunity: Boolean(nextUser?.show_profile_in_community ?? true),
-      showFaculty: Boolean(nextUser?.show_faculty ?? true),
       allowTelegramDiscovery: Boolean(nextUser?.allow_telegram_discovery ?? false),
     });
   };
@@ -182,7 +181,6 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
     user?.notify_support_replies,
     user?.notify_security_events,
     user?.show_profile_in_community,
-    user?.show_faculty,
     user?.allow_telegram_discovery,
   ]);
 
@@ -249,8 +247,9 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
     () => [
       { id: 'profile', label: 'Профиль', icon: User },
       { id: 'security', label: 'Безопасность', icon: Shield },
-      { id: 'notifications', label: 'Уведомления', icon: Bell },
       { id: 'privacy', label: 'Приватность', icon: Eye },
+      { id: 'notifications', label: 'Уведомления', icon: Bell },
+      { id: 'referral', label: 'Реферальная система', icon: Gift },
       {
         id: 'logout',
         label: 'Выйти',
@@ -513,7 +512,6 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
 
     const payloadByKey = {
       showProfileInCommunity: { show_profile_in_community: nextValue },
-      showFaculty: { show_faculty: nextValue },
       allowTelegramDiscovery: { allow_telegram_discovery: nextValue },
     };
 
@@ -521,9 +519,6 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
       showProfileInCommunity: nextValue
         ? 'Профиль снова виден в сообществе'
         : 'Профиль скрыт из сообщества',
-      showFaculty: nextValue
-        ? 'Факультет снова показывается в публичном профиле'
-        : 'Факультет скрыт из публичного профиля',
       allowTelegramDiscovery: nextValue
         ? 'Информация о привязанном Telegram теперь видна в публичном профиле'
         : 'Информация о привязанном Telegram скрыта из публичного профиля',
@@ -613,6 +608,8 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
       values={notificationSettings}
       onToggle={toggleNotificationSetting}
     />
+  ) : activeTab === 'referral' ? (
+    <ReferralSettingsSection referral={user?.referral} />
   ) : activeTab === 'privacy' ? (
     <PreferenceSettingsSection
       title="Приватность"
@@ -622,11 +619,6 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
           key: 'showProfileInCommunity',
           label: 'Показывать профиль в сообществе',
           description: 'Разрешить открывать вашу карточку профиля по студенческому коду внутри сайта.',
-        },
-        {
-          key: 'showFaculty',
-          label: 'Показывать факультет',
-          description: 'Отображать факультет в публичной карточке профиля.',
         },
         {
           key: 'allowTelegramDiscovery',

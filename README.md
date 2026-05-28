@@ -62,7 +62,7 @@ Copy-Item .env.example .env
 3. Поднимите проект:
 
 ```powershell
-docker compose up --build
+powershell -ExecutionPolicy Bypass -File .\scripts\dev-up.ps1
 ```
 
 После старта будут доступны:

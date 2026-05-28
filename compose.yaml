@@ -1,3 +1,5 @@
+name: bentumweb
+
 services:
   app:
     restart: always
@@ -10,13 +12,22 @@ services:
     ports:
       - 5173:5173
     depends_on:
-      - server
+      server:
+        condition: service_healthy
 
   server:
     build:
       context: ./backend
+    env_file:
+      - .env
     ports:
       - 1337:1337
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:1337/api/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 6
+      start_period: 45s
     depends_on:
       db:
         condition: service_healthy
@@ -28,8 +39,11 @@ services:
       DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD}
       DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME}
       DEBUG: ${DEBUG}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-False}
+      CSRF_COOKIE_SECURE: ${CSRF_COOKIE_SECURE:-False}
+      SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT:-False}
       DJANGO_LOGLEVEL: ${DJANGO_LOGLEVEL}
-      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS},server,app
       DATABASE_ENGINE: ${DATABASE_ENGINE}
       DATABASE_NAME: ${DATABASE_NAME}
       DATABASE_USERNAME: ${DATABASE_USERNAME}
@@ -46,11 +60,13 @@ services:
   worker:
     build:
       context: ./backend
+    env_file:
+      - .env
     restart: always
     command: python manage.py process_background_jobs --loop --sleep 5 --limit 20
     depends_on:
       server:
-        condition: service_started
+        condition: service_healthy
       db:
         condition: service_healthy
       redis:
@@ -61,8 +77,11 @@ services:
       DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD}
       DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME}
       DEBUG: ${DEBUG}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-False}
+      CSRF_COOKIE_SECURE: ${CSRF_COOKIE_SECURE:-False}
+      SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT:-False}
       DJANGO_LOGLEVEL: ${DJANGO_LOGLEVEL}
-      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS},server,app
       DATABASE_ENGINE: ${DATABASE_ENGINE}
       DATABASE_NAME: ${DATABASE_NAME}
       DATABASE_USERNAME: ${DATABASE_USERNAME}
@@ -83,15 +102,33 @@ services:
       dockerfile: Dockerfile.bot
     container_name: bentum-telegram-bot
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
-      - TELEGRAM_TOPIC_ID=${TELEGRAM_TOPIC_ID:-9}
-      - TELEGRAM_INTERNAL_API_TOKEN=${TELEGRAM_INTERNAL_API_TOKEN}
+      DJANGO_ENV: ${DJANGO_ENV:-dev}
+      DJANGO_SETTINGS_MODULE: backend.settings
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DEBUG: ${DEBUG}
+      DJANGO_LOGLEVEL: ${DJANGO_LOGLEVEL}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS},server,app
+      DATABASE_ENGINE: ${DATABASE_ENGINE}
+      DATABASE_NAME: ${DATABASE_NAME}
+      DATABASE_USERNAME: ${DATABASE_USERNAME}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+      TELEGRAM_TOPIC_ID: ${TELEGRAM_TOPIC_ID:-9}
+      TELEGRAM_INTERNAL_API_TOKEN: ${TELEGRAM_INTERNAL_API_TOKEN}
     volumes:
       - ./backend:/app
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
   db:
     image: mysql:latest
     restart: always

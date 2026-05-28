@@ -1,3 +1,5 @@
+name: bentumweb-vps
+
 services:
   app:
     restart: unless-stopped
@@ -117,7 +119,16 @@ services:
     env_file:
       - .env
     environment:
-      BACKEND_BASE_URL: http://server:1337
+      DJANGO_ENV: production
+      DEBUG: "False"
+      DJANGO_SETTINGS_MODULE: backend.settings
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_LOGLEVEL: ${DJANGO_LOGLEVEL}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS},server,app
+      DATABASE_ENGINE: mysql
+      DATABASE_HOST: db
+      DATABASE_PORT: 3306
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       server:
         condition: service_healthy

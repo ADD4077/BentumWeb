@@ -1,107 +1,90 @@
 """Views for literature content."""
 
-from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.db.models import Count
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status
+from rest_framework.generics import GenericAPIView
+from rest_framework.response import Response
 
-from ...common.utils import format_size, parse_pagination, parse_size
+from ...common.utils import parse_pagination, parse_size
 from ...models import LiteratureItem
-from ...content_parser_service import LITERATURE_TOP_LEVEL_SECTIONS
+from .filters import LiteratureItemFilter
+from .helpers import get_allowed_categories, repair_mojibake
+from .serializers import LiteratureItemSerializer
 
 
-def get_literature(request):
-    if request.method != "GET":
-        return JsonResponse({"detail": "Метод не разрешён"}, status=405)
+class LiteratureListView(GenericAPIView):
+    serializer_class = LiteratureItemSerializer
+    queryset = LiteratureItem.objects.all()
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = LiteratureItemFilter
 
-    page, page_size = parse_pagination(request)
-    search = (request.GET.get("search") or "").strip()
-    categories = [value for value in request.GET.getlist("category") if value]
-    sort_param = request.GET.get("sort", "default")
+    def get_base_queryset(self):
+        allowed_categories = get_allowed_categories()
+        return self.get_queryset().filter(category__in=allowed_categories)
 
-    allowed_categories = list(LITERATURE_TOP_LEVEL_SECTIONS.keys())
-    queryset = LiteratureItem.objects.filter(category__in=allowed_categories)
+    def get_sorted_queryset(self, queryset, sort_param):
+        if sort_param == "title_desc":
+            return queryset.order_by("-title")
+        if sort_param == "year_desc":
+            return queryset.order_by("-publishing_date", "title")
+        if sort_param == "year_asc":
+            return queryset.order_by("publishing_date", "title")
+        if sort_param == "category_asc":
+            return queryset.order_by("category", "title")
+        if sort_param == "category_desc":
+            return queryset.order_by("-category", "title")
+        return queryset.order_by("title")
 
-    if categories and "all" not in categories:
-        queryset = queryset.filter(category__in=categories)
+    def get(self, request, *args, **kwargs):
+        page, page_size = parse_pagination(request)
+        sort_param = request.query_params.get("sort", "default")
+        allowed_categories = get_allowed_categories()
 
-    if search:
-        query = Q()
-        for term in search.split():
-            if term:
-                query |= (
-                    Q(title__icontains=term)
-                    | Q(authors__icontains=term)
-                    | Q(description__icontains=term)
-                )
-        queryset = queryset.filter(query)
+        base_queryset = self.get_base_queryset()
+        filtered_queryset = self.filter_queryset(base_queryset)
+        total = filtered_queryset.count()
 
-    if sort_param == "title_desc":
-        queryset = queryset.order_by("-title")
-    elif sort_param == "year_desc":
-        queryset = queryset.order_by("-publishing_date", "title")
-    elif sort_param == "year_asc":
-        queryset = queryset.order_by("publishing_date", "title")
-    elif sort_param == "category_asc":
-        queryset = queryset.order_by("category", "title")
-    elif sort_param == "category_desc":
-        queryset = queryset.order_by("-category", "title")
-    else:
-        queryset = queryset.order_by("title")
-
-    total = queryset.count()
-    category_counts = {
-        row["category"]: row["count"]
-        for row in LiteratureItem.objects.filter(category__in=allowed_categories)
-        .values("category")
-        .annotate(count=Count("id"))
-    }
-    category_options = [
-        {
-            "id": name,
-            "name": name,
-            "count": category_counts.get(name, 0),
+        category_counts = {
+            row["category"]: row["count"]
+            for row in base_queryset.values("category").annotate(count=Count("id"))
         }
-        for name in LITERATURE_TOP_LEVEL_SECTIONS.keys()
-    ]
-    available_categories = [option["name"] for option in category_options]
+        category_options = [
+            {
+                "id": name,
+                "name": repair_mojibake(name),
+                "count": category_counts.get(name, 0),
+            }
+            for name in allowed_categories
+        ]
+        available_categories = [option["name"] for option in category_options]
 
-    if sort_param in {"size_desc", "size_asc"}:
-        reverse = sort_param == "size_desc"
-        all_items = sorted(
-            queryset,
-            key=lambda item: parse_size(item.download_size or "0"),
-            reverse=reverse,
+        if sort_param in {"size_desc", "size_asc"}:
+            reverse = sort_param == "size_desc"
+            sorted_items = sorted(
+                filtered_queryset,
+                key=lambda item: parse_size(item.download_size or "0"),
+                reverse=reverse,
+            )
+            rows = sorted_items[(page - 1) * page_size: page * page_size]
+        else:
+            sorted_queryset = self.get_sorted_queryset(filtered_queryset, sort_param)
+            offset = (page - 1) * page_size
+            rows = list(sorted_queryset[offset:offset + page_size])
+
+        serializer = self.get_serializer(rows, many=True)
+        return Response(
+            {
+                "success": True,
+                "page": page,
+                "page_size": page_size,
+                "total": total,
+                "available_categories": available_categories,
+                "category_options": category_options,
+                "items": serializer.data,
+            },
+            status=status.HTTP_200_OK,
         )
-        rows = all_items[(page - 1) * page_size: page * page_size]
-    else:
-        offset = (page - 1) * page_size
-        rows = list(queryset[offset:offset + page_size])
 
-    items = [
-        {
-            "id": item.id,
-            "title": item.title or "",
-            "author": item.authors or "",
-            "description": item.description or "",
-            "category": item.category or "",
-            "year": item.publishing_date or "",
-            "faculty": item.faculty or "",
-            "downloadUrl": item.download_link or "",
-            "downloadSize": format_size(item.download_size),
-            "image_url": item.image_url or "",
-        }
-        for item in rows
-    ]
 
-    return JsonResponse(
-        {
-            "success": True,
-            "page": page,
-            "page_size": page_size,
-            "total": total,
-            "available_categories": available_categories,
-            "category_options": category_options,
-            "items": items,
-        },
-        status=200,
-        json_dumps_params={"ensure_ascii": False},
-    )
+get_literature = LiteratureListView.as_view()

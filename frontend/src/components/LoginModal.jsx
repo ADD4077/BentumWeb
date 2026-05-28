@@ -1,11 +1,22 @@
-import React, { useState } from 'react';
-import { LogIn } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { LogIn, X } from 'lucide-react';
 
 import { useAuth } from '../contexts/AuthContext.jsx';
 
+function getReferralCodeFromLocation() {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  return (params.get('ref') || '').trim().toUpperCase();
+}
+
 function LoginModal({ isOpen, onClose, onInstructionOpen }) {
+  const initialReferralCode = useMemo(getReferralCodeFromLocation, []);
   const [studentCode, setStudentCode] = useState('');
   const [password, setPassword] = useState('');
+  const [referralCode, setReferralCode] = useState(initialReferralCode);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
@@ -18,15 +29,19 @@ function LoginModal({ isOpen, onClose, onInstructionOpen }) {
     if (!studentCode) {
       nextErrors.studentCode = 'Это поле обязательно';
     } else if (!/^\d+$/.test(studentCode)) {
-      nextErrors.studentCode = 'Некорректные данные';
+      nextErrors.studentCode = 'Некорректный номер студенческого';
     } else if (studentCode.length !== 10) {
-      nextErrors.studentCode = 'Не менее 10 цифр';
+      nextErrors.studentCode = 'Номер студенческого должен содержать 10 цифр';
     }
 
     if (!password) {
       nextErrors.password = 'Это поле обязательно';
     } else if (password.length < 7) {
       nextErrors.password = 'Минимум 7 символов';
+    }
+
+    if (referralCode && !/^[A-Z0-9_-]{4,16}$/i.test(referralCode)) {
+      nextErrors.referralCode = 'Некорректный реферальный код';
     }
 
     setErrors(nextErrors);
@@ -43,7 +58,7 @@ function LoginModal({ isOpen, onClose, onInstructionOpen }) {
     setIsLoading(true);
 
     try {
-      const result = await login(studentCode, password);
+      const result = await login(studentCode, password, referralCode);
       if (result.success) {
         onClose();
       } else {
@@ -73,31 +88,32 @@ function LoginModal({ isOpen, onClose, onInstructionOpen }) {
     }
   };
 
-  const inputClassName = (hasError) => `w-full rounded-2xl border px-5 py-4 text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.06)] transition-all duration-300 focus:outline-none focus:ring-2 dark:text-white ${
-    hasError
-      ? 'border-red-500 focus:ring-red-500 bg-white dark:bg-slate-800/70'
-      : 'border-slate-300/70 bg-white/90 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-800/70'
-  }`;
+  const inputClassName = (hasError) =>
+    `w-full rounded-2xl border px-5 py-4 text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.06)] transition-all duration-300 focus:outline-none focus:ring-2 dark:text-white ${
+      hasError
+        ? 'border-red-500 bg-white focus:ring-red-500 dark:bg-slate-800/70'
+        : 'border-slate-300/70 bg-white/90 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-800/70'
+    }`;
 
   return (
     <div className="modal-backdrop fixed inset-0 z-[150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="modal-panel w-full max-w-md rounded-3xl border border-slate-300/70 bg-white/96 p-8 shadow-2xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-800/90">
+      <div className="modal-panel relative w-full max-w-md rounded-3xl border border-slate-300/70 bg-white/96 p-8 shadow-2xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-800/90">
         <button
           onClick={onClose}
-          className="absolute right-6 top-6 text-slate-400 transition-colors hover:text-slate-700 dark:hover:text-slate-200"
+          className="absolute right-6 top-6 inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-300/70 bg-white/75 text-slate-500 shadow-[0_12px_30px_rgba(15,23,42,0.10)] backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-slate-400 hover:text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:text-white"
+          aria-label="Закрыть окно входа"
+          title="Закрыть"
         >
-          ✕
+          <X className="h-4 w-4" />
         </button>
 
         <div className="mb-8 text-center">
           <div className="inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-xl shadow-emerald-500/25">
             <LogIn className="h-8 w-8" />
           </div>
-          <h2 className="mt-6 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Вход
-          </h2>
+          <h2 className="mt-6 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Вход</h2>
           <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
-            Войдите в личный кабинет, чтобы получить доступ к функциям платформы.
+            Войдите в личный кабинет, чтобы получить доступ ко всем функциям Bentum.
           </p>
         </div>
 
@@ -130,9 +146,7 @@ function LoginModal({ isOpen, onClose, onInstructionOpen }) {
               className={inputClassName(Boolean(errors.password))}
               placeholder="Минимум 7 символов"
             />
-            {errors.password ? (
-              <p className="mt-2 ml-1 text-sm text-red-500">{errors.password}</p>
-            ) : null}
+            {errors.password ? <p className="mt-2 ml-1 text-sm text-red-500">{errors.password}</p> : null}
           </div>
 
           {errors.general ? (
@@ -158,7 +172,7 @@ function LoginModal({ isOpen, onClose, onInstructionOpen }) {
         </form>
 
         <div className="mt-8 text-center text-sm">
-          <span className="text-slate-500 dark:text-slate-400">Как войти? </span>
+          <span className="text-slate-500 dark:text-slate-400">Нужна помощь со входом? </span>
           <button
             onClick={onInstructionOpen}
             className="font-bold text-emerald-600 transition-colors hover:text-emerald-700 hover:underline dark:text-emerald-400 dark:hover:text-emerald-300"

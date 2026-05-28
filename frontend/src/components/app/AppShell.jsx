@@ -46,6 +46,7 @@ export const AppShell = ({
   setIsMobileMenuOpen,
   isProfileModalOpen,
   setIsProfileModalOpen,
+  onOpenNotificationsPage,
   userMedia,
   children,
 }) => {
@@ -73,6 +74,7 @@ export const AppShell = ({
           setIsMobileMenuOpen={setIsMobileMenuOpen}
           isProfileModalOpen={isProfileModalOpen}
           setIsProfileModalOpen={setIsProfileModalOpen}
+          onOpenNotificationsPage={onOpenNotificationsPage}
           userMedia={userMedia}
         />
       ) : null}

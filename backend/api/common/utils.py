@@ -148,7 +148,6 @@ def serialize_user_preferences(user_settings: UserSettings) -> Dict[str, bool]:
         "notify_support_replies": user_settings.notify_support_replies,
         "notify_security_events": user_settings.notify_security_events,
         "show_profile_in_community": user_settings.show_profile_in_community,
-        "show_faculty": user_settings.show_faculty,
         "allow_telegram_discovery": user_settings.allow_telegram_discovery,
     }
 
@@ -204,6 +203,8 @@ def get_user_admin_status(user: User) -> bool:
 def get_user_full_data(user: User) -> Dict[str, Any]:
     """Получить полные данные пользователя, включая медиа и статусы."""
 
+    from ..referral_service import ReferralService
+
     media = get_user_media(user)
     ban_status = get_user_ban_status(user.student_code)
     is_admin = get_user_admin_status(user)
@@ -229,6 +230,7 @@ def get_user_full_data(user: User) -> Dict[str, Any]:
             if binding and binding.telegram_username
             else ("Telegram привязан" if binding else None)
         ),
+        "referral": ReferralService.get_referral_summary(user),
         "is_banned": ban_status["is_banned"],
         "ban_info": ban_status.get("ban_info"),
         "is_admin": is_admin,
@@ -255,14 +257,7 @@ def get_public_user_profile_data(
         return None
 
     can_bypass_privacy = not respect_privacy_strictly and (viewer_is_owner or viewer_is_admin)
-    faculty = (
-        user.faculty
-        if (
-            not respect_privacy_strictly
-            and (user_settings.show_faculty or can_bypass_privacy)
-        )
-        else None
-    )
+    faculty = user.faculty
     telegram_display = None
 
     if not respect_privacy_strictly and (

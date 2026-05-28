@@ -10,6 +10,7 @@ urlpatterns = [
     path('submit', views.submit_support_request, name='submit_support_request_alt'),
     path('my/threads', views.get_my_threads, name='my_support_threads'),
     path('my/threads/<int:thread_id>', views.get_my_thread_detail, name='my_support_thread_detail'),
+    path('my/threads/<int:thread_id>/reply', views.reply_to_own_thread, name='my_support_thread_reply'),
     path('moder/threads', views.get_moder_threads, name='moder_support_threads'),
     path('moder/threads/<int:thread_id>', views.get_moder_thread_detail, name='moder_support_thread_detail'),
     path('moder/threads/<int:thread_id>/reply', views.reply_to_thread, name='moder_support_thread_reply'),

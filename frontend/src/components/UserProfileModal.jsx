@@ -82,7 +82,7 @@ export default function UserProfileModal({
   onClose,
   studentCode,
   userId = null,
-  darkMode: _darkMode,
+  darkMode: _providedDarkMode,
   showActivityMeta = false,
   adminView = false,
 }) {
@@ -94,6 +94,7 @@ export default function UserProfileModal({
     banner_placeholder: null,
   });
   const [loading, setLoading] = useState(false);
+  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
 
   useEffect(() => {
     if (!isOpen) {
@@ -142,7 +143,13 @@ export default function UserProfileModal({
 
   const modalContent = (
     <div className="modal-backdrop fixed inset-0 z-[150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="modal-panel flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-slate-300/70 bg-white/96 shadow-2xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-800/90">
+      <div
+        className={`modal-panel flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border shadow-2xl backdrop-blur-md ${
+          isDark
+            ? 'border-slate-700 bg-slate-800'
+            : 'border-slate-200 bg-white'
+        }`}
+      >
         <div className="relative h-32">
           {userMedia.banner_url ? (
             <img
@@ -151,9 +158,9 @@ export default function UserProfileModal({
               className="h-full w-full object-cover"
             />
           ) : userMedia.banner_placeholder ? (
-            <div className="h-full w-full bg-gray-200 dark:bg-slate-700" />
+            <div className={`h-full w-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
           ) : (
-            <div className="h-full w-full bg-gray-200" />
+            <div className={`h-full w-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`} />
           )}
 
           <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 transform">
@@ -161,11 +168,17 @@ export default function UserProfileModal({
               <img
                 src={buildMediaUrl(userMedia.avatar_url)}
                 alt="Profile Avatar"
-                className="h-32 w-32 rounded-2xl border-4 border-white object-cover dark:border-slate-800"
+                className={`h-32 w-32 rounded-2xl border-4 object-cover ${
+                  isDark ? 'border-slate-800' : 'border-white'
+                }`}
               />
             ) : (
               <div
-                className="flex h-32 w-32 items-center justify-center rounded-2xl border-4 border-white bg-gray-300 font-semibold text-gray-600 dark:border-slate-800"
+                className={`flex h-32 w-32 items-center justify-center rounded-2xl border-4 font-semibold ${
+                  isDark
+                    ? 'border-slate-800 bg-slate-600 text-slate-100'
+                    : 'border-white bg-gray-300 text-gray-600'
+                }`}
                 style={{ fontSize: '300%' }}
               >
                 {user?.fullname?.charAt(0)?.toUpperCase() || 'U'}
@@ -175,7 +188,11 @@ export default function UserProfileModal({
 
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-2xl border border-white/30 bg-white/20 text-white backdrop-blur-sm transition-all duration-300 hover:bg-white/30"
+            className={`absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-2xl border backdrop-blur-sm transition-all duration-300 ${
+              isDark
+                ? 'border-white/30 bg-white/20 text-white hover:bg-white/30'
+                : 'border-slate-300/70 bg-white/75 text-slate-500 shadow-[0_12px_30px_rgba(15,23,42,0.10)] hover:border-slate-400 hover:bg-white hover:text-slate-800'
+            }`}
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -183,18 +200,20 @@ export default function UserProfileModal({
           </button>
         </div>
 
-        <div className="custom-scrollbar flex-1 overflow-y-auto p-6 pt-20">
+        <div className={`custom-scrollbar flex-1 overflow-y-auto p-6 pt-20 ${
+          isDark ? 'bg-slate-800' : 'bg-white'
+        }`}>
           {loading ? (
             <div className="flex w-full items-center justify-center py-10">
               <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-emerald-600" />
             </div>
           ) : (
             <>
-              <h3 className="mb-2 text-center text-xl font-bold text-slate-900 dark:text-white">
+              <h3 className={`mb-2 text-center text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 {user?.fullname || 'Пользователь'}
               </h3>
 
-              <div className="mb-6 text-center text-xs text-slate-500 dark:text-slate-400">
+              <div className={`mb-6 text-center text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 ID: {user?.id || 'Не определен'}
               </div>
 

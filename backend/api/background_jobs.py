@@ -37,6 +37,17 @@ class BackgroundJobService:
     DEFAULT_MAX_ATTEMPTS = 3
     MAINTENANCE_INTERVAL_SECONDS = 300
     STALE_RUNNING_TIMEOUT_SECONDS = getattr(settings, "BACKGROUND_JOB_STALE_TIMEOUT_SECONDS", 1800)
+    CONTENT_JOB_GROUPS = {
+        "schedule": (BackgroundJobType.SCHEDULE_FULL_SYNC,),
+        "news": (
+            BackgroundJobType.NEWS_BOOTSTRAP,
+            BackgroundJobType.NEWS_INCREMENTAL_SYNC,
+        ),
+        "literature": (
+            BackgroundJobType.LITERATURE_BOOTSTRAP,
+            BackgroundJobType.LITERATURE_INCREMENTAL_SYNC,
+        ),
+    }
 
     @staticmethod
     def _periodic_job_key(job_type, interval_seconds):
@@ -54,13 +65,32 @@ class BackgroundJobService:
         return f"{exc.__class__.__name__}: {message}" if message else exc.__class__.__name__
 
     @staticmethod
-    def enqueue(job_type, payload=None, *, max_attempts=None, available_at=None, job_key=None):
+    def get_default_priority(job_type):
+        if job_type in {
+            BackgroundJobType.SUPPORT_REQUEST_NOTIFICATION,
+            BackgroundJobType.NEW_USER_NOTIFICATION,
+            BackgroundJobType.CLEANUP_EXPIRED_BANS,
+            BackgroundJobType.CLEANUP_TELEGRAM_TOKENS,
+        }:
+            return BackgroundJob.PRIORITY_HIGH
+
+        if job_type in {
+            BackgroundJobType.NEWS_INCREMENTAL_SYNC,
+            BackgroundJobType.LITERATURE_INCREMENTAL_SYNC,
+        }:
+            return BackgroundJob.PRIORITY_MEDIUM
+
+        return BackgroundJob.PRIORITY_LOW
+
+    @staticmethod
+    def enqueue(job_type, payload=None, *, max_attempts=None, available_at=None, job_key=None, priority=None):
         normalized_job_key = (job_key or "").strip()
         try:
             return BackgroundJob.objects.create(
                 job_type=job_type,
                 job_key=normalized_job_key,
                 payload=payload or {},
+                priority=priority or BackgroundJobService.get_default_priority(job_type),
                 max_attempts=max_attempts or BackgroundJobService.DEFAULT_MAX_ATTEMPTS,
                 available_at=available_at or timezone.now(),
             )
@@ -70,7 +100,7 @@ class BackgroundJobService:
             return BackgroundJob.objects.get(job_key=normalized_job_key)
 
     @staticmethod
-    def enqueue_once(job_type, payload=None, *, job_key, max_attempts=None, available_at=None):
+    def enqueue_once(job_type, payload=None, *, job_key, max_attempts=None, available_at=None, priority=None):
         existing = BackgroundJob.objects.filter(
             job_key=job_key,
             status__in=[BackgroundJob.STATUS_PENDING, BackgroundJob.STATUS_RUNNING],
@@ -83,6 +113,7 @@ class BackgroundJobService:
             max_attempts=max_attempts,
             available_at=available_at,
             job_key=job_key,
+            priority=priority,
         )
 
     @staticmethod
@@ -94,7 +125,7 @@ class BackgroundJobService:
                     status=BackgroundJob.STATUS_PENDING,
                     available_at__lte=timezone.now(),
                 )
-                .order_by("created_at")
+                .order_by("-priority", "created_at")
                 .first()
             )
             if not job:
@@ -118,6 +149,7 @@ class BackgroundJobService:
         retry_at = timezone.now() + timedelta(seconds=min(300, 10 * job.attempts))
         job.last_error = BackgroundJobService._safe_error(exc)
         job.finished_at = timezone.now()
+        job.started_at = None
         if job.attempts >= job.max_attempts:
             job.status = BackgroundJob.STATUS_FAILED
             job.available_at = retry_at
@@ -128,6 +160,7 @@ class BackgroundJobService:
             update_fields=[
                 "status",
                 "available_at",
+                "started_at",
                 "finished_at",
                 "last_error",
                 "updated_at",
@@ -300,59 +333,60 @@ class BackgroundJobService:
         ).exists()
 
     @staticmethod
+    def _latest_job(job_types):
+        return (
+            BackgroundJob.objects.filter(job_type__in=job_types)
+            .order_by("-updated_at", "-created_at")
+            .first()
+        )
+
+    @staticmethod
+    def _active_job(job_types):
+        return (
+            BackgroundJob.objects.filter(
+                job_type__in=job_types,
+                status__in=[BackgroundJob.STATUS_PENDING, BackgroundJob.STATUS_RUNNING],
+            )
+            .order_by("-priority", "created_at")
+            .first()
+        )
+
+    @staticmethod
+    def get_content_sync_status():
+        status_payload = {}
+        content_models = {
+            "schedule": ScheduleEntry,
+            "news": NewsItem,
+            "literature": LiteratureItem,
+        }
+
+        for content_type, job_types in BackgroundJobService.CONTENT_JOB_GROUPS.items():
+            active_job = BackgroundJobService._active_job(job_types)
+            latest_job = active_job or BackgroundJobService._latest_job(job_types)
+            model = content_models[content_type]
+            records_count = model.objects.count()
+
+            status_payload[content_type] = {
+                "content_type": content_type,
+                "records_count": records_count,
+                "has_data": records_count > 0,
+                "status": latest_job.status if latest_job else "idle",
+                "job_type": latest_job.job_type if latest_job else None,
+                "priority": latest_job.priority if latest_job else None,
+                "attempts": latest_job.attempts if latest_job else 0,
+                "max_attempts": latest_job.max_attempts if latest_job else 0,
+                "available_at": latest_job.available_at.isoformat() if latest_job and latest_job.available_at else None,
+                "started_at": latest_job.started_at.isoformat() if latest_job and latest_job.started_at else None,
+                "finished_at": latest_job.finished_at.isoformat() if latest_job and latest_job.finished_at else None,
+                "created_at": latest_job.created_at.isoformat() if latest_job and latest_job.created_at else None,
+                "updated_at": latest_job.updated_at.isoformat() if latest_job and latest_job.updated_at else None,
+                "last_error": latest_job.last_error if latest_job else "",
+            }
+
+        return status_payload
+
+    @staticmethod
     def schedule_content_jobs():
-        if BackgroundJobService._has_active_job(BackgroundJobType.NEWS_BOOTSTRAP):
-            pass
-        elif not NewsItem.objects.exists():
-            if not BackgroundJobService._has_active_job(BackgroundJobType.NEWS_BOOTSTRAP) and not BackgroundJobService._has_recent_attempt(
-                BackgroundJobType.NEWS_BOOTSTRAP, 900
-            ):
-                BackgroundJobService.enqueue_once(
-                    BackgroundJobType.NEWS_BOOTSTRAP,
-                    {},
-                    job_key=BackgroundJobService._periodic_job_key(
-                        BackgroundJobType.NEWS_BOOTSTRAP,
-                        900,
-                    ),
-                )
-        elif not BackgroundJobService._has_active_job(BackgroundJobType.NEWS_INCREMENTAL_SYNC) and not BackgroundJobService._has_recent_completion(
-            BackgroundJobType.NEWS_INCREMENTAL_SYNC, 4 * 60 * 60
-        ):
-            BackgroundJobService.enqueue_once(
-                BackgroundJobType.NEWS_INCREMENTAL_SYNC,
-                {},
-                job_key=BackgroundJobService._periodic_job_key(
-                    BackgroundJobType.NEWS_INCREMENTAL_SYNC,
-                    4 * 60 * 60,
-                ),
-            )
-
-        if BackgroundJobService._has_active_job(BackgroundJobType.LITERATURE_BOOTSTRAP):
-            pass
-        elif not LiteratureItem.objects.exists():
-            if not BackgroundJobService._has_active_job(BackgroundJobType.LITERATURE_BOOTSTRAP) and not BackgroundJobService._has_recent_attempt(
-                BackgroundJobType.LITERATURE_BOOTSTRAP, 900
-            ):
-                BackgroundJobService.enqueue_once(
-                    BackgroundJobType.LITERATURE_BOOTSTRAP,
-                    {},
-                    job_key=BackgroundJobService._periodic_job_key(
-                        BackgroundJobType.LITERATURE_BOOTSTRAP,
-                        900,
-                    ),
-                )
-        elif not BackgroundJobService._has_active_job(BackgroundJobType.LITERATURE_INCREMENTAL_SYNC) and not BackgroundJobService._has_recent_completion(
-            BackgroundJobType.LITERATURE_INCREMENTAL_SYNC, 4 * 60 * 60
-        ):
-            BackgroundJobService.enqueue_once(
-                BackgroundJobType.LITERATURE_INCREMENTAL_SYNC,
-                {},
-                job_key=BackgroundJobService._periodic_job_key(
-                    BackgroundJobType.LITERATURE_INCREMENTAL_SYNC,
-                    4 * 60 * 60,
-                ),
-            )
-
         if not ScheduleEntry.objects.exists():
             if not BackgroundJobService._has_active_job(BackgroundJobType.SCHEDULE_FULL_SYNC) and not BackgroundJobService._has_recent_attempt(
                 BackgroundJobType.SCHEDULE_FULL_SYNC, 900
@@ -365,7 +399,63 @@ class BackgroundJobService:
                         900,
                     ),
                 )
-        elif not BackgroundJobService._has_active_job(BackgroundJobType.SCHEDULE_FULL_SYNC) and not BackgroundJobService._has_recent_completion(
+            return
+
+        if not NewsItem.objects.exists():
+            if not BackgroundJobService._has_active_job(BackgroundJobType.NEWS_BOOTSTRAP) and not BackgroundJobService._has_recent_attempt(
+                BackgroundJobType.NEWS_BOOTSTRAP, 900
+            ):
+                BackgroundJobService.enqueue_once(
+                    BackgroundJobType.NEWS_BOOTSTRAP,
+                    {},
+                    job_key=BackgroundJobService._periodic_job_key(
+                        BackgroundJobType.NEWS_BOOTSTRAP,
+                        900,
+                    ),
+                )
+            latest_news_job = BackgroundJobService._latest_job(BackgroundJobService.CONTENT_JOB_GROUPS["news"])
+            if not latest_news_job or latest_news_job.status != BackgroundJob.STATUS_FAILED:
+                return
+
+        if not LiteratureItem.objects.exists():
+            if not BackgroundJobService._has_active_job(BackgroundJobType.LITERATURE_BOOTSTRAP) and not BackgroundJobService._has_recent_attempt(
+                BackgroundJobType.LITERATURE_BOOTSTRAP, 900
+            ):
+                BackgroundJobService.enqueue_once(
+                    BackgroundJobType.LITERATURE_BOOTSTRAP,
+                    {},
+                    job_key=BackgroundJobService._periodic_job_key(
+                        BackgroundJobType.LITERATURE_BOOTSTRAP,
+                        900,
+                    ),
+                )
+            return
+
+        if not BackgroundJobService._has_active_job(BackgroundJobType.NEWS_INCREMENTAL_SYNC) and not BackgroundJobService._has_recent_completion(
+            BackgroundJobType.NEWS_INCREMENTAL_SYNC, 4 * 60 * 60
+        ):
+            BackgroundJobService.enqueue_once(
+                BackgroundJobType.NEWS_INCREMENTAL_SYNC,
+                {},
+                job_key=BackgroundJobService._periodic_job_key(
+                    BackgroundJobType.NEWS_INCREMENTAL_SYNC,
+                    4 * 60 * 60,
+                ),
+            )
+
+        if not BackgroundJobService._has_active_job(BackgroundJobType.LITERATURE_INCREMENTAL_SYNC) and not BackgroundJobService._has_recent_completion(
+            BackgroundJobType.LITERATURE_INCREMENTAL_SYNC, 4 * 60 * 60
+        ):
+            BackgroundJobService.enqueue_once(
+                BackgroundJobType.LITERATURE_INCREMENTAL_SYNC,
+                {},
+                job_key=BackgroundJobService._periodic_job_key(
+                    BackgroundJobType.LITERATURE_INCREMENTAL_SYNC,
+                    4 * 60 * 60,
+                ),
+            )
+
+        if not BackgroundJobService._has_active_job(BackgroundJobType.SCHEDULE_FULL_SYNC) and not BackgroundJobService._has_recent_completion(
             BackgroundJobType.SCHEDULE_FULL_SYNC, 24 * 60 * 60
         ):
             BackgroundJobService.enqueue_once(

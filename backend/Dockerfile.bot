@@ -21,5 +21,5 @@ COPY --chown=appuser:appuser . .
 RUN useradd -m -r appuser && chown -R appuser:appuser /app
 USER appuser
 
-# Run the bot directly (no entrypoint)
-CMD ["python", "run_bot.py"]
+# Run the unified bot package
+CMD ["python", "-m", "telegram_bot.main"]

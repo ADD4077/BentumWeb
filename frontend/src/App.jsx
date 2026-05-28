@@ -22,10 +22,34 @@ import { useAppSideEffects } from './hooks/useAppSideEffects.js';
 import { SchedulePage } from './pages/SchedulePage.jsx';
 import { LiteraturePage } from './pages/LiteraturePage.jsx';
 import { NewsPage } from './pages/NewsPage.jsx';
+import { EventsPage } from './pages/EventsPage.jsx';
+import { NotificationsPage } from './pages/NotificationsPage.jsx';
 import { GamesPage } from './pages/GamesPage.jsx';
 import { HomePage } from './pages/HomePage.jsx';
 import { AppShell } from './components/app/AppShell.jsx';
 import { ModalRoot } from './components/ModalRoot.jsx';
+
+const GUEST_ALLOWED_TABS = new Set(['home', 'support', 'privacy', 'events', '404']);
+
+function resolveAccessibleTab(tab, { loading, isAuthenticated, isAdmin, canModerate }) {
+  if (loading) {
+    return GUEST_ALLOWED_TABS.has(tab) ? tab : 'home';
+  }
+
+  if (!isAuthenticated) {
+    return GUEST_ALLOWED_TABS.has(tab) ? tab : 'home';
+  }
+
+  if (tab === 'admin' && !isAdmin) {
+    return 'home';
+  }
+
+  if (tab === 'moder' && !canModerate) {
+    return 'home';
+  }
+
+  return tab;
+}
 
 function AppContent() {
   const { loading, isAuthenticated, user, logout, requires2FA } = useAuth();
@@ -54,6 +78,12 @@ function AppContent() {
   const isBanned = Boolean(!loading && isAuthenticated && user?.is_banned);
   const isAdmin = Boolean(isAuthenticated && user?.is_admin);
   const canModerate = Boolean(isAuthenticated && (user?.role === 'moderator' || user?.is_admin));
+  const visibleTab = useMemo(() => resolveAccessibleTab(activeTab, {
+    loading,
+    isAuthenticated,
+    isAdmin,
+    canModerate,
+  }), [activeTab, loading, isAuthenticated, isAdmin, canModerate]);
 
   const filteredGames = useMemo(() => gamesData.filter((item) => (
     selectedGameCategory === 'all' || item.category === selectedGameCategory
@@ -77,7 +107,7 @@ function AppContent() {
   }, []);
 
   useAppSideEffects({
-    activeTab,
+    activeTab: visibleTab,
     setActiveTab,
     setIsLoginModalOpen,
     setIsProfileModalOpen,
@@ -87,8 +117,14 @@ function AppContent() {
     setIs2FAModalOpen,
   });
 
+  useEffect(() => {
+    if (activeTab !== visibleTab) {
+      setActiveTab(visibleTab);
+    }
+  }, [activeTab, visibleTab, setActiveTab]);
+
   const renderActivePage = () => {
-    if (activeTab === 'home') {
+    if (visibleTab === 'home') {
       return (
         <HomePage
           isAuthenticated={isAuthenticated}
@@ -107,45 +143,58 @@ function AppContent() {
       );
     }
 
-    if (activeTab === 'admin' && isAdmin) {
+    if (visibleTab === 'admin' && isAdmin) {
       return <AdminPanel darkMode={darkMode} setActiveTab={setActiveTab} />;
     }
 
-    if (activeTab === 'moder' && canModerate) {
+    if (visibleTab === 'moder' && canModerate) {
       return <ModeratorSupportPage darkMode={darkMode} />;
     }
 
-    if (activeTab === 'support') {
+    if (visibleTab === 'support') {
       return <SupportPage setIsLoginModalOpen={setIsLoginModalOpen} />;
     }
 
-    if (activeTab === '404') {
+    if (visibleTab === '404') {
       return <NotFoundPage setActiveTab={setActiveTab} />;
     }
 
-    if (activeTab === 'privacy') {
+    if (visibleTab === 'privacy') {
       return <PrivacyPolicy setActiveTab={setActiveTab} />;
     }
 
-    if (activeTab === 'schedule') {
+    if (visibleTab === 'schedule') {
       return <SchedulePage />;
     }
 
-    if (activeTab === 'literature') {
+    if (visibleTab === 'literature') {
       return (
         <LiteraturePage
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          activeTab={activeTab}
+          activeTab={visibleTab}
         />
       );
     }
 
-    if (activeTab === 'news') {
-      return <NewsPage activeTab={activeTab} />;
+    if (visibleTab === 'news') {
+      return <NewsPage activeTab={visibleTab} />;
     }
 
-    if (activeTab === 'games') {
+    if (visibleTab === 'events') {
+      return (
+        <EventsPage
+          activeTab={visibleTab}
+          setIsLoginModalOpen={setIsLoginModalOpen}
+        />
+      );
+    }
+
+    if (visibleTab === 'notifications') {
+      return <NotificationsPage setActiveTab={setActiveTab} />;
+    }
+
+    if (visibleTab === 'games') {
       return (
         <GamesPage
           gameCategories={gameCategories}
@@ -157,6 +206,13 @@ function AppContent() {
     }
 
     return null;
+  };
+
+  const openNotificationsPage = () => {
+    setIsProfileModalOpen(false);
+    setIsProfileSettingsOpen(false);
+    setIsMobileMenuOpen(false);
+    setActiveTab('notifications');
   };
 
   return (
@@ -188,7 +244,7 @@ function AppContent() {
               isSortModalOpen ||
               isProfileModalOpen
             }
-            activeTab={activeTab}
+            activeTab={visibleTab}
             setActiveTab={setActiveTab}
             darkMode={darkMode}
             toggleTheme={toggleTheme}
@@ -197,6 +253,7 @@ function AppContent() {
             setIsMobileMenuOpen={setIsMobileMenuOpen}
             isProfileModalOpen={isProfileModalOpen}
             setIsProfileModalOpen={setIsProfileModalOpen}
+            onOpenNotificationsPage={openNotificationsPage}
             userMedia={userMedia}
           >
             {renderActivePage()}

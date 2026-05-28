@@ -17,6 +17,11 @@ export default defineConfig({
         target: process.env.VITE_API_URL || 'http://server:1337',
         changeOrigin: true,
         secure: false,
+      },
+      '/media': {
+        target: process.env.VITE_API_URL || 'http://server:1337',
+        changeOrigin: true,
+        secure: false,
       }
     },
     hmr: false

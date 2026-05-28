@@ -17,7 +17,7 @@ export const ProfileModal = () => {
 
   return (
     <div className="modal-backdrop fixed inset-0 z-[150] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="modal-panel flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white/90 shadow-2xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-800/90">
+      <div className="modal-panel flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-800">
         <div className="relative h-32">
           {userMedia.banner_url ? (
             <img
@@ -79,7 +79,7 @@ export const ProfileModal = () => {
           </button>
         </div>
 
-        <div className="custom-scrollbar flex-1 overflow-y-auto p-6 pt-20">
+        <div className="custom-scrollbar flex-1 overflow-y-auto bg-white p-6 pt-20 dark:bg-slate-800">
           <h3 className="mb-2 text-center text-xl font-bold text-slate-900 dark:text-white">
             {user?.fullname || 'Пользователь'}
           </h3>

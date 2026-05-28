@@ -144,7 +144,7 @@ function AddUserModal({ isOpen, onClose, onAddUser, darkMode }) {
     <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div
         className={`modal-panel max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border shadow-2xl ${
-          darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-300/70 bg-white/96'
+          darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'
         }`}
       >
         <div className={`border-b p-6 ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>

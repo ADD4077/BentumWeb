@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { safeGetItem, safeSetItem } from '../utils/storage.js';
 
-const VALID_TABS = ['home', 'schedule', 'literature', 'news', 'support', 'moder', 'login', 'profile', 'admin', 'privacy', '404'];
+const VALID_TABS = ['home', 'schedule', 'literature', 'news', 'events', 'notifications', 'support', 'moder', 'login', 'profile', 'admin', 'privacy', '404'];
 const DEFAULT_TAB = 'home';
 
 /**

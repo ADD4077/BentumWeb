@@ -304,7 +304,7 @@ export function SchedulePage() {
                   onClick={() => setWeekType('lower')}
                   className={`h-11 flex-1 rounded-2xl px-4 text-sm font-semibold transition-all duration-300 xl:flex-none xl:px-6 ${
                     weekType === 'lower'
-                      ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-700'
+                      ? 'bg-slate-200 text-slate-700 shadow-sm dark:bg-slate-700 dark:text-white'
                       : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
                   }`}
                 >
@@ -314,7 +314,7 @@ export function SchedulePage() {
                   onClick={() => setWeekType('upper')}
                   className={`h-11 flex-1 rounded-2xl px-4 text-sm font-semibold transition-all duration-300 xl:flex-none xl:px-6 ${
                     weekType === 'upper'
-                      ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-700'
+                      ? 'bg-slate-200 text-slate-700 shadow-sm dark:bg-slate-700 dark:text-white'
                       : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
                   }`}
                 >
@@ -337,7 +337,7 @@ export function SchedulePage() {
                 onClick={() => setWeekType('lower')}
                 className={`h-11 flex-1 rounded-2xl px-4 text-sm font-semibold transition-all duration-300 ${
                   weekType === 'lower'
-                    ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-700'
+                    ? 'bg-slate-200 text-slate-700 shadow-sm dark:bg-slate-700 dark:text-white'
                     : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
                 }`}
               >
@@ -347,7 +347,7 @@ export function SchedulePage() {
                 onClick={() => setWeekType('upper')}
                 className={`h-11 flex-1 rounded-2xl px-4 text-sm font-semibold transition-all duration-300 ${
                   weekType === 'upper'
-                    ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-700'
+                    ? 'bg-slate-200 text-slate-700 shadow-sm dark:bg-slate-700 dark:text-white'
                     : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
                 }`}
               >
@@ -439,6 +439,7 @@ export function SchedulePage() {
                     key={`${selectedDay}-${weekType}-${item.time}-${item.subject}-${index}`}
                     item={item}
                     highlighted={Boolean(isHighlighted)}
+                    revealIndex={index}
                   />
                 );
               })}

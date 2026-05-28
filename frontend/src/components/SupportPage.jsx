@@ -154,9 +154,13 @@ export default function SupportPage({ setIsLoginModalOpen }) {
   const [selectedThreadId, setSelectedThreadId] = useState(null);
   const [selectedThread, setSelectedThread] = useState(null);
   const [threadLoading, setThreadLoading] = useState(false);
+  const [threadReplyMessage, setThreadReplyMessage] = useState('');
+  const [threadReplySubmitting, setThreadReplySubmitting] = useState(false);
+  const [threadReplyStatus, setThreadReplyStatus] = useState(null);
   const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
 
   const maxMessageLength = 512;
+  const maxThreadReplyLength = 2000;
 
   const resetForm = () => {
     setMessage('');
@@ -247,6 +251,8 @@ export default function SupportPage({ setIsLoginModalOpen }) {
   useEffect(() => {
     if (!selectedThreadId) {
       setMobileThreadOpen(false);
+      setThreadReplyMessage('');
+      setThreadReplyStatus(null);
     }
   }, [selectedThreadId]);
 
@@ -303,6 +309,53 @@ export default function SupportPage({ setIsLoginModalOpen }) {
   const openThread = (threadId) => {
     setSelectedThreadId(threadId);
     setMobileThreadOpen(true);
+  };
+
+  const handleThreadReply = async (event) => {
+    event.preventDefault();
+
+    if (!selectedThreadId || !selectedThread?.can_user_reply) {
+      return;
+    }
+
+    const nextMessage = threadReplyMessage.trim();
+    if (!nextMessage) {
+      setThreadReplyStatus({ type: 'error', message: 'Напишите сообщение перед отправкой.' });
+      return;
+    }
+
+    if (nextMessage.length > maxThreadReplyLength) {
+      setThreadReplyStatus({ type: 'error', message: `Максимальная длина ответа ${maxThreadReplyLength} символов.` });
+      return;
+    }
+
+    setThreadReplySubmitting(true);
+    setThreadReplyStatus(null);
+
+    try {
+      const headers = await buildCsrfHeaders({ 'Content-Type': 'application/json' });
+      const response = await fetch(API_ENDPOINTS.SUPPORT_MY_THREAD_REPLY(selectedThreadId), {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ message: nextMessage }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setThreadReplyStatus({ type: 'error', message: data.detail || 'Не удалось отправить сообщение.' });
+        return;
+      }
+
+      setThreadReplyMessage('');
+      setThreadReplyStatus({ type: 'success', message: 'Сообщение отправлено.' });
+      await loadThreads(threadsPage, threadsStatus, threadsSearch);
+      await loadThreadDetail(selectedThreadId);
+    } catch {
+      setThreadReplyStatus({ type: 'error', message: 'Ошибка соединения с сервером.' });
+    } finally {
+      setThreadReplySubmitting(false);
+    }
   };
 
   const threadsCountText = threadsStatus === 'closed' ? 'Закрытые обращения' : 'Не закрытые обращения';
@@ -576,6 +629,58 @@ export default function SupportPage({ setIsLoginModalOpen }) {
                       </div>
                     )}
                   </div>
+                  {selectedThread.can_user_reply ? (
+                    <form onSubmit={handleThreadReply} className="mt-5 border-t border-gray-200 pt-4 dark:border-slate-700">
+                      <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Новое сообщение
+                      </label>
+                      <textarea
+                        value={threadReplyMessage}
+                        onChange={(event) => setThreadReplyMessage(event.target.value)}
+                        rows={4}
+                        maxLength={maxThreadReplyLength}
+                        placeholder="Уточните детали или ответьте модератору..."
+                        className="w-full resize-none rounded-2xl border border-gray-200 bg-white px-4 py-3 text-slate-900 placeholder-slate-500 outline-none transition focus:border-emerald-400 dark:border-slate-600 dark:bg-slate-900/70 dark:text-white dark:placeholder-slate-400"
+                      />
+                      <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        {threadReplyMessage.length}/{maxThreadReplyLength} символов
+                      </div>
+                      {threadReplyStatus ? (
+                        <div
+                          className={`mt-3 rounded-2xl border p-4 text-sm font-medium ${
+                            threadReplyStatus.type === 'success'
+                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400'
+                              : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400'
+                          }`}
+                        >
+                          {threadReplyStatus.message}
+                        </div>
+                      ) : null}
+                      <div className="mt-4 flex justify-end">
+                        <button
+                          type="submit"
+                          disabled={threadReplySubmitting || !threadReplyMessage.trim()}
+                          className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-300"
+                        >
+                          {threadReplySubmitting ? (
+                            <>
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                              Отправка...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="h-4 w-4" />
+                              Отправить
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="mt-5 rounded-2xl border border-dashed border-gray-300/70 px-4 py-4 text-sm text-slate-500 dark:border-slate-700/60 dark:text-slate-400">
+                      Это обращение закрыто. Чтобы продолжить диалог, нужно создать новое обращение.
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="rounded-2xl border border-dashed border-gray-300/70 px-4 py-16 text-center text-slate-500 dark:border-slate-700/60 dark:text-slate-400">

@@ -2,8 +2,6 @@
 set -e
 
 run_init_tasks() {
-  python manage.py makemigrations
-
   python manage.py migrate
 
   if [ -n "$DJANGO_SUPERUSER_USERNAME" ]; then

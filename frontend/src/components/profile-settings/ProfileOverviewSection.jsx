@@ -61,7 +61,7 @@ export default function ProfileOverviewSection({
       ) : null}
 
       <div className="rounded-3xl border border-gray-200/70 bg-gray-100/50 p-6 shadow-lg shadow-gray-900/10 dark:border-slate-800/60 dark:bg-[#121927] dark:shadow-black/20 sm:p-8">
-        <div className="relative mb-16 h-36 rounded-2xl bg-slate-200/80 dark:bg-[#0f1724] sm:h-44">
+        <div className="relative mb-16 h-36 rounded-2xl bg-slate-200 dark:bg-[#1a2230] sm:h-44">
           {(bannerPreview || userMedia?.banner_url) ? (
             <img
               src={bannerPreview || buildMediaUrl(userMedia.banner_url)}
@@ -147,12 +147,8 @@ export default function ProfileOverviewSection({
         </div>
 
         <div className="pt-4 text-center">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-            {user?.fullname || 'Пользователь'}
-          </h2>
-          <p className="mb-6 text-sm text-slate-600 dark:text-slate-400">
-            ID: {user?.id || 'Неизвестно'}
-          </p>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">{user?.fullname || 'Пользователь'}</h2>
+          <p className="mb-6 text-sm text-slate-600 dark:text-slate-400">ID: {user?.id || 'Неизвестно'}</p>
 
           {errors.general ? (
             <div className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-300">
@@ -181,9 +177,7 @@ export default function ProfileOverviewSection({
                       <Icon className="h-4 w-4" />
                       {item.label}
                     </div>
-                    <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                      {item.value}
-                    </div>
+                    <div className="text-sm font-semibold text-slate-900 dark:text-white">{item.value}</div>
                   </div>
                 );
               })}

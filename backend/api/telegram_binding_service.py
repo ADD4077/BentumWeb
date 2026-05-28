@@ -175,6 +175,110 @@ class TelegramBindingService:
 
         return loop.run_until_complete(self.bind_telegram_account(token, telegram_data))
 
+    async def bind_user_to_telegram_account_async(
+        self,
+        user: User,
+        telegram_data: Dict[str, Any],
+    ) -> Tuple[bool, str]:
+        try:
+            from asgiref.sync import sync_to_async
+
+            telegram_id = int(telegram_data["id"])
+
+            @sync_to_async
+            def get_existing_binding_for_telegram():
+                return (
+                    TelegramBinding.objects.filter(telegram_id=telegram_id, is_active=True)
+                    .exclude(user=user)
+                    .exclude(telegram_id=0)
+                    .first()
+                )
+
+            @sync_to_async
+            def upsert_binding():
+                binding, _ = TelegramBinding.objects.update_or_create(
+                    user=user,
+                    defaults={
+                        "telegram_id": telegram_id,
+                        "telegram_username": telegram_data.get("username"),
+                        "telegram_first_name": telegram_data.get("first_name"),
+                        "telegram_last_name": telegram_data.get("last_name"),
+                        "binding_token": secrets.token_urlsafe(32),
+                        "is_active": True,
+                        "updated_at": timezone.now(),
+                    },
+                )
+                return binding
+
+            existing_binding = await get_existing_binding_for_telegram()
+            if existing_binding:
+                return False, "Этот Telegram-аккаунт уже привязан к другому пользователю Bentum."
+
+            await upsert_binding()
+            logger.info(
+                "Directly bound Telegram @%s to user %s",
+                telegram_data.get("username", telegram_id),
+                user.student_code,
+            )
+            return True, f"Telegram успешно привязан к {user.fullname}"
+        except Exception as error:
+            logger.error(
+                "Error directly binding Telegram account %s to user %s: %s",
+                telegram_data.get("id"),
+                getattr(user, "student_code", "unknown"),
+                error,
+            )
+            return False, "Внутренняя ошибка сервера"
+
+    async def refresh_binding_metadata_async(self, telegram_data: Dict[str, Any]) -> bool:
+        try:
+            from asgiref.sync import sync_to_async
+
+            telegram_id = int(telegram_data["id"])
+
+            @sync_to_async
+            def get_binding_data():
+                binding = (
+                    TelegramBinding.objects.filter(telegram_id=telegram_id, is_active=True)
+                    .exclude(telegram_id=0)
+                    .select_related("user")
+                    .first()
+                )
+                if not binding:
+                    return None, None
+                return binding, binding.user.student_code
+
+            @sync_to_async
+            def save_binding(binding: TelegramBinding):
+                binding.telegram_username = telegram_data.get("username")
+                binding.telegram_first_name = telegram_data.get("first_name")
+                binding.telegram_last_name = telegram_data.get("last_name")
+                binding.updated_at = timezone.now()
+                binding.save(update_fields=[
+                    "telegram_username",
+                    "telegram_first_name",
+                    "telegram_last_name",
+                    "updated_at",
+                ])
+
+            binding, student_code = await get_binding_data()
+            if not binding:
+                return False
+
+            if (
+                binding.telegram_username == telegram_data.get("username")
+                and binding.telegram_first_name == telegram_data.get("first_name")
+                and binding.telegram_last_name == telegram_data.get("last_name")
+            ):
+                return True
+
+            await save_binding(binding)
+            logger.info("Refreshed Telegram metadata for user %s", student_code or binding.user_id)
+            return True
+        except Exception as error:
+            logger.error("Error refreshing Telegram metadata for %s: %s", telegram_data.get("id"), error)
+            return False
+
     def get_user_binding(self, user: User) -> Optional[TelegramBinding]:
         try:
             return TelegramBinding.objects.filter(user=user, is_active=True).first()

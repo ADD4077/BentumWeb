@@ -129,6 +129,8 @@ class AuthService:
 
     @staticmethod
     def register_user(student_code: str, password: str, fullname: str, faculty: str) -> User:
+        from ..referral_service import ReferralService
+
         normalized_fullname = (fullname or "").strip()[: AuthService.FULLNAME_MAX_LENGTH] or student_code
         normalized_faculty = (faculty or "").strip()[: AuthService.FACULTY_MAX_LENGTH] or "Неизвестный факультет"
 
@@ -157,10 +159,13 @@ class AuthService:
         except Exception:
             logger.exception("Failed to enqueue new user notification for %s", user.student_code)
 
+        ReferralService.ensure_user_referral_code(user)
         return user
 
     @staticmethod
     def build_auth_user_payload(user: User) -> dict:
+        from ..referral_service import ReferralService
+
         user_settings = get_user_settings(user)
         media = get_user_media(user)
         preferences = serialize_user_preferences(user_settings)
@@ -176,6 +181,7 @@ class AuthService:
             "preferences": preferences,
             "created_at": serialize_datetime(user.created_at),
             "last_login": serialize_datetime(user.last_login),
+            "referral": ReferralService.get_referral_summary(user),
             **media,
         }
 

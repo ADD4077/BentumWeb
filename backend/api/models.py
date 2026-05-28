@@ -32,6 +32,9 @@ class UserManager(BaseUserManager):
         if user.created_at is None:
             user.created_at = timezone.now()
         user.save(using=self._db)
+        from .referral_service import ReferralService
+
+        ReferralService.ensure_user_referral_code(user)
         return user
 
     def create_superuser(self, student_code=None, password=None, **extra_fields):
@@ -64,6 +67,16 @@ class User(AbstractBaseUser, PermissionsMixin):
     faculty = models.CharField(max_length=255)
     student_code = models.CharField(max_length=10, unique=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_STUDENT)
+    referral_code = models.CharField(max_length=16, unique=True, null=True, blank=True)
+    referred_by = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="referred_users",
+    )
+    referred_at = models.DateTimeField(null=True, blank=True)
+    referral_source = models.CharField(max_length=32, blank=True, default="")
     created_at = models.DateTimeField(null=True, blank=True)
     twofa_enabled = models.BooleanField(default=False)
     twofa_method = models.CharField(max_length=20, null=True, blank=True)
@@ -89,7 +102,6 @@ class UserSettings(models.Model):
     notify_support_replies = models.BooleanField(default=True)
     notify_security_events = models.BooleanField(default=True)
     show_profile_in_community = models.BooleanField(default=True)
-    show_faculty = models.BooleanField(default=True)
     allow_telegram_discovery = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -273,6 +285,9 @@ class BackgroundJob(models.Model):
     STATUS_RUNNING = "running"
     STATUS_COMPLETED = "completed"
     STATUS_FAILED = "failed"
+    PRIORITY_HIGH = 300
+    PRIORITY_MEDIUM = 200
+    PRIORITY_LOW = 100
 
     STATUS_CHOICES = [
         (STATUS_PENDING, "Pending"),
@@ -280,10 +295,20 @@ class BackgroundJob(models.Model):
         (STATUS_COMPLETED, "Completed"),
         (STATUS_FAILED, "Failed"),
     ]
+    PRIORITY_CHOICES = [
+        (PRIORITY_HIGH, "High"),
+        (PRIORITY_MEDIUM, "Medium"),
+        (PRIORITY_LOW, "Low"),
+    ]
 
     job_type = models.CharField(max_length=100, db_index=True)
     job_key = models.CharField(max_length=255, blank=True, default="", db_index=True)
     payload = models.JSONField(default=dict, blank=True)
+    priority = models.PositiveSmallIntegerField(
+        choices=PRIORITY_CHOICES,
+        default=PRIORITY_MEDIUM,
+        db_index=True,
+    )
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -302,7 +327,7 @@ class BackgroundJob(models.Model):
     class Meta:
         db_table = "background_jobs"
         indexes = [
-            models.Index(fields=["status", "available_at"]),
+            models.Index(fields=["status", "priority", "available_at"]),
             models.Index(fields=["job_type", "status"]),
             models.Index(fields=["created_at"]),
         ]
@@ -355,6 +380,42 @@ class ActivityEvent(models.Model):
 
     def __str__(self):
         return f"{self.event_type} @ {self.created_at}"
+
+
+class UserNotification(models.Model):
+    TYPE_LOGIN_SUCCESS = "login_success"
+    TYPE_SUPPORT_REPLY = "support_reply"
+    TYPE_PASSWORD_CHANGED = "password_changed"
+    TYPE_TWOFA_ENABLED = "twofa_enabled"
+    TYPE_TWOFA_DISABLED = "twofa_disabled"
+
+    TYPE_CHOICES = [
+        (TYPE_LOGIN_SUCCESS, "Успешный вход"),
+        (TYPE_SUPPORT_REPLY, "Ответ поддержки"),
+        (TYPE_PASSWORD_CHANGED, "Смена пароля"),
+        (TYPE_TWOFA_ENABLED, "2FA включена"),
+        (TYPE_TWOFA_DISABLED, "2FA отключена"),
+    ]
+
+    user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="notifications")
+    notification_type = models.CharField(max_length=40, choices=TYPE_CHOICES, db_index=True)
+    title = models.CharField(max_length=255)
+    body = models.TextField(blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    is_read = models.BooleanField(default=False, db_index=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "user_notifications"
+        indexes = [
+            models.Index(fields=["user", "created_at"]),
+            models.Index(fields=["user", "is_read", "created_at"]),
+            models.Index(fields=["notification_type", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.student_code}: {self.notification_type}"
 
 
 class DevTeamMember(models.Model):
@@ -520,3 +581,76 @@ class ScheduleEntry(models.Model):
 
     def __str__(self):
         return f"{self.group_number}: {self.day} {self.time}"
+
+
+class Event(models.Model):
+    STATUS_ACTIVE = "active"
+    STATUS_IN_PROGRESS = "in_progress"
+    STATUS_COMPLETED = "completed"
+
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, "Активно"),
+        (STATUS_IN_PROGRESS, "В процессе"),
+        (STATUS_COMPLETED, "Завершено"),
+    ]
+
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    starts_at = models.DateTimeField(db_index=True)
+    max_participants = models.PositiveIntegerField(default=10)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE, db_index=True)
+    banner_path = models.CharField(max_length=500, blank=True)
+    banner_original_filename = models.CharField(max_length=255, blank=True)
+    banner_file_size = models.IntegerField(default=0)
+    banner_width = models.IntegerField(null=True, blank=True)
+    banner_height = models.IntegerField(null=True, blank=True)
+    created_by = models.ForeignKey("User", on_delete=models.CASCADE, related_name="created_events")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "events"
+        indexes = [
+            models.Index(fields=["status", "starts_at"]),
+            models.Index(fields=["created_by", "created_at"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        return self.title
+
+    @property
+    def effective_status(self):
+        if self.status == self.STATUS_COMPLETED:
+            return self.STATUS_COMPLETED
+        if self.starts_at and timezone.now() >= self.starts_at:
+            return self.STATUS_IN_PROGRESS
+        return self.STATUS_ACTIVE
+
+    def get_effective_status_display(self):
+        if self.effective_status == self.STATUS_IN_PROGRESS:
+            return "В процессе"
+        if self.effective_status == self.STATUS_COMPLETED:
+            return "Завершено"
+        return "Активно"
+
+
+class EventParticipation(models.Model):
+    event = models.ForeignKey("Event", on_delete=models.CASCADE, related_name="participants")
+    user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="event_participations")
+    attended = models.BooleanField(default=False)
+    attended_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "event_participations"
+        constraints = [
+            models.UniqueConstraint(fields=["event", "user"], name="uniq_event_participant"),
+        ]
+        indexes = [
+            models.Index(fields=["event", "created_at"]),
+            models.Index(fields=["user", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.event_id}:{self.user_id}"

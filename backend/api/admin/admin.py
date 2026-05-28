@@ -3,6 +3,8 @@ from api.models import (
     ActivityEvent,
     BackgroundJob,
     DevTeamMember,
+    Event,
+    EventParticipation,
     LiteratureItem,
     NewsItem,
     ScheduleEntry,
@@ -144,6 +146,24 @@ class UserProfileMediaAdmin(admin.ModelAdmin):
     fields = ['user', 'media_type', 'original_filename', 'file_path', 'file_size', 'mime_type', 'width', 'height', 'is_active', 'created_at']
 
 
+@admin.register(Event)
+class EventAdmin(admin.ModelAdmin):
+    list_display = ["id", "title", "status", "starts_at", "max_participants", "created_by", "created_at"]
+    list_filter = ["status", "starts_at", "created_at"]
+    search_fields = ["title", "description", "created_by__fullname", "created_by__student_code"]
+    raw_id_fields = ["created_by"]
+    readonly_fields = ["created_at", "updated_at"]
+
+
+@admin.register(EventParticipation)
+class EventParticipationAdmin(admin.ModelAdmin):
+    list_display = ["id", "event", "user", "created_at"]
+    list_filter = ["created_at"]
+    search_fields = ["event__title", "user__fullname", "user__student_code"]
+    raw_id_fields = ["event", "user"]
+    readonly_fields = ["created_at"]
+
+
 @admin.register(MediaOptimization)
 class MediaOptimizationAdmin(admin.ModelAdmin):
     list_display = ['id', 'original_media', 'size_type', 'file_size', 'created_at']
@@ -269,7 +289,6 @@ class UserSettingsAdmin(admin.ModelAdmin):
         "notify_support_replies",
         "notify_security_events",
         "show_profile_in_community",
-        "show_faculty",
         "allow_telegram_discovery",
         "created_at",
         "updated_at",
@@ -279,7 +298,6 @@ class UserSettingsAdmin(admin.ModelAdmin):
         "notify_support_replies",
         "notify_security_events",
         "show_profile_in_community",
-        "show_faculty",
         "allow_telegram_discovery",
         "created_at",
         "updated_at",
@@ -349,10 +367,11 @@ class SupportMessageAdmin(admin.ModelAdmin):
 
 @admin.register(BackgroundJob)
 class BackgroundJobAdmin(admin.ModelAdmin):
-    list_display = ["id", "job_type", "status", "attempts", "max_attempts", "available_at", "created_at"]
-    list_filter = ["job_type", "status", "available_at", "created_at"]
+    list_display = ["id", "job_type", "priority", "status", "attempts", "max_attempts", "available_at", "started_at", "finished_at", "created_at"]
+    list_filter = ["job_type", "priority", "status", "available_at", "created_at"]
     search_fields = ["job_type", "job_key", "last_error"]
     readonly_fields = ["created_at", "updated_at", "started_at", "finished_at"]
+    ordering = ["-priority", "-created_at"]
     fields = [
         "job_type",
         "job_key",

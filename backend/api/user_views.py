@@ -686,21 +686,26 @@ def unban_user(request):
 
 
 @api_view(["GET"])
+@allow_unverified_2fa
 def get_user_by_code(request, student_code):
     """Получить информацию о пользователе по студенческому коду."""
     try:
-        _, error_response = _get_session_user(request)
-        if error_response:
-            request.session.modified = False
-            return error_response
-
         user = User.objects.filter(student_code=student_code).first()
 
         if not user:
             request.session.modified = False
             return JsonResponse({"success": True, "user": None})
 
-        viewer, _error_response = _get_session_user(request)
+        request_user = getattr(request, "user", None)
+        viewer = None
+
+        if isinstance(request_user, User) and getattr(request_user, "is_authenticated", False):
+            viewer = request_user
+        elif request.session.get("is_authenticated"):
+            viewer = User.objects.filter(
+                student_code=request.session.get("student_code")
+            ).first()
+
         user_data = get_public_user_profile_data(
             user,
             viewer=viewer,
