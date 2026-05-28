@@ -1,11 +1,20 @@
 #!/bin/bash
 set -e
 
+APP_UID="${APP_UID:-appuser}"
+
+ensure_storage_permissions() {
+  for path in /app/media /app/books /app/news /app/schedules; do
+    mkdir -p "$path"
+    chown -R "$APP_UID":"$APP_UID" "$path"
+  done
+}
+
 run_init_tasks() {
-  python manage.py migrate
+  gosu "$APP_UID" python manage.py migrate
 
   if [ -n "$DJANGO_SUPERUSER_USERNAME" ]; then
-  if python manage.py shell -c "
+  if gosu "$APP_UID" python manage.py shell -c "
 from django.contrib.auth import get_user_model
 import os
 
@@ -19,7 +28,7 @@ if identifier and not User.objects.filter(**{lookup_field: identifier}).exists()
   then
     echo "Superuser already exists"
   else
-    python manage.py shell -c "
+    gosu "$APP_UID" python manage.py shell -c "
 from django.contrib.auth import get_user_model
 import os
 
@@ -43,13 +52,15 @@ if identifier and password and not User.objects.filter(**{lookup_field: identifi
   fi
   fi
 
-  python manage.py collectstatic --noinput
+  gosu "$APP_UID" python manage.py collectstatic --noinput
 }
 
+ensure_storage_permissions
+
 if [ "${SKIP_INIT_TASKS:-0}" = "1" ]; then
-  exec "$@"
+  exec gosu "$APP_UID" "$@"
 fi
 
 run_init_tasks
 
-exec "$@"
+exec gosu "$APP_UID" "$@"

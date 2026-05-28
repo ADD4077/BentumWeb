@@ -70,21 +70,13 @@ function statusLabelFromValue(status) {
 }
 
 function EmptyState({ canManage }) {
-  const isDark = getIsDarkMode();
-
   return (
-    <div className={`rounded-3xl border px-6 py-12 text-center shadow-[0_32px_120px_rgba(3,8,20,0.12)] ${
-      isDark
-        ? 'border-slate-800/80 bg-[#141c28]/80'
-        : 'border-slate-200/70 bg-white/90'
-    }`}>
-      <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${
-        isDark ? 'bg-slate-800/80 text-slate-300' : 'bg-slate-100 text-slate-500'
-      }`}>
+    <div className="rounded-3xl border border-slate-200/70 bg-white/90 px-6 py-12 text-center shadow-[0_32px_120px_rgba(3,8,20,0.12)] dark:border-slate-800/80 dark:bg-[#141c28]/80">
+      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800/80 dark:text-slate-300">
         <CalendarDays className="h-7 w-7" />
       </div>
-      <h3 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Мероприятий пока нет</h3>
-      <p className={`mx-auto mt-3 max-w-xl text-sm leading-6 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+      <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Мероприятий пока нет</h3>
+      <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600 dark:text-slate-400">
         {canManage
           ? 'Создайте первое мероприятие, и оно появится в общей сети для студентов.'
           : 'Когда преподаватели добавят мероприятие, здесь появятся карточки с описанием, временем и кнопкой участия.'}

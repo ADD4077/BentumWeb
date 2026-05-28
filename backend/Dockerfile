@@ -21,7 +21,7 @@ RUN useradd -m -r appuser && \
    mkdir /app && \
    chown -R appuser /app
 
-RUN apt update && apt install -y ca-certificates && update-ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt update && apt install -y ca-certificates gosu && update-ca-certificates && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/local/lib/python3.13/site-packages/ /usr/local/lib/python3.13/site-packages/
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
@@ -29,8 +29,6 @@ COPY --from=builder /usr/local/bin/ /usr/local/bin/
 WORKDIR /app
 
 COPY --chown=appuser:appuser . .
-
-USER appuser
 
 EXPOSE 1337
 
