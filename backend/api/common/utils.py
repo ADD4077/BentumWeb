@@ -279,7 +279,7 @@ def get_public_user_profile_data(
         **media,
     }
 
-    if faculty:
+    if faculty and not respect_privacy_strictly:
         payload["faculty"] = faculty
 
     if telegram_display:

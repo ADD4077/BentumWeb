@@ -690,21 +690,16 @@ def unban_user(request):
 def get_user_by_code(request, student_code):
     """Получить информацию о пользователе по студенческому коду."""
     try:
+        viewer, error_response = _get_session_user(request)
+        if error_response:
+            request.session.modified = False
+            return error_response
+
         user = User.objects.filter(student_code=student_code).first()
 
         if not user:
             request.session.modified = False
             return JsonResponse({"success": True, "user": None})
-
-        request_user = getattr(request, "user", None)
-        viewer = None
-
-        if isinstance(request_user, User) and getattr(request_user, "is_authenticated", False):
-            viewer = request_user
-        elif request.session.get("is_authenticated"):
-            viewer = User.objects.filter(
-                student_code=request.session.get("student_code")
-            ).first()
 
         user_data = get_public_user_profile_data(
             user,
@@ -718,7 +713,6 @@ def get_user_by_code(request, student_code):
         request.session.modified = False
         logger.exception("Failed to fetch user by code")
         return JsonResponse({"success": False, "detail": "Внутренняя ошибка сервера"}, status=500)
-
 
 @api_view(["GET"])
 def get_admin_user_profile(request, user_id):
