@@ -212,7 +212,7 @@ class TelegramBindingService:
 
             existing_binding = await get_existing_binding_for_telegram()
             if existing_binding:
-                return False, "Этот Telegram-аккаунт уже привязан к другому пользователю Bentum."
+                return False, "Этот Telegram-аккаунт уже привязан к другому пользователю Бентум."
 
             await upsert_binding()
             logger.info(

@@ -138,7 +138,7 @@ class SaveDataView(APIView):
                     existing_user,
                     notification_type="login_success",
                     title="Новый вход в аккаунт",
-                    body="Вы успешно вошли в Bentum.",
+                    body="Вы успешно вошли в Бентум.",
                 )
                 return JsonResponse(
                     {

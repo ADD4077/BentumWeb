@@ -34,8 +34,8 @@ const MediaUpload = ({
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      showWarning('Файл слишком большой. Максимальный размер: 10MB');
+    if (file.size > 20 * 1024 * 1024) {
+      showWarning('Файл слишком большой. Максимальный размер: 20MB');
       return;
     }
 

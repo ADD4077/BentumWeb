@@ -82,7 +82,7 @@ async def authenticate_or_register_telegram_user(
         if existing_bound_user.student_code != student_code:
             return BotAuthResult(
                 success=False,
-                message="Этот Telegram уже привязан к другому аккаунту Bentum.",
+                message="Этот Telegram уже привязан к другому аккаунту Бентум.",
             )
 
         binding = await telegram_binding_service.get_user_binding_async(existing_bound_user)
@@ -92,7 +92,7 @@ async def authenticate_or_register_telegram_user(
 
         return BotAuthResult(
             success=True,
-            message="Этот Telegram уже привязан к вашему аккаунту Bentum. Повторная привязка не требуется.",
+            message="Этот Telegram уже привязан к вашему аккаунту Бентум. Повторная привязка не требуется.",
             user=_build_bound_user(existing_bound_user, telegram_display),
             created=False,
         )
@@ -130,7 +130,7 @@ async def authenticate_or_register_telegram_user(
         user,
         notification_type="login_success",
         title="Новый вход через Telegram-бота",
-        body="Вы успешно вошли в Bentum через Telegram-бота.",
+        body="Вы успешно вошли в Бентум через Telegram-бота.",
         metadata={"source": "telegram_bot"},
     )
 
@@ -141,9 +141,9 @@ async def authenticate_or_register_telegram_user(
 
     message_parts = [
         (
-            "Создали новый аккаунт Bentum и сразу привязали к нему Telegram."
+            "Создали новый аккаунт Бентум и сразу привязали к нему Telegram."
             if created
-            else "Нашли существующий аккаунт Bentum и привязали к нему Telegram."
+            else "Нашли существующий аккаунт Бентум и привязали к нему Telegram."
         )
     ]
     if referral_result and referral_result.message:

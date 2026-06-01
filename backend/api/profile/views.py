@@ -194,7 +194,7 @@ class ChangePasswordView(SessionUserAPIView):
                 user,
                 notification_type="password_changed",
                 title="Пароль изменён",
-                body="Пароль вашего аккаунта Bentum был успешно изменён.",
+                body="Пароль вашего аккаунта Бентум был успешно изменён.",
             )
 
             try:
@@ -202,7 +202,7 @@ class ChangePasswordView(SessionUserAPIView):
                     telegram_binding_service.send_user_notification_sync(
                         user,
                         (
-                            "Безопасность Bentum\n\n"
+                            "Безопасность Бентум\n\n"
                             "Пароль вашего аккаунта был изменён. Если это были не вы, "
                             "срочно смените пароль и проверьте безопасность аккаунта."
                         ),

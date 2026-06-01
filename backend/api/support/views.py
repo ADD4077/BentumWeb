@@ -504,7 +504,7 @@ class ReplyToThreadView(ModeratorSupportAPIView):
                     telegram_binding_service.send_user_notification_sync(
                         thread.created_by,
                         (
-                            "Bentum: ответ на обращение\n\n"
+                            "Бентум: ответ на обращение\n\n"
                             f"Тема: {thread.subject}\n"
                             f"Модератор: {moderator.fullname}\n\n"
                             f"{body[:600]}"

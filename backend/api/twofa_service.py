@@ -207,7 +207,7 @@ class TwoFAService:
         name = getattr(user, "fullname", None) or "Пользователь"
 
         text = (
-            f"{name}, выполнен успешный вход в аккаунт Bentum.\n"
+            f"{name}, выполнен успешный вход в аккаунт Бентум.\n"
             f"Устройство: {device}\n"
             f"Браузер: {browser}\n\n"
             f"Время: {timestamp}"

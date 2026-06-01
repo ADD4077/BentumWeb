@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, Eye, Gift, LogOut, Shield, User } from 'lucide-react';
+import { Bell, Eye, Gift, Image, LogOut, Shield } from 'lucide-react';
 
 import { API_ENDPOINTS } from '../config/api.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -27,7 +27,7 @@ const DEFAULT_PRIVACY_SETTINGS = {
 
 function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, onForceRefresh, onLogout }) {
   const { isAuthenticated, logout, checkAuth } = useAuth();
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState('security');
   const [isMobileMode, setIsMobileMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -195,7 +195,7 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
         if (nextMobile) {
           return current === 'logout' ? null : null;
         }
-        return current || 'profile';
+        return current || 'security';
       });
     };
 
@@ -245,7 +245,7 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
 
   const tabs = useMemo(
     () => [
-      { id: 'profile', label: 'Профиль', icon: User },
+      { id: 'profile', label: 'Оформление', icon: Image },
       { id: 'security', label: 'Безопасность', icon: Shield },
       { id: 'privacy', label: 'Приватность', icon: Eye },
       { id: 'notifications', label: 'Уведомления', icon: Bell },
@@ -585,8 +585,8 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
       title="Уведомления"
       description={
         isTelegramLinked
-          ? 'Все уведомления Bentum отправляются в привязанный Telegram. Здесь можно выбрать, какие события будут приходить.'
-          : 'Все уведомления Bentum отправляются в Telegram. Сначала привяжите Telegram во вкладке «Безопасность», чтобы получать их.'
+          ? 'Все уведомления Бентум отправляются в привязанный Telegram. Здесь можно выбрать, какие события будут приходить.'
+          : 'Все уведомления Бентум отправляются в Telegram. Сначала привяжите Telegram во вкладке «Безопасность», чтобы получать их.'
       }
       items={[
         {
@@ -613,7 +613,7 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
   ) : activeTab === 'privacy' ? (
     <PreferenceSettingsSection
       title="Приватность"
-      description="Управляйте тем, что другие пользователи увидят в вашем публичном профиле внутри Bentum."
+      description="Управляйте тем, что другие пользователи увидят в вашем публичном профиле внутри Бентум."
       items={[
         {
           key: 'showProfileInCommunity',

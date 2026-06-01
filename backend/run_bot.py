@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Backward-compatible entrypoint for the unified Bentum Telegram bot."""
 
 from telegram_bot.main import main
 

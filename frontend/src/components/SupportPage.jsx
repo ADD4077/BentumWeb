@@ -359,11 +359,23 @@ export default function SupportPage({ setIsLoginModalOpen }) {
   };
 
   const threadsCountText = threadsStatus === 'closed' ? 'Закрытые обращения' : 'Не закрытые обращения';
+  const selectedRequestMeta = REQUEST_TYPES.find((type) => type.value === requestType) || REQUEST_TYPES[0];
+  const SelectedRequestIcon = selectedRequestMeta.icon;
+  const requestTypeDescriptions = {
+    support: 'Поможем разобраться с проблемой или непонятным поведением сервиса.',
+    bug: 'Дайте нам цепочку шагов, ожидаемый результат и фактическое поведение.',
+    feature: 'Опишите идею и ситуацию, в которой новая функция действительно поможет.',
+    question: 'Подойдет для уточнений, когда нужно быстро понять, как что-то работает.',
+  };
 
   return (
     <div className="min-h-screen p-3 sm:p-6">
       <div className="mx-auto max-w-[1560px] space-y-6">
-        <section className="rounded-[30px] border border-gray-200/70 bg-gray-100/50 p-5 shadow-lg shadow-gray-900/10 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20">
+        <section
+          className={`rounded-[30px] border border-gray-200/70 bg-gray-100/50 p-5 shadow-lg shadow-gray-900/10 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20 ${
+            isAuthenticated && activeTab === TAB_NEW ? 'mx-auto max-w-4xl' : ''
+          }`}
+        >
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
               <h1 className="text-3xl font-semibold text-slate-950 dark:text-white">Поддержка</h1>
@@ -412,7 +424,7 @@ export default function SupportPage({ setIsLoginModalOpen }) {
               </div>
               <h2 className="mt-5 text-2xl font-semibold text-slate-900 dark:text-white">Нужен вход в аккаунт</h2>
               <p className="mt-2 text-slate-500 dark:text-slate-400">
-                Чтобы отправлять обращения и видеть историю ответов, войдите в аккаунт Bentum.
+                Чтобы отправлять обращения и видеть историю ответов, войдите в аккаунт Бентум.
               </p>
               <button
                 type="button"
@@ -424,89 +436,115 @@ export default function SupportPage({ setIsLoginModalOpen }) {
             </div>
           </section>
         ) : activeTab === TAB_NEW ? (
-          <section className="rounded-[30px] border border-gray-200/70 bg-gray-100/50 p-4 sm:p-6 shadow-lg shadow-gray-900/10 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="mb-3 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Тип обращения
-                </label>
-                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                  {REQUEST_TYPES.map((type) => {
-                    const Icon = type.icon;
-                    const palette = COLOR_CLASSES[type.color];
-                    const isSelected = requestType === type.value;
+          <section className="py-1">
+            <div className="mx-auto max-w-4xl px-1">
+              <form
+                onSubmit={handleSubmit}
+                className="rounded-[28px] border border-gray-200/70 bg-gray-100/50 p-5 shadow-lg shadow-gray-900/10 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20 sm:p-6"
+              >
+                <div className="flex flex-col gap-4 border-b border-slate-200/70 pb-5 dark:border-slate-700/60">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-400">
+                        <SelectedRequestIcon className="h-3.5 w-3.5" />
+                        {selectedRequestMeta.label}
+                      </div>
+                      <h2 className="mt-3 text-xl font-semibold text-slate-900 dark:text-white">
+                        Новое обращение
+                      </h2>
+                      <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+                        Опиши ситуацию спокойно и в одном сообщении: что произошло, что ожидалось и при каких шагах это повторяется.
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-100/90 px-3 py-2 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                      {message.length}/{maxMessageLength} символов
+                    </div>
+                  </div>
 
-                    return (
-                      <button
-                        key={type.value}
-                        type="button"
-                        onClick={() => setRequestType(type.value)}
-                        className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
-                          isSelected ? palette.active : palette.idle
-                        }`}
-                      >
-                        <Icon className="h-4 w-4" />
-                        {type.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                  <div>
+                    <label className="mb-3 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                      Тип обращения
+                    </label>
+                    <div className="flex flex-wrap gap-2.5">
+                      {REQUEST_TYPES.map((type) => {
+                        const Icon = type.icon;
+                        const palette = COLOR_CLASSES[type.color];
+                        const isSelected = requestType === type.value;
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Сообщение
-                </label>
-                <textarea
-                  value={message}
-                  onChange={(event) => setMessage(event.target.value)}
-                  rows={8}
-                  maxLength={maxMessageLength}
-                  required
-                  placeholder="Опишите проблему, вопрос или предложение..."
-                  className="w-full resize-none rounded-2xl border border-gray-200 bg-white px-4 py-3 text-slate-900 placeholder-slate-500 outline-none transition focus:border-emerald-400 dark:border-slate-600 dark:bg-slate-900/70 dark:text-white dark:placeholder-slate-400"
-                />
-                <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  {message.length}/{maxMessageLength} символов
-                </div>
-              </div>
-
-              {submitStatus ? (
-                <div
-                  className={`rounded-2xl border p-4 text-sm font-medium ${
-                    submitStatus.type === 'success'
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400'
-                      : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
-                    <div>{submitStatus.message}</div>
+                        return (
+                          <button
+                            key={type.value}
+                            type="button"
+                            onClick={() => setRequestType(type.value)}
+                            className={`inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition-all ${
+                              isSelected ? palette.active : palette.idle
+                            }`}
+                          >
+                            <Icon className="h-4 w-4 shrink-0" />
+                            <span>{type.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
-              ) : null}
 
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-300"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      Отправка...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4" />
-                      Отправить обращение
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
+                <div className="mt-5">
+                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Сообщение
+                  </label>
+                  <textarea
+                    value={message}
+                    onChange={(event) => setMessage(event.target.value)}
+                    rows={8}
+                    maxLength={maxMessageLength}
+                    required
+                    placeholder="Опишите проблему, вопрос или предложение..."
+                    className="w-full resize-none rounded-[24px] border border-slate-200 bg-slate-50/90 px-4 py-4 text-slate-900 placeholder-slate-500 outline-none transition focus:border-emerald-400 focus:bg-white dark:border-slate-700 dark:bg-slate-950/70 dark:text-white dark:placeholder-slate-400 dark:focus:bg-slate-950"
+                  />
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
+                  <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 px-4 py-3 text-sm leading-6 text-slate-600 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-300">
+                    Ответ модератора появится в разделе «Мои обращения». Если это ошибка, полезно указать последовательность действий и ожидаемый результат.
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-300"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Отправка...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" />
+                        Отправить
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {submitStatus ? (
+                  <div
+                    className={`mt-4 rounded-2xl border p-4 text-sm font-medium ${
+                      submitStatus.type === 'success'
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400'
+                        : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                      <div>{submitStatus.message}</div>
+                    </div>
+                  </div>
+                ) : null}
+              </form>
+            </div>
           </section>
+
         ) : (
           <div className="grid gap-4 sm:gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
             <section className={`rounded-[30px] border border-gray-200/70 bg-gray-100/50 p-4 sm:p-5 shadow-lg shadow-gray-900/10 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/50 dark:shadow-black/20 ${mobileThreadOpen ? 'hidden xl:block' : ''}`}>

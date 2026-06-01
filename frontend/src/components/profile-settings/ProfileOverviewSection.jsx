@@ -1,19 +1,17 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
-  Calendar,
   Camera,
-  GraduationCap,
   Loader2,
   Save,
-  ShieldCheck,
   Trash2,
   Upload,
   User,
 } from 'lucide-react';
 
-import { formatDateOnly, formatDateTime } from '../../utils/dates.js';
 import { buildMediaUrl } from '../../utils/media.js';
-import { getRoleLabel } from '../../utils/roles.js';
+import { showWarning } from '../../utils/notifications.js';
+
+const MAX_PROFILE_MEDIA_SIZE = 20 * 1024 * 1024;
 
 export default function ProfileOverviewSection({
   banInfo,
@@ -35,23 +33,6 @@ export default function ProfileOverviewSection({
   bannerFile,
   resetSelection,
 }) {
-  const infoItems = useMemo(
-    () => [
-      { label: 'ID аккаунта', value: user?.id ? String(user.id) : 'Не указан', icon: ShieldCheck },
-      { label: 'Роль', value: getRoleLabel(user?.role), icon: ShieldCheck },
-      { label: 'Код студента', value: user?.student_code || 'Не указан', icon: GraduationCap },
-      { label: 'Факультет', value: user?.faculty || 'Не указан', icon: GraduationCap },
-      { label: 'Дата регистрации', value: formatDateOnly(user?.created_at, 'Не указана'), icon: Calendar },
-      { label: 'Последний вход', value: formatDateTime(user?.last_login, 'Не указан'), icon: Calendar },
-      {
-        label: 'Двухфакторная аутентификация',
-        value: user?.twofa_enabled ? 'Включена' : 'Выключена',
-        icon: ShieldCheck,
-      },
-    ],
-    [user]
-  );
-
   return (
     <div className="space-y-6">
       {banInfo ? (
@@ -80,6 +61,11 @@ export default function ProfileOverviewSection({
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (!file) return;
+                  if (file.size > MAX_PROFILE_MEDIA_SIZE) {
+                    showWarning('Файл слишком большой. Максимальный размер: 20MB');
+                    event.target.value = '';
+                    return;
+                  }
                   setBannerFile(file);
                   const reader = new FileReader();
                   reader.onload = (loadEvent) => setBannerPreview(loadEvent.target?.result || null);
@@ -120,12 +106,17 @@ export default function ProfileOverviewSection({
                     ref={avatarInputRef}
                     type="file"
                     accept="image/*"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (!file) return;
-                      setAvatarFile(file);
-                      const reader = new FileReader();
-                      reader.onload = (loadEvent) => setAvatarPreview(loadEvent.target?.result || null);
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > MAX_PROFILE_MEDIA_SIZE) {
+                    showWarning('Файл слишком большой. Максимальный размер: 20MB');
+                    event.target.value = '';
+                    return;
+                  }
+                  setAvatarFile(file);
+                  const reader = new FileReader();
+                  reader.onload = (loadEvent) => setAvatarPreview(loadEvent.target?.result || null);
                       reader.readAsDataURL(file);
                     }}
                     className="hidden"
@@ -147,42 +138,26 @@ export default function ProfileOverviewSection({
         </div>
 
         <div className="pt-4 text-center">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">{user?.fullname || 'Пользователь'}</h2>
-          <p className="mb-6 text-sm text-slate-600 dark:text-slate-400">ID: {user?.id || 'Неизвестно'}</p>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Оформление профиля</h2>
+          <p className="mb-6 text-sm text-slate-600 dark:text-slate-400">
+            Здесь можно менять только аватар и баннер. Личные данные аккаунта теперь находятся отдельно в личном кабинете.
+          </p>
+
+          <div className="mb-6 rounded-2xl border border-emerald-200/70 bg-emerald-50/70 p-4 text-left text-sm leading-6 text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100">
+            <div className="font-semibold">Рекомендации по загрузке</div>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Максимальный размер файла: 20MB.</li>
+              <li>Поддерживаются JPG, PNG, WEBP, AVIF и GIF.</li>
+              <li>Аватар лучше использовать квадратный, чтобы он аккуратно отображался в профиле.</li>
+              <li>Для баннера лучше выбирать широкое изображение без важного текста по краям.</li>
+            </ul>
+          </div>
 
           {errors.general ? (
             <div className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-300">
               {errors.general}
             </div>
           ) : null}
-
-          <div className="mb-6 rounded-2xl border border-gray-200/70 bg-white/70 p-4 text-left shadow-sm dark:border-slate-700/60 dark:bg-[#17202d] sm:p-5">
-            <div className="mb-4 flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-emerald-500" />
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200">
-                Информация о пользователе
-              </h3>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              {infoItems.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <div
-                    key={item.label}
-                    className="rounded-2xl border border-gray-200/70 bg-gray-50/80 px-4 py-3 dark:border-slate-700/60 dark:bg-slate-800/70"
-                  >
-                    <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      <Icon className="h-4 w-4" />
-                      {item.label}
-                    </div>
-                    <div className="text-sm font-semibold text-slate-900 dark:text-white">{item.value}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
             <button

@@ -112,7 +112,7 @@ function LoginModal({ isOpen, onClose, onInstructionOpen }) {
           </div>
           <h2 className="mt-6 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Вход</h2>
           <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
-            Войдите в личный кабинет, чтобы получить доступ ко всем функциям Bentum.
+            Войдите в личный кабинет, чтобы получить доступ ко всем функциям Бентум.
           </p>
         </div>
 

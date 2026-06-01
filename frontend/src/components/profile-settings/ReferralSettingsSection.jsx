@@ -52,7 +52,7 @@ export default function ReferralSettingsSection({ referral }) {
       </div>
 
       <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
-        Приглашайте друзей в Bentum через личный код и делитесь готовыми ссылками на сайт или Telegram-бота.
+        Приглашайте друзей в Бентум через личный код и делитесь готовыми ссылками на сайт или Telegram-бота.
       </p>
 
       <div className="grid gap-3 sm:grid-cols-2">

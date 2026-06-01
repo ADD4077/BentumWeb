@@ -40,11 +40,11 @@ function InstructionModal({ isOpen, onClose, darkMode: _darkMode, onSupportOpen:
             <div className="mb-3 flex items-center gap-3">
               <AlertCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                Что такое BentumWeb?
+                Что такое Бентум?
               </h3>
             </div>
             <p className="leading-relaxed text-slate-600 dark:text-slate-400">
-              BentumWeb — это портал для студентов БНТУ с доступом к расписанию,
+              Бентум — это портал для студентов БНТУ с доступом к расписанию,
               учебным материалам, новостям и личному профилю. Для входа используйте
               ваши университетские данные.
             </p>

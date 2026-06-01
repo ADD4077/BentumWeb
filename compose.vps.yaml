@@ -39,6 +39,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       RUN_INIT_TASKS_ONLY: "1"
     volumes:
+      - static_data:/app/static
       - media_data:/app/media
       - books_data:/app/books
       - news_data:/app/news
@@ -86,6 +87,7 @@ services:
       CSRF_COOKIE_SECURE: "True"
       SKIP_INIT_TASKS: "1"
     volumes:
+      - static_data:/app/static
       - media_data:/app/media
       - books_data:/app/books
       - news_data:/app/news
@@ -169,6 +171,7 @@ services:
 volumes:
   mysql_data:
   redis_data:
+  static_data:
   media_data:
   books_data:
   news_data:

@@ -166,7 +166,7 @@ export function CTASection({ setActiveTab }) {
       <div className="relative mb-8 overflow-hidden rounded-2xl border border-white/50 bg-white/40 p-4 shadow-xl backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/40 sm:mb-12 sm:p-6 md:p-8 lg:p-12">
         <div className="relative z-10 text-center">
           <h2 className="mb-3 text-xl font-bold text-slate-900 dark:text-white sm:mb-4 sm:text-2xl md:text-3xl">
-            Присоединяйтесь к Bentum
+            Присоединяйтесь к Бентум
           </h2>
           <p className="mx-auto mb-6 max-w-2xl px-4 text-sm text-slate-600 dark:text-slate-400 sm:mb-8 sm:text-base md:text-lg">
             Мы развиваем платформу вместе со студентами. Если хочешь следить за
@@ -272,7 +272,7 @@ function AboutPage({ setActiveTab }) {
     <div className="min-h-screen bg-gray-50 py-16 text-slate-900 dark:bg-[#0B0F19] dark:text-slate-100">
       <div className="mb-20 text-center">
         <h1 className="mb-8 text-5xl font-bold leading-[1.1] tracking-tight text-slate-900 dark:text-white md:text-7xl">
-          Bentum
+          Бентум
         </h1>
         <p className="mx-auto max-w-3xl text-xl text-slate-600 dark:text-slate-400">
           Платформа для студентов БНТУ, которая помогает быстрее находить нужную

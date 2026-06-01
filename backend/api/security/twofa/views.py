@@ -93,7 +93,7 @@ class TwoFAConfigView(TwoFABaseView):
                     if get_user_settings(user).notify_security_events:
                         telegram_binding_service.send_user_notification_sync(
                             user,
-                            "Безопасность Bentum\n\nДвухфакторная аутентификация через Telegram была включена для вашего аккаунта.",
+                            "Безопасность Бентум\n\nДвухфакторная аутентификация через Telegram была включена для вашего аккаунта.",
                         )
                 except Exception:
                     logger.exception("Failed to send 2FA enabled notification for %s", user.student_code)
@@ -118,7 +118,7 @@ class TwoFAConfigView(TwoFABaseView):
                 if get_user_settings(user).notify_security_events:
                     telegram_binding_service.send_user_notification_sync(
                         user,
-                        "Безопасность Bentum\n\nДвухфакторная аутентификация через Telegram была отключена для вашего аккаунта.",
+                        "Безопасность Бентум\n\nДвухфакторная аутентификация через Telegram была отключена для вашего аккаунта.",
                     )
             except Exception:
                 logger.exception("Failed to send 2FA disabled notification for %s", user.student_code)
@@ -172,7 +172,7 @@ class VerifyTwoFAView(TwoFABaseView):
                 user,
                 notification_type="login_success",
                 title="Новый вход в аккаунт",
-                body="Вы успешно вошли в Bentum после подтверждения 2FA.",
+                body="Вы успешно вошли в Бентум после подтверждения 2FA.",
             )
 
             try:

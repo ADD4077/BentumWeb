@@ -45,7 +45,7 @@ function CookieNotice({ onOpenPrivacy }) {
                   Мы используем cookie
                 </h3>
                 <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
-                  Bentum использует cookie для входа в аккаунт, сохранения настроек и стабильной работы сайта.
+                  Бентум использует cookie для входа в аккаунт, сохранения настроек и стабильной работы сайта.
                 </p>
               </div>
             </div>

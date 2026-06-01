@@ -389,7 +389,7 @@ function Header({
                     className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-slate-600 transition-all hover:bg-gray-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
                     onClick={() => {
                       setIsNotificationsOpen(false);
-                      setIsProfileModalOpen(true);
+                      setActiveTab('profile');
                     }}
                     aria-label="Профиль"
                   >
@@ -440,7 +440,7 @@ function Header({
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => {
-                          setIsProfileModalOpen(true);
+                          setActiveTab('profile');
                           setIsMobileMenuOpen(false);
                         }}
                         className="flex flex-1 items-center gap-3 rounded-full px-4 py-3 text-left transition-all hover:bg-gray-100 dark:hover:bg-slate-700"

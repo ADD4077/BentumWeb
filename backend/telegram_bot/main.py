@@ -127,7 +127,7 @@ def _main_menu_text(first_name: str | None) -> str:
     greeting_name = first_name or "друг"
     return (
         f"Привет, {greeting_name}!\n\n"
-        "Это объединённый бот Bentum. Здесь можно открыть сайт, посмотреть своё расписание, "
+        "Это объединённый бот Бентум. Здесь можно открыть сайт, посмотреть своё расписание, "
         "поискать литературу, открыть карту БНТУ и работать с реферальной системой."
     )
 
@@ -145,7 +145,7 @@ def _profile_text(user) -> str:
 
 def _referral_text(summary: dict) -> str:
     lines = [
-        "<b>Реферальная система Bentum</b>",
+        "<b>Реферальная система Бентум</b>",
         "",
         f"Ваш код: <code>{summary['code']}</code>",
         f"Приглашено пользователей: {summary['invited_count']}",
@@ -156,7 +156,7 @@ def _referral_text(summary: dict) -> str:
         lines.extend(
             [
                 "",
-                f"Вас пригласил: <b>{referred_by.get('fullname') or 'Пользователь Bentum'}</b>",
+                f"Вас пригласил: <b>{referred_by.get('fullname') or 'Пользователь Бентум'}</b>",
                 f"Код студента: {referred_by.get('student_code') or 'не указан'}",
             ]
         )
@@ -196,8 +196,8 @@ async def _ensure_bound(target: Message | CallbackQuery):
 
     text = (
         "Этот раздел доступен только после авторизации в боте.\n\n"
-        "Нажмите «Авторизоваться в боте» и введите номер студенческого билета и пароль, "
-        "или сначала привяжите Telegram в настройках Bentum на сайте."
+        "Нажмите «Авторизоваться» и введите номер студенческого билета и пароль, "
+        "или сначала привяжите Telegram в настройках Бентум на сайте."
     )
     markup = keyboards.unbound_profile(config.web_app_url)
 
@@ -214,7 +214,7 @@ async def _start_bot_auth(target: Message | CallbackQuery, state: FSMContext):
         if bound_user:
             text = (
                 f"Telegram уже привязан к аккаунту <b>{bound_user.fullname}</b>.\n\n"
-                "Если нужно перепривязать аккаунт, сначала отвяжите Telegram в настройках Bentum."
+                "Если нужно перепривязать аккаунт, сначала отвяжите Telegram в настройках Бентум."
             )
             if isinstance(target, Message):
                 await target.answer(text)
@@ -264,7 +264,7 @@ async def handle_start(message: Message, state: FSMContext):
         await state.update_data(referral_code=referral_code)
         await message.answer(
             f"Реферальный код <code>{referral_code}</code> сохранён.\n"
-            "Теперь авторизуйтесь в боте, и мы привяжем его к вашему новому аккаунту Bentum."
+            "Теперь авторизуйтесь в боте, и мы привяжем его к вашему новому аккаунту Бентум."
         )
         await _start_bot_auth(message, state)
         return
@@ -330,8 +330,8 @@ async def handle_auth_student_code(message: Message, state: FSMContext):
     await state.update_data(student_code=student_code)
     await state.set_state(BotAuthStates.password)
     await message.answer(
-        "Теперь отправьте пароль от аккаунта БНТУ или Bentum.\n\n"
-        "Для сценария старого BntuBot это тот же «красный номер» со студенческого.",
+        "Теперь отправьте пароль от аккаунта БНТУ или Бентум.\n\n"
+        "Это «красный номер» со студенческого.",
         reply_markup=keyboards.auth_cancel(),
     )
 
@@ -372,7 +372,7 @@ async def handle_auth_password(message: Message, state: FSMContext):
         f"Факультет: {result.user.faculty}"
     )
     await message.answer(success_text)
-    await _send_main_menu(message, text="Вы авторизованы в Bentum. Выберите нужный раздел.")
+    await _send_main_menu(message, text="Вы авторизованы в Бентум. Выберите нужный раздел.")
 
 
 @dp.callback_query(F.data == "main_menu")
@@ -519,7 +519,7 @@ async def handle_help(callback: CallbackQuery):
         return
     username_part = f" или @{config.support_username}" if config.support_username else ""
     text = (
-        "Поддержка Bentum доступна на сайте.\n\n"
+        "Поддержка Бентум доступна на сайте.\n\n"
         f"Откройте раздел поддержки в приложении{username_part}."
     )
     await _show_callback_content(
@@ -540,7 +540,7 @@ async def handle_inline_literature(inline_query: InlineQuery):
                 InlineQueryResultArticle(
                     id=_safe_result_id("auth-required"),
                     title="Сначала авторизуйтесь в боте",
-                    description="Литература доступна после привязки Telegram к аккаунту Bentum.",
+                    description="Литература доступна после привязки Telegram к аккаунту Бентум.",
                     input_message_content=InputTextMessageContent(
                         message_text=(
                             "Сначала авторизуйтесь в боте через кнопку «Авторизоваться в боте» "
@@ -561,7 +561,7 @@ async def handle_inline_literature(inline_query: InlineQuery):
 
     for item in items:
         title = item.title[:256]
-        description = (item.authors or item.category or item.faculty or "Литература Bentum")[:256]
+        description = (item.authors or item.category or item.faculty or "Литература Бентум")[:256]
         text_lines = [f"<b>{item.title}</b>"]
         if item.authors:
             text_lines.append(f"Авторы: {item.authors}")
@@ -592,13 +592,13 @@ async def handle_inline_literature(inline_query: InlineQuery):
 
 async def main():
     if not config.token:
-        raise RuntimeError("TELEGRAM_BOT_TOKEN is not configured")
+        raise RuntimeError("Токен не указан")
 
     bot = Bot(token=config.token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     me = await bot.get_me()
     if not config.bot_username and me.username:
         config.bot_username = me.username
-    logger.info("Unified Bentum bot started: @%s", me.username)
+    logger.info("Бентум бот запущен: @%s", me.username)
     await dp.start_polling(bot)
 
 

@@ -8,6 +8,7 @@ import {
   ScrollText,
   Send,
   Shield,
+  UserRound,
 } from 'lucide-react';
 
 import Header from '../Header.jsx';
@@ -18,12 +19,13 @@ const QUICK_LINKS = [
   { id: 'schedule', label: 'Расписание', icon: GraduationCap },
   { id: 'literature', label: 'Литература', icon: BookOpen },
   { id: 'news', label: 'Новости', icon: Newspaper },
+  { id: 'profile', label: 'Кабинет', icon: UserRound },
 ];
 
 const COMMUNITY_LINKS = [
   {
     label: 'Telegram',
-    description: 'Сообщество Bentum и обновления платформы.',
+    description: 'Сообщество Бентум и обновления платформы.',
     href: 'https://t.me/BNTUnity',
     icon: Send,
   },
@@ -89,7 +91,7 @@ export const AppShell = ({
             <div className="space-y-4">
               <div>
                 <h3 className="text-2xl font-bold tracking-tight text-slate-950 dark:text-white">
-                  Bentum
+                  Бентум
                 </h3>
                 <p className="mt-3 max-w-md text-sm leading-6 text-slate-600 dark:text-slate-300">
                   Спокойная цифровая среда для студентов БНТУ: расписание,
@@ -192,8 +194,8 @@ export const AppShell = ({
 
           <div className="mt-8 border-t border-slate-300/70 pt-4 dark:border-slate-800/70">
             <div className="flex flex-col gap-2 text-sm text-slate-500 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between">
-              <p>© 2026 Bentum. Все права защищены.</p>
-              <p>Bentum для комфортной студенческой повседневности.</p>
+              <p>© 2026 Бентум. Все права защищены.</p>
+              <p>Бентум для комфортной студенческой повседневности.</p>
             </div>
           </div>
         </div>

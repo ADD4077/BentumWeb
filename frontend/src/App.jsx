@@ -26,6 +26,7 @@ import { EventsPage } from './pages/EventsPage.jsx';
 import { NotificationsPage } from './pages/NotificationsPage.jsx';
 import { GamesPage } from './pages/GamesPage.jsx';
 import { HomePage } from './pages/HomePage.jsx';
+import { ProfilePage } from './pages/ProfilePage.jsx';
 import { AppShell } from './components/app/AppShell.jsx';
 import { ModalRoot } from './components/ModalRoot.jsx';
 
@@ -192,6 +193,15 @@ function AppContent() {
 
     if (visibleTab === 'notifications') {
       return <NotificationsPage setActiveTab={setActiveTab} />;
+    }
+
+    if (visibleTab === 'profile') {
+      return (
+        <ProfilePage
+          setActiveTab={setActiveTab}
+          userMedia={userMedia}
+        />
+      );
     }
 
     if (visibleTab === 'games') {

@@ -4,7 +4,7 @@ set -e
 APP_UID="${APP_UID:-appuser}"
 
 ensure_storage_permissions() {
-  for path in /app/media /app/books /app/news /app/schedules; do
+  for path in /app/static /app/media /app/books /app/news /app/schedules; do
     mkdir -p "$path"
     chown -R "$APP_UID":"$APP_UID" "$path"
   done

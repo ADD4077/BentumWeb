@@ -289,7 +289,7 @@ class MediaValidator:
         "GIF": "image/gif",
     }
 
-    MAX_FILE_SIZE = 10 * 1024 * 1024
+    MAX_FILE_SIZE = 20 * 1024 * 1024
     MAX_DIMENSIONS = (4000, 4000)
 
     @staticmethod

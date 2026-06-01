@@ -178,7 +178,7 @@ class TwoFAServiceTests(TestCase):
 
         send_mock.assert_called_once()
         sent_text = send_mock.call_args[0][1]
-        self.assertIn("Свиридович Павел, выполнен успешный вход в аккаунт Bentum.", sent_text)
+        self.assertIn("Свиридович Павел, выполнен успешный вход в аккаунт Бентум.", sent_text)
         self.assertIn("Устройство: Windows 10/11", sent_text)
         self.assertIn("Браузер: Chrome 135.0", sent_text)
         self.assertIn("IP: 172.18.0.1", sent_text)

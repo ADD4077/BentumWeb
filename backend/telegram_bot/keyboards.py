@@ -6,14 +6,14 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 def main_menu(web_app_url: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="Открыть Bentum", web_app=WebAppInfo(url=web_app_url))],
+            [InlineKeyboardButton(text="Открыть Бентум", web_app=WebAppInfo(url=web_app_url))],
             [
-                InlineKeyboardButton(text="Профиль", callback_data="profile"),
                 InlineKeyboardButton(text="Расписание", callback_data="schedule"),
+                InlineKeyboardButton(text="Литература", switch_inline_query_current_chat=""),
             ],
             [
-                InlineKeyboardButton(text="Литература", switch_inline_query_current_chat=""),
                 InlineKeyboardButton(text="Карта", callback_data="map"),
+                InlineKeyboardButton(text="Профиль", callback_data="profile"),
             ],
             [InlineKeyboardButton(text="Поддержка", callback_data="help")],
         ]
@@ -23,8 +23,8 @@ def main_menu(web_app_url: str) -> InlineKeyboardMarkup:
 def guest_main_menu(web_app_url: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="Открыть Bentum", web_app=WebAppInfo(url=web_app_url))],
-            [InlineKeyboardButton(text="Авторизоваться в боте", callback_data="auth")],
+            [InlineKeyboardButton(text="Открыть Бентум", web_app=WebAppInfo(url=web_app_url))],
+            [InlineKeyboardButton(text="Авторизоваться", callback_data="auth")],
         ]
     )
 
@@ -56,7 +56,7 @@ def referral_menu() -> InlineKeyboardMarkup:
 def unbound_profile(web_app_url: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="Открыть Bentum", web_app=WebAppInfo(url=web_app_url))],
+            [InlineKeyboardButton(text="Открыть Бентум", web_app=WebAppInfo(url=web_app_url))],
             [InlineKeyboardButton(text="Авторизоваться в боте", callback_data="auth")],
             [InlineKeyboardButton(text="Назад", callback_data="main_menu")],
         ]
@@ -66,7 +66,7 @@ def unbound_profile(web_app_url: str) -> InlineKeyboardMarkup:
 def support_menu(web_app_url: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="Открыть поддержку Bentum", web_app=WebAppInfo(url=web_app_url))],
+            [InlineKeyboardButton(text="Открыть поддержку Бентум", web_app=WebAppInfo(url=web_app_url))],
             [InlineKeyboardButton(text="Назад", callback_data="main_menu")],
         ]
     )

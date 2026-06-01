@@ -158,7 +158,7 @@ export function NotificationsPage({ setActiveTab }) {
             Все уведомления
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-            Последние события аккаунта, ответы поддержки и уведомления о безопасности Bentum.
+            Последние события аккаунта, ответы поддержки и уведомления о безопасности Бентум.
           </p>
         </div>
 
