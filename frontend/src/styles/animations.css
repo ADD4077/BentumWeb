@@ -1,6 +1,18 @@
 :root {
   --motion-spring: cubic-bezier(0.22, 1, 0.36, 1);
   --motion-smooth: cubic-bezier(0.33, 1, 0.68, 1);
+  --app-panel-light: rgba(243, 244, 246, 0.52);
+  --app-panel-dark: rgba(30, 41, 59, 0.5);
+  --app-panel-border-light: rgba(229, 231, 235, 0.84);
+  --app-panel-border-dark: rgba(51, 65, 85, 0.56);
+  --app-cell-light: rgba(255, 255, 255, 0.92);
+  --app-cell-dark: rgba(51, 65, 85, 0.78);
+  --app-cell-border-light: rgba(226, 232, 240, 0.9);
+  --app-cell-border-dark: rgba(71, 85, 105, 0.7);
+  --app-input-light: rgba(255, 255, 255, 0.9);
+  --app-input-dark: #17202d;
+  --app-input-border-light: rgba(226, 232, 240, 0.9);
+  --app-input-border-dark: rgba(51, 65, 85, 0.78);
 }
 
 html {
@@ -187,6 +199,42 @@ body {
 .app-shell-main {
   position: relative;
   z-index: 1;
+}
+
+.app-panel-surface {
+  border-color: var(--app-panel-border-light) !important;
+  background-color: var(--app-panel-light) !important;
+  box-shadow:
+    0 18px 44px rgba(15, 23, 42, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.72) inset;
+}
+
+.dark .app-panel-surface {
+  border-color: var(--app-panel-border-dark) !important;
+  background-color: var(--app-panel-dark) !important;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.22),
+    0 1px 0 rgba(255, 255, 255, 0.03) inset;
+}
+
+.app-cell-surface {
+  border-color: var(--app-cell-border-light) !important;
+  background-color: var(--app-cell-light) !important;
+}
+
+.dark .app-cell-surface {
+  border-color: var(--app-cell-border-dark) !important;
+  background-color: var(--app-cell-dark) !important;
+}
+
+.app-input-surface {
+  border-color: var(--app-input-border-light) !important;
+  background-color: var(--app-input-light) !important;
+}
+
+.dark .app-input-surface {
+  border-color: var(--app-input-border-dark) !important;
+  background-color: var(--app-input-dark) !important;
 }
 
 .app-shell-main > * {

@@ -125,14 +125,14 @@ def find_next_lesson_for_group(group_id):
 
 def get_schedule(request):
     if request.method != "GET":
-        return JsonResponse({"detail": "РњРµС‚РѕРґ РЅРµ СЂР°Р·СЂРµС€С‘РЅ"}, status=405)
+        return JsonResponse({"detail": "Метод не разрешён"}, status=405)
 
     if not is_request_authenticated(request):
-        return JsonResponse({"detail": "РўСЂРµР±СѓРµС‚СЃСЏ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ"}, status=401)
+        return JsonResponse({"detail": "Требуется авторизация"}, status=401)
 
     user = get_current_user(request)
     if user is None:
-        return JsonResponse({"detail": "РћС‚СЃСѓС‚СЃС‚РІСѓРµС‚ РєРѕРґ СЃС‚СѓРґРµРЅС‚Р°"}, status=400)
+        return JsonResponse({"detail": "Отсутствует код студента"}, status=400)
 
     student_code = user.student_code
     group_id = student_code[:8]
@@ -144,7 +144,7 @@ def get_schedule(request):
     )
 
     if not rows:
-        return JsonResponse({"detail": f"Р Р°СЃРїРёСЃР°РЅРёРµ РґР»СЏ РіСЂСѓРїРїС‹ {group_id} РЅРµ РЅР°Р№РґРµРЅРѕ"}, status=404)
+        return JsonResponse({"detail": f"Расписание для группы {group_id} не найдено"}, status=404)
 
     latest_updated_at = queryset.aggregate(last_updated_at=Max("updated_at"))["last_updated_at"]
     return JsonResponse(serialize_schedule_rows(rows, student_code, latest_updated_at), status=200)
@@ -152,14 +152,14 @@ def get_schedule(request):
 
 def get_next_schedule_lesson(request):
     if request.method != "GET":
-        return JsonResponse({"detail": "РњРµС‚РѕРґ РЅРµ СЂР°Р·СЂРµС€С‘РЅ"}, status=405)
+        return JsonResponse({"detail": "Метод не разрешён"}, status=405)
 
     if not is_request_authenticated(request):
-        return JsonResponse({"detail": "РўСЂРµР±СѓРµС‚СЃСЏ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ"}, status=401)
+        return JsonResponse({"detail": "Требуется авторизация"}, status=401)
 
     user = get_current_user(request)
     if user is None:
-        return JsonResponse({"detail": "РћС‚СЃСѓС‚СЃС‚РІСѓРµС‚ РєРѕРґ СЃС‚СѓРґРµРЅС‚Р°"}, status=400)
+        return JsonResponse({"detail": "Отсутствует код студента"}, status=400)
 
     student_code = user.student_code
     group_id = student_code[:8]
@@ -169,7 +169,7 @@ def get_next_schedule_lesson(request):
         return JsonResponse(
             {
                 "success": False,
-                "detail": f"РЎР»РµРґСѓСЋС‰Р°СЏ РїР°СЂР° РґР»СЏ РіСЂСѓРїРїС‹ {group_id} РЅРµ РЅР°Р№РґРµРЅР°",
+                "detail": f"Следующая пара для группы {group_id} не найдена",
             },
             status=404,
         )

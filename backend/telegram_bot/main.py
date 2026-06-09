@@ -126,8 +126,8 @@ async def _show_callback_content(
 def _main_menu_text(first_name: str | None) -> str:
     greeting_name = first_name or "друг"
     return (
-        f"Привет, {greeting_name}!\n\n"
-        "Это объединённый бот Бентум. Здесь можно открыть сайт, посмотреть своё расписание, "
+        f"🤍 Привет, {greeting_name}!\n\n"
+        "📖 Это бот Бентум. Здесь можно открыть сайт, посмотреть своё расписание, "
         "поискать литературу, открыть карту БНТУ и работать с реферальной системой."
     )
 
@@ -280,9 +280,9 @@ async def handle_start(message: Message, state: FSMContext):
             },
         )
         if ok:
-            await message.answer(f"Telegram успешно привязан.\n\n{result_message}")
+            await message.answer(f"{result_message}")
         else:
-            await message.answer(f"Не удалось привязать Telegram.\n\n{result_message}")
+            await message.answer(f"❌ Не удалось привязать Telegram.\n\n{result_message}")
         return
 
     await _send_main_menu(message)

@@ -147,19 +147,7 @@ function Header({
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const headerRef = useRef(null);
 
-  const isAdmin = Boolean(isAuthenticated && user?.is_admin);
-  const isModerator = Boolean(isAuthenticated && (user?.role === 'moderator' || user?.is_admin));
-
-  const navItems = useMemo(() => {
-    const items = NAV_ITEMS.filter((item) => item.id !== 'games');
-    if (isModerator) {
-      items.push({ id: 'moder', label: 'Модер', admin: true });
-    }
-    if (isAdmin) {
-      items.push({ id: 'admin', label: 'Админ', admin: true });
-    }
-    return items;
-  }, [isAdmin, isModerator]);
+  const navItems = useMemo(() => NAV_ITEMS.filter((item) => item.id !== 'games'), []);
 
   useEffect(() => {
     if (isMobileMenuOpen) {

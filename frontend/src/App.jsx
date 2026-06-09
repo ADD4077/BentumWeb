@@ -27,12 +27,13 @@ import { NotificationsPage } from './pages/NotificationsPage.jsx';
 import { GamesPage } from './pages/GamesPage.jsx';
 import { HomePage } from './pages/HomePage.jsx';
 import { ProfilePage } from './pages/ProfilePage.jsx';
+import { ChairpersonPage } from './pages/ChairpersonPage.jsx';
 import { AppShell } from './components/app/AppShell.jsx';
 import { ModalRoot } from './components/ModalRoot.jsx';
 
 const GUEST_ALLOWED_TABS = new Set(['home', 'support', 'privacy', 'events', '404']);
 
-function resolveAccessibleTab(tab, { loading, isAuthenticated, isAdmin, canModerate }) {
+function resolveAccessibleTab(tab, { loading, isAuthenticated, isAdmin, canModerate, canOpenChairperson }) {
   if (loading) {
     return GUEST_ALLOWED_TABS.has(tab) ? tab : 'home';
   }
@@ -46,6 +47,10 @@ function resolveAccessibleTab(tab, { loading, isAuthenticated, isAdmin, canModer
   }
 
   if (tab === 'moder' && !canModerate) {
+    return 'home';
+  }
+
+  if (tab === 'chairperson' && !canOpenChairperson) {
     return 'home';
   }
 
@@ -79,12 +84,14 @@ function AppContent() {
   const isBanned = Boolean(!loading && isAuthenticated && user?.is_banned);
   const isAdmin = Boolean(isAuthenticated && user?.is_admin);
   const canModerate = Boolean(isAuthenticated && (user?.role === 'moderator' || user?.is_admin));
+  const canOpenChairperson = Boolean(isAuthenticated && (user?.role === 'chairperson' || user?.is_admin));
   const visibleTab = useMemo(() => resolveAccessibleTab(activeTab, {
     loading,
     isAuthenticated,
     isAdmin,
     canModerate,
-  }), [activeTab, loading, isAuthenticated, isAdmin, canModerate]);
+    canOpenChairperson,
+  }), [activeTab, loading, isAuthenticated, isAdmin, canModerate, canOpenChairperson]);
 
   const filteredGames = useMemo(() => gamesData.filter((item) => (
     selectedGameCategory === 'all' || item.category === selectedGameCategory
@@ -152,6 +159,10 @@ function AppContent() {
       return <ModeratorSupportPage darkMode={darkMode} />;
     }
 
+    if (visibleTab === 'chairperson' && canOpenChairperson) {
+      return <ChairpersonPage setActiveTab={setActiveTab} />;
+    }
+
     if (visibleTab === 'support') {
       return <SupportPage setIsLoginModalOpen={setIsLoginModalOpen} />;
     }
@@ -197,10 +208,7 @@ function AppContent() {
 
     if (visibleTab === 'profile') {
       return (
-        <ProfilePage
-          setActiveTab={setActiveTab}
-          userMedia={userMedia}
-        />
+        <ProfilePage setActiveTab={setActiveTab} userMedia={userMedia} />
       );
     }
 

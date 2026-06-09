@@ -554,12 +554,12 @@ class ContentEndpointTests(TestCase):
         LiteratureItem.objects.create(
             source_id=1,
             handle="12345/1",
-            title="Р’С‹СЃС€Р°СЏ РјР°С‚РµРјР°С‚РёРєР°",
-            faculty="Р¤РРўР ",
+            title="Высшая математика",
+            faculty="ФИТР",
             category=next(iter(LITERATURE_TOP_LEVEL_SECTIONS.keys())),
-            authors="РРІР°РЅ РРІР°РЅРѕРІ",
+            authors="Иван Иванов",
             publishing_date="2024",
-            description="РЈС‡РµР±РЅРѕРµ РїРѕСЃРѕР±РёРµ",
+            description="Учебное пособие",
             image_url="https://example.com/book.jpg",
             download_size="12 MB",
             download_link="https://example.com/book.pdf",
@@ -588,9 +588,9 @@ class ContentEndpointTests(TestCase):
             week=1,
             day="monday",
             time="09:00",
-            matter="РњР°С‚РµРјР°С‚РёРєР°",
-            frame="Р›РµРєС†РёСЏ",
-            teacher="РРІР°РЅРѕРІ Р.Р.",
+            matter="Математика",
+            frame="Лекция",
+            teacher="Иванов И.И.",
             classroom="101",
         )
         ScheduleEntry.objects.create(
@@ -598,9 +598,9 @@ class ContentEndpointTests(TestCase):
             week=0,
             day="monday",
             time="11:00",
-            matter="Р¤РёР·РёРєР°",
-            frame="РџСЂР°РєС‚РёРєР°",
-            teacher="РџРµС‚СЂРѕРІ Рџ.Рџ.",
+            matter="Физика",
+            frame="Практика",
+            teacher="Петров П.П.",
             classroom="202",
         )
 

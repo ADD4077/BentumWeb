@@ -161,7 +161,7 @@ class TelegramBindingService:
                 telegram_data.get("username", telegram_data["id"]),
                 user.student_code,
             )
-            return True, f"Telegram аккаунт успешно привязан к {user.fullname}"
+            return True, f"✅ {user.fullname}, твой Telegram-аккаунт успешно привязан к учетной записи на сайте."
         except Exception as error:
             logger.error("Error binding Telegram account with token ref %s: %s", _token_log_ref(token), error)
             return False, "Внутренняя ошибка сервера"

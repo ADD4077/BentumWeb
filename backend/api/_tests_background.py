@@ -142,7 +142,7 @@ class BackgroundJobTests(TestCase):
             date="2026-04-21",
             timestamp=123456789,
             summary="summary",
-            tags="#Р‘РќРўРЈ",
+            tags="#БНТУ",
             image_url="",
             reading_time=5,
         )
@@ -191,7 +191,7 @@ class BackgroundJobTests(TestCase):
             date="2026-04-21",
             timestamp=123456789,
             summary="summary",
-            tags="#Р‘РќРўРЈ",
+            tags="#БНТУ",
             image_url="",
             reading_time=5,
         )
@@ -275,7 +275,7 @@ class BackgroundJobTests(TestCase):
             date="2026-04-21",
             timestamp=123456789,
             summary="summary",
-            tags="#Р‘РќРўРЈ",
+            tags="#БНТУ",
             image_url="",
             reading_time=5,
         )
@@ -394,9 +394,9 @@ class ContentParserServiceTests(TestCase):
         ScheduleEntry.objects.create(
             group_number="10903525",
             week=0,
-            day="РџРѕРЅРµРґРµР»СЊРЅРёРє",
+            day="Понедельник",
             time="08:00",
-            matter="РСЃС‚РѕСЂРёСЏ",
+            matter="История",
         )
 
         async def failing_collect():
