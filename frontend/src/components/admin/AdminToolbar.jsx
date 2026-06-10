@@ -2,7 +2,6 @@ import React from 'react';
 import {
   CalendarRange,
   Download,
-  Filter,
   RefreshCw,
   RotateCcw,
   Search,
@@ -87,16 +86,6 @@ export default function AdminToolbar({
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <div className="inline-flex items-center gap-2 rounded-2xl border border-gray-200/70 bg-gray-100/70 px-4 py-3 text-sm text-slate-700 dark:border-slate-700/50 dark:bg-slate-800/70 dark:text-slate-300">
-                <Filter className="h-4 w-4" />
-                <span>Фильтры</span>
-                {activeFiltersCount > 0 ? (
-                  <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-semibold text-white">
-                    {activeFiltersCount}
-                  </span>
-                ) : null}
-              </div>
-
               <button
                 type="button"
                 onClick={resetFilters}
@@ -104,6 +93,11 @@ export default function AdminToolbar({
               >
                 <RotateCcw className="h-4 w-4" />
                 Сбросить
+                {activeFiltersCount > 0 ? (
+                  <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-semibold text-white">
+                    {activeFiltersCount}
+                  </span>
+                ) : null}
               </button>
             </div>
           </div>

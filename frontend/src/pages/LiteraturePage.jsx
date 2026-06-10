@@ -196,7 +196,7 @@ export function LiteraturePage({ searchQuery, setSearchQuery, activeTab }) {
       </div>
 
       <div className="section-reveal mb-6 flex items-center gap-2 sm:mb-8">
-        <div className="relative flex-1">
+        <div className="relative flex-1 overflow-hidden rounded-xl sm:rounded-2xl">
           <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400 sm:left-4 sm:h-5 sm:w-5" />
           <input
             type="text"
@@ -211,7 +211,7 @@ export function LiteraturePage({ searchQuery, setSearchQuery, activeTab }) {
           <button
             onClick={() => setIsCategoryModalOpen(true)}
             title="Фильтр категорий"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200/70 bg-gray-100/50 text-slate-600 shadow-lg shadow-gray-900/10 backdrop-blur-md transition-colors hover:bg-emerald-50/80 hover:text-emerald-600 dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-300 dark:shadow-black/20 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400 sm:h-12 sm:w-12 sm:rounded-2xl"
+            className="relative z-10 flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200/70 bg-gray-100/50 text-slate-600 transition-colors hover:bg-emerald-50/80 hover:text-emerald-600 dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-300 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400 sm:h-12 sm:w-12 sm:rounded-2xl"
           >
             <Filter className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
@@ -222,7 +222,7 @@ export function LiteraturePage({ searchQuery, setSearchQuery, activeTab }) {
               setIsSortModalOpen(true);
             }}
             title="Сортировка"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200/70 bg-gray-100/50 text-slate-600 shadow-lg shadow-gray-900/10 backdrop-blur-md transition-colors hover:bg-emerald-50/80 hover:text-emerald-600 dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-300 dark:shadow-black/20 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400 sm:h-12 sm:w-12 sm:rounded-2xl"
+            className="relative z-10 flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200/70 bg-gray-100/50 text-slate-600 transition-colors hover:bg-emerald-50/80 hover:text-emerald-600 dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-300 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400 sm:h-12 sm:w-12 sm:rounded-2xl"
           >
             <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />

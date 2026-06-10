@@ -198,6 +198,7 @@ function AppContent() {
         <EventsPage
           activeTab={visibleTab}
           setIsLoginModalOpen={setIsLoginModalOpen}
+          darkMode={darkMode}
         />
       );
     }

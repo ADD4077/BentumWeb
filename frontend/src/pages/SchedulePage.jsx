@@ -285,6 +285,9 @@ export function SchedulePage() {
   const nextLessonSubject = capitalizeFirst(cleanLessonSubject(nextLesson?.subject));
   const nextLessonType = inferLessonType(nextLesson?.subject);
   const isTomorrowSelected = selectedDay === tomorrowDay;
+  const currentWeekType = getWeekType();
+  const tomorrowWeekType =
+    todayDay === 'Вс' ? (currentWeekType === 'lower' ? 'upper' : 'lower') : currentWeekType;
   const scheduleUpdatedAtLabel = useMemo(() => formatScheduleUpdatedAt(scheduleUpdatedAt), [scheduleUpdatedAt]);
 
   return (
@@ -363,8 +366,12 @@ export function SchedulePage() {
                   const meta = QUICK_BUTTON_META[button.id];
                   const Icon = meta.icon;
                   const isActive =
-                    (button.id === 'today' && selectedDay === todayDay) ||
-                    (button.id === 'tomorrow' && isTomorrowSelected);
+                    (button.id === 'today' &&
+                      selectedDay === todayDay &&
+                      weekType === currentWeekType) ||
+                    (button.id === 'tomorrow' &&
+                      isTomorrowSelected &&
+                      weekType === tomorrowWeekType);
 
                   return (
                     <button

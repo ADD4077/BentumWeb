@@ -29,10 +29,6 @@ const STATUS_STYLES = {
   completed: 'bg-slate-500/15 text-slate-300 ring-1 ring-slate-500/20',
 };
 
-function getIsDarkMode() {
-  return typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
-}
-
 function formatDateTime(value) {
   if (!value) {
     return 'Дата не указана';
@@ -85,8 +81,8 @@ function EmptyState({ canManage }) {
   );
 }
 
-function EventFormModal({ mode, initialEvent, saving, onClose, onSubmit }) {
-  const isDark = getIsDarkMode();
+function EventFormModal({ mode, initialEvent, saving, onClose, onSubmit, darkMode }) {
+  const isDark = darkMode;
   const [title, setTitle] = useState(initialEvent?.title || '');
   const [description, setDescription] = useState(initialEvent?.description || '');
   const [startsAt, setStartsAt] = useState(toDateTimeLocalValue(initialEvent?.starts_at));
@@ -284,8 +280,9 @@ function ParticipantsModal({
   onRemove,
   onToggleAttendance,
   onSaveAttendance,
+  darkMode,
 }) {
-  const isDark = getIsDarkMode();
+  const isDark = darkMode;
   const canRemove = eventStatus === 'active';
   const canMarkAttendance = eventStatus === 'in_progress';
   const draftSet = new Set(attendanceDraftIds);
@@ -438,11 +435,11 @@ function ParticipantsModal({
   return typeof document === 'undefined' ? modalContent : createPortal(modalContent, document.body);
 }
 
-function ConfirmDeleteEventModal({ event, loading, onClose, onConfirm }) {
+function ConfirmDeleteEventModal({ event, loading, onClose, onConfirm, darkMode }) {
   if (!event) {
     return null;
   }
-  const isDark = getIsDarkMode();
+  const isDark = darkMode;
 
   const modalContent = (
     <div className="modal-backdrop fixed inset-0 z-[160] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -537,11 +534,11 @@ function ConfirmDeleteEventModal({ event, loading, onClose, onConfirm }) {
   return typeof document === 'undefined' ? modalContent : createPortal(modalContent, document.body);
 }
 
-function ConfirmCompleteEventModal({ event, loading, onClose, onConfirm }) {
+function ConfirmCompleteEventModal({ event, loading, onClose, onConfirm, darkMode }) {
   if (!event) {
     return null;
   }
-  const isDark = getIsDarkMode();
+  const isDark = darkMode;
 
   const modalContent = (
     <div className="modal-backdrop fixed inset-0 z-[160] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -643,11 +640,11 @@ function ConfirmCompleteEventModal({ event, loading, onClose, onConfirm }) {
   return typeof document === 'undefined' ? modalContent : createPortal(modalContent, document.body);
 }
 
-function ConfirmRemoveParticipantModal({ participant, loading, onClose, onConfirm }) {
+function ConfirmRemoveParticipantModal({ participant, loading, onClose, onConfirm, darkMode }) {
   if (!participant) {
     return null;
   }
-  const isDark = getIsDarkMode();
+  const isDark = darkMode;
 
   const modalContent = (
     <div className="modal-backdrop fixed inset-0 z-[160] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -761,8 +758,9 @@ function EventCard({
   onParticipants,
   onComplete,
   onRequireLogin,
+  darkMode,
 }) {
-  const isDark = getIsDarkMode();
+  const isDark = darkMode;
   const bannerUrl = buildMediaUrl(item.banner_url);
   const statusClassName = STATUS_STYLES[item.status] || STATUS_STYLES.active;
   const joined = Boolean(item.user_joined);
@@ -921,7 +919,7 @@ function EventCard({
   );
 }
 
-export function EventsPage({ activeTab, setIsLoginModalOpen }) {
+export function EventsPage({ activeTab, setIsLoginModalOpen, darkMode }) {
   const { isAuthenticated, user } = useAuth();
   const {
     items,
@@ -1194,6 +1192,7 @@ export function EventsPage({ activeTab, setIsLoginModalOpen }) {
                 onParticipants={handleOpenParticipants}
                 onComplete={handleComplete}
                 onRequireLogin={() => setIsLoginModalOpen(true)}
+                darkMode={darkMode}
               />
             ))}
           </div>
@@ -1214,6 +1213,7 @@ export function EventsPage({ activeTab, setIsLoginModalOpen }) {
           saving={saving}
           onClose={() => setCreateOpen(false)}
           onSubmit={handleCreate}
+          darkMode={darkMode}
         />
       ) : null}
 
@@ -1224,6 +1224,7 @@ export function EventsPage({ activeTab, setIsLoginModalOpen }) {
           saving={saving}
           onClose={() => setEditTarget(null)}
           onSubmit={handleUpdate}
+          darkMode={darkMode}
         />
       ) : null}
 
@@ -1236,6 +1237,7 @@ export function EventsPage({ activeTab, setIsLoginModalOpen }) {
           removingId={removingParticipantId}
           savingAttendance={savingAttendance}
           attendanceDraftIds={participantsState.attendanceDraftIds}
+          darkMode={darkMode}
           onClose={() =>
             setParticipantsState({
               open: false,
@@ -1263,6 +1265,7 @@ export function EventsPage({ activeTab, setIsLoginModalOpen }) {
           }
         }}
         onConfirm={handleConfirmDelete}
+        darkMode={darkMode}
       />
 
       <ConfirmRemoveParticipantModal
@@ -1274,6 +1277,7 @@ export function EventsPage({ activeTab, setIsLoginModalOpen }) {
           }
         }}
         onConfirm={handleConfirmRemoveParticipant}
+        darkMode={darkMode}
       />
 
       <ConfirmCompleteEventModal
@@ -1285,6 +1289,7 @@ export function EventsPage({ activeTab, setIsLoginModalOpen }) {
           }
         }}
         onConfirm={handleConfirmComplete}
+        darkMode={darkMode}
       />
 
       <UserProfileModal
