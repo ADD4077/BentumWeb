@@ -1,5 +1,5 @@
 from ._tests_common import *
-from api.models import Event, EventParticipation
+from api.models import Administration, Event, EventParticipation
 
 
 class EventEndpointTests(TestCase):
@@ -17,6 +17,29 @@ class EventEndpointTests(TestCase):
             faculty="FITR",
             student_code="1000000002",
             password=make_password("password123"),
+        )
+        self.other_chair = User.objects.create(
+            fullname="Other Chair",
+            faculty="FITR",
+            student_code="1000000003",
+            password=make_password("password123"),
+            role=User.ROLE_CHAIRPERSON,
+        )
+        self.admin = User.objects.create(
+            fullname="Admin User",
+            faculty="IPF",
+            student_code="1000000004",
+            password=make_password("password123"),
+            is_staff=True,
+        )
+        Administration.objects.create(administrator=self.admin, appointed_by=self.chair, is_active=True)
+        self.superuser = User.objects.create(
+            fullname="Super User",
+            faculty="IPF",
+            student_code="1000000005",
+            password=make_password("password123"),
+            is_staff=True,
+            is_superuser=True,
         )
 
     def _auth(self, user):
@@ -70,6 +93,48 @@ class EventEndpointTests(TestCase):
             self.assertTrue(payload["success"])
             self.assertTrue(Event.objects.filter(title="Hackathon").exists())
             self.assertTrue(payload["item"]["banner_url"])
+        finally:
+            shutil.rmtree(media_root, ignore_errors=True)
+
+    def test_admin_can_create_event(self):
+        self._auth(self.admin)
+        media_root = tempfile.mkdtemp(prefix="bentum-event-media-")
+        try:
+            with override_settings(MEDIA_ROOT=media_root):
+                response = self.client.post(
+                    "/api/events/",
+                    data={
+                        "title": "Admin event",
+                        "description": "Created by admin",
+                        "starts_at": (timezone.now() + timedelta(days=3)).isoformat(),
+                        "max_participants": "25",
+                        "banner": self._make_banner_upload(),
+                    },
+                )
+
+            self.assertEqual(response.status_code, 201)
+            self.assertTrue(Event.objects.filter(title="Admin event", created_by=self.admin).exists())
+        finally:
+            shutil.rmtree(media_root, ignore_errors=True)
+
+    def test_superuser_can_create_event(self):
+        self._auth(self.superuser)
+        media_root = tempfile.mkdtemp(prefix="bentum-event-media-")
+        try:
+            with override_settings(MEDIA_ROOT=media_root):
+                response = self.client.post(
+                    "/api/events/",
+                    data={
+                        "title": "Superuser event",
+                        "description": "Created by superuser",
+                        "starts_at": (timezone.now() + timedelta(days=3)).isoformat(),
+                        "max_participants": "25",
+                        "banner": self._make_banner_upload(),
+                    },
+                )
+
+            self.assertEqual(response.status_code, 201)
+            self.assertTrue(Event.objects.filter(title="Superuser event", created_by=self.superuser).exists())
         finally:
             shutil.rmtree(media_root, ignore_errors=True)
 
@@ -188,3 +253,43 @@ class EventEndpointTests(TestCase):
         participation.refresh_from_db()
         self.assertTrue(participation.attended)
         self.assertIsNotNone(participation.attended_at)
+
+    def test_other_chair_cannot_edit_foreign_event(self):
+        self._auth(self.other_chair)
+        event = Event.objects.create(
+            title="Foreign event",
+            description="Owned by another chair",
+            starts_at=timezone.now() + timedelta(days=1),
+            max_participants=10,
+            created_by=self.chair,
+        )
+
+        response = self.client.patch(
+            f"/api/events/{event.id}",
+            data=json.dumps({"title": "Hacked title"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        event.refresh_from_db()
+        self.assertEqual(event.title, "Foreign event")
+
+    def test_admin_can_edit_foreign_event(self):
+        self._auth(self.admin)
+        event = Event.objects.create(
+            title="Foreign event",
+            description="Owned by another chair",
+            starts_at=timezone.now() + timedelta(days=1),
+            max_participants=10,
+            created_by=self.chair,
+        )
+
+        response = self.client.patch(
+            f"/api/events/{event.id}",
+            data=json.dumps({"title": "Admin edited"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        event.refresh_from_db()
+        self.assertEqual(event.title, "Admin edited")

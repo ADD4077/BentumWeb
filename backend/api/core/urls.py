@@ -14,4 +14,5 @@ urlpatterns = [
     path('theme', views.theme, name='theme'),
     path('dashboard', views.dashboard, name='dashboard'),
     path('sessions', views.get_user_sessions, name='get_user_sessions'),
+    path('sessions/close', views.close_user_session, name='close_user_session'),
 ]

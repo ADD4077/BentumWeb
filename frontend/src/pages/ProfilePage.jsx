@@ -214,7 +214,7 @@ export function ProfilePage({ setActiveTab, userMedia }) {
             </div>
 
             <div className="px-6 pb-6">
-              <div className="-mt-10 relative z-10 flex h-24 w-24 items-center justify-center overflow-hidden rounded-[24px] border-[6px] border-slate-900 bg-slate-950 shadow-xl">
+              <div className="-mt-10 relative z-10 flex h-24 w-24 items-center justify-center overflow-hidden rounded-[24px] border-[6px] border-[var(--app-cell-dark)] bg-[var(--app-cell-dark)] shadow-xl">
                 {userMedia?.avatar_url ? (
                   <img
                     src={buildMediaUrl(userMedia.avatar_url)}

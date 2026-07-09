@@ -5,9 +5,9 @@ import {
   CalendarDays,
   Check,
   CheckCircle,
-  Clock3,
   Eye,
   Loader2,
+  MapPin,
   Pencil,
   Plus,
   Trash2,
@@ -85,6 +85,7 @@ function EventFormModal({ mode, initialEvent, saving, onClose, onSubmit, darkMod
   const isDark = darkMode;
   const [title, setTitle] = useState(initialEvent?.title || '');
   const [description, setDescription] = useState(initialEvent?.description || '');
+  const [location, setLocation] = useState(initialEvent?.location || '');
   const [startsAt, setStartsAt] = useState(toDateTimeLocalValue(initialEvent?.starts_at));
   const [maxParticipants, setMaxParticipants] = useState(
     initialEvent?.max_participants ? String(initialEvent.max_participants) : '10',
@@ -108,6 +109,7 @@ function EventFormModal({ mode, initialEvent, saving, onClose, onSubmit, darkMod
     const formData = new FormData();
     formData.append('title', title.trim());
     formData.append('description', description.trim());
+    formData.append('location', location.replace(/\r?\n/g, ' ').trim());
     formData.append('starts_at', new Date(startsAt).toISOString());
     formData.append('max_participants', String(Math.max(1, Number.parseInt(maxParticipants, 10) || 1)));
     if (bannerFile) {
@@ -175,7 +177,23 @@ function EventFormModal({ mode, initialEvent, saving, onClose, onSubmit, darkMod
                     : 'border-slate-200 bg-slate-50 text-slate-900'
                 }`}
                 placeholder="Кратко объясните, что это мероприятие и зачем оно проводится."
-                maxLength={2000}
+                maxLength={1024}
+              />
+            </label>
+
+            <label className="space-y-2 md:col-span-2">
+              <span className={`text-sm font-medium ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>Место проведения</span>
+              <input
+                type="text"
+                value={location}
+                onChange={(event) => setLocation(event.target.value.replace(/[\r\n]+/g, ' '))}
+                className={`w-full rounded-2xl border px-4 py-3 text-sm outline-none transition focus:border-emerald-500/60 ${
+                  isDark
+                    ? 'border-slate-700/80 bg-slate-900/70 text-white'
+                    : 'border-slate-200 bg-slate-50 text-slate-900'
+                }`}
+                placeholder="Например: Актовый зал, корпус 2"
+                maxLength={255}
               />
             </label>
 
@@ -435,6 +453,165 @@ function ParticipantsModal({
   return typeof document === 'undefined' ? modalContent : createPortal(modalContent, document.body);
 }
 
+function EventDetailsModal({ event, onClose, darkMode }) {
+  if (!event) {
+    return null;
+  }
+
+  const isDark = darkMode;
+  const bannerUrl = buildMediaUrl(event.banner_url);
+  const statusClassName = STATUS_STYLES[event.status] || STATUS_STYLES.active;
+  const participantRatio = event.participant_ratio || `${event.participant_count ?? 0}/${event.max_participants}`;
+
+  const modalContent = (
+    <div className="modal-backdrop fixed inset-0 z-[155] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
+      <div className={`modal-panel w-full max-w-3xl overflow-hidden rounded-3xl border shadow-2xl ${
+        isDark ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'
+      }`}>
+        <div className="relative">
+          <div className={`relative aspect-[16/6] overflow-hidden ${isDark ? 'bg-slate-900/70' : 'bg-slate-100'}`}>
+            {bannerUrl ? (
+              <img src={bannerUrl} alt={event.title} className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full items-center justify-center text-slate-500">
+                <CalendarDays className="h-12 w-12" />
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+            <div className="absolute left-5 top-5 flex flex-wrap gap-2">
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusClassName}`}>
+                {event.status_label || statusLabelFromValue(event.status)}
+              </span>
+              <span className={`rounded-full px-3 py-1 text-xs font-medium backdrop-blur-sm ${
+                isDark ? 'bg-black/35 text-white' : 'bg-white/85 text-slate-700'
+              }`}>
+                {participantRatio}
+              </span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className={`absolute right-5 top-5 flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
+              isDark ? 'bg-slate-900/70 text-slate-300 hover:bg-slate-800 hover:text-white' : 'bg-white/90 text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+            }`}
+            aria-label="Закрыть модальное окно"
+            title="Закрыть"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-6 p-6">
+          <div>
+            <h3 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{event.title}</h3>
+            <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+              {event.description}
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className={`rounded-2xl border px-4 py-4 ${
+              isDark ? 'border-slate-700/80 bg-slate-900/55' : 'border-slate-200 bg-slate-50'
+            }`}>
+              <div className="flex items-start gap-3">
+                <CalendarDays className="mt-0.5 h-5 w-5 text-emerald-400" />
+                <div>
+                  <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                    Дата и время
+                  </p>
+                  <p className={`mt-2 text-sm font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    {formatDateTime(event.starts_at)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className={`rounded-2xl border px-4 py-4 ${
+              isDark ? 'border-slate-700/80 bg-slate-900/55' : 'border-slate-200 bg-slate-50'
+            }`}>
+              <div className="flex items-start gap-3">
+                <Users className="mt-0.5 h-5 w-5 text-sky-400" />
+                <div>
+                  <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                    Участники
+                  </p>
+                  <p className={`mt-2 text-sm font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    {participantRatio}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className={`rounded-2xl border px-4 py-4 ${
+              isDark ? 'border-slate-700/80 bg-slate-900/55' : 'border-slate-200 bg-slate-50'
+            }`}>
+              <div className="flex items-start gap-3">
+                <MapPin className="mt-0.5 h-5 w-5 text-rose-400" />
+                <div>
+                  <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                    Место проведения
+                  </p>
+                  <p className={`mt-2 text-sm font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    {event.location || 'Не указано'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className={`rounded-2xl border px-4 py-4 ${
+              isDark ? 'border-slate-700/80 bg-slate-900/55' : 'border-slate-200 bg-slate-50'
+            }`}>
+              <div className="flex items-start gap-3">
+                <Eye className="mt-0.5 h-5 w-5 text-violet-400" />
+                <div>
+                  <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                    Статус
+                  </p>
+                  <p className={`mt-2 text-sm font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    {event.status_label || statusLabelFromValue(event.status)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className={`rounded-2xl border px-4 py-4 ${
+            isDark ? 'border-slate-700/80 bg-slate-900/55' : 'border-slate-200 bg-slate-50'
+          }`}>
+            <div className="flex items-start gap-3">
+              <Eye className="mt-0.5 h-5 w-5 text-violet-400" />
+              <div>
+                <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                  Организатор
+                </p>
+                {event.created_by_student_code ? (
+                  <button
+                    type="button"
+                    onClick={() => setParticipantProfileCode(event.created_by_student_code)}
+                    className={`mt-2 text-left text-sm font-medium transition hover:underline ${
+                      isDark ? 'text-white hover:text-emerald-300' : 'text-slate-900 hover:text-emerald-600'
+                    }`}
+                  >
+                    {event.created_by_name || 'Не указан'}
+                  </button>
+                ) : (
+                  <p className={`mt-2 text-sm font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    {event.created_by_name || 'Не указан'}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return typeof document === 'undefined' ? modalContent : createPortal(modalContent, document.body);
+}
+
 function ConfirmDeleteEventModal({ event, loading, onClose, onConfirm, darkMode }) {
   if (!event) {
     return null;
@@ -481,17 +658,17 @@ function ConfirmDeleteEventModal({ event, loading, onClose, onConfirm, darkMode 
             </p>
           </div>
 
-          <div className="mb-6 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-300" />
-              <div>
-                <p className="font-semibold text-amber-200">Внимание</p>
-                <p className="mt-1 text-sm text-amber-100/80">
-                  Мероприятие исключено из списка скоро после удаления. Это действие нельзя отменить.
-                </p>
-              </div>
+        <div className="mb-6 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className={`mt-0.5 h-5 w-5 flex-shrink-0 ${isDark ? 'text-amber-300' : 'text-amber-600'}`} />
+            <div>
+              <p className={`font-semibold ${isDark ? 'text-amber-200' : 'text-amber-800'}`}>Внимание</p>
+              <p className={`mt-1 text-sm ${isDark ? 'text-amber-100/80' : 'text-amber-700'}`}>
+                Мероприятие будет полностью удалено, это действие нельзя отменить.
+              </p>
             </div>
           </div>
+        </div>
 
           <div className="flex gap-3 pt-2">
             <button
@@ -757,6 +934,7 @@ function EventCard({
   onDelete,
   onParticipants,
   onComplete,
+  onOpenDetails,
   onRequireLogin,
   darkMode,
 }) {
@@ -767,11 +945,22 @@ function EventCard({
   const participantRatio = item.participant_ratio || `${item.participant_count ?? 0}/${item.max_participants}`;
 
   return (
-    <article className={`overflow-hidden rounded-3xl border shadow-[0_32px_120px_rgba(3,8,20,0.16)] ${
-      isDark
-        ? 'border-slate-800/80 bg-[#141c28]/85'
-        : 'border-slate-200/70 bg-white/92'
-    }`}>
+    <article
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpenDetails(item)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpenDetails(item);
+        }
+      }}
+      className={`overflow-hidden rounded-3xl border shadow-[0_32px_120px_rgba(3,8,20,0.16)] transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 ${
+        isDark
+          ? 'border-slate-800/80 bg-[#141c28]/85'
+          : 'border-slate-200/70 bg-white/92'
+      }`}
+    >
       <div className={`relative aspect-[16/6] overflow-hidden ${isDark ? 'bg-slate-900/70' : 'bg-slate-100'}`}>
         {bannerUrl ? (
           <img src={bannerUrl} alt={item.title} className="h-full w-full object-cover" />
@@ -798,26 +987,35 @@ function EventCard({
           <p className={`line-clamp-3 text-sm leading-6 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{item.description}</p>
         </div>
 
-        <div className={`flex flex-wrap gap-3 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-          <span className="inline-flex items-center gap-2">
-            <CalendarDays className="h-4 w-4 text-emerald-400" />
-            {formatDateTime(item.starts_at)}
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <Users className="h-4 w-4 text-sky-400" />
-            {participantRatio}
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <Clock3 className="h-4 w-4 text-slate-500" />
-            {item.created_by_name || 'Без автора'}
-          </span>
+        <div className={`space-y-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="inline-flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-emerald-400" />
+              {formatDateTime(item.starts_at)}
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <Users className="h-4 w-4 text-sky-400" />
+              {participantRatio}
+            </span>
+          </div>
+          {item.location ? (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <span className="inline-flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-rose-400" />
+                <span className="truncate">{item.location}</span>
+              </span>
+            </div>
+          ) : null}
         </div>
 
         {canManage ? (
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => onParticipants(item)}
+              onClick={(event) => {
+                event.stopPropagation();
+                onParticipants(item);
+              }}
               className={`inline-flex h-12 items-center justify-center rounded-2xl border transition ${
                 isDark
                   ? 'border-slate-700/80 bg-slate-900/70 text-slate-200 hover:border-sky-500/40 hover:text-white'
@@ -834,7 +1032,10 @@ function EventCard({
             {item.can_edit ? (
               <button
                 type="button"
-                onClick={() => onEdit(item)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onEdit(item);
+                }}
                 className={`inline-flex h-12 min-w-0 flex-1 items-center justify-center rounded-2xl border transition ${
                   isDark
                     ? 'border-slate-700/80 bg-slate-900/70 text-slate-200 hover:border-emerald-500/40 hover:text-white'
@@ -850,7 +1051,10 @@ function EventCard({
             {item.can_delete ? (
               <button
                 type="button"
-                onClick={() => onDelete(item)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onDelete(item);
+                }}
                 className={`inline-flex h-12 min-w-0 flex-1 items-center justify-center rounded-2xl border transition ${
                   isDark
                     ? 'border-slate-700/80 bg-slate-900/70 text-rose-300 hover:border-rose-500/40 hover:text-rose-200'
@@ -867,7 +1071,10 @@ function EventCard({
               <button
                 type="button"
                 disabled={completing}
-                onClick={() => onComplete(item)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onComplete(item);
+                }}
                 className="inline-flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-emerald-300 transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {completing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
@@ -890,7 +1097,8 @@ function EventCard({
         ) : (
           <button
             type="button"
-            onClick={() => {
+            onClick={(event) => {
+              event.stopPropagation();
               if (!isAuthenticated) {
                 onRequireLogin();
                 return;
@@ -941,6 +1149,7 @@ export function EventsPage({ activeTab, setIsLoginModalOpen, darkMode }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
+  const [detailTarget, setDetailTarget] = useState(null);
   const [saving, setSaving] = useState(false);
   const [joiningId, setJoiningId] = useState(null);
   const [completingId, setCompletingId] = useState(null);
@@ -975,6 +1184,20 @@ export function EventsPage({ activeTab, setIsLoginModalOpen, darkMode }) {
   useEffect(() => {
     setCurrentPage(page);
   }, [page]);
+
+  useEffect(() => {
+    if (!detailTarget) {
+      return;
+    }
+
+    const freshEvent = items.find((item) => item.id === detailTarget.id);
+    if (!freshEvent) {
+      setDetailTarget(null);
+      return;
+    }
+
+    setDetailTarget(freshEvent);
+  }, [items, detailTarget]);
 
   const subtitle = useMemo(
     () => (
@@ -1147,7 +1370,7 @@ export function EventsPage({ activeTab, setIsLoginModalOpen, darkMode }) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6">
-      <div className="mb-8 text-center sm:mb-10">
+      <div className="mb-8 pt-[10px] text-center sm:mb-10">
         <h2 className="mb-3 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:mb-4 sm:text-4xl">
           Мероприятия
         </h2>
@@ -1191,6 +1414,7 @@ export function EventsPage({ activeTab, setIsLoginModalOpen, darkMode }) {
                 onDelete={handleDelete}
                 onParticipants={handleOpenParticipants}
                 onComplete={handleComplete}
+                onOpenDetails={setDetailTarget}
                 onRequireLogin={() => setIsLoginModalOpen(true)}
                 darkMode={darkMode}
               />
@@ -1227,6 +1451,12 @@ export function EventsPage({ activeTab, setIsLoginModalOpen, darkMode }) {
           darkMode={darkMode}
         />
       ) : null}
+
+      <EventDetailsModal
+        event={detailTarget}
+        onClose={() => setDetailTarget(null)}
+        darkMode={darkMode}
+      />
 
       {participantsState.open ? (
         <ParticipantsModal

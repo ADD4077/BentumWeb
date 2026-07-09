@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import secrets
 import string
 from dataclasses import dataclass
 
+from aiogram import Bot
 from django.conf import settings
 from django.utils import timezone
 
@@ -22,6 +24,7 @@ class ReferralApplyResult:
 
 class ReferralService:
     CODE_LENGTH = 8
+    _cached_bot_username: str | None = None
 
     @staticmethod
     def normalize_referral_code(value: str | None) -> str:
@@ -42,6 +45,46 @@ class ReferralService:
         user.referral_code = cls.generate_unique_referral_code()
         user.save(update_fields=["referral_code"])
         return user.referral_code
+
+    @classmethod
+    async def _detect_bot_username_async(cls) -> str | None:
+        bot_token = getattr(settings, "TELEGRAM_BOT_TOKEN", None) or os.getenv("TELEGRAM_BOT_TOKEN", "")
+        if not bot_token:
+            return None
+
+        bot = Bot(token=bot_token)
+        try:
+            bot_info = await bot.get_me()
+            username = (getattr(bot_info, "username", "") or "").strip().lstrip("@")
+            cls._cached_bot_username = username or None
+            return cls._cached_bot_username
+        except Exception:
+            return None
+        finally:
+            await bot.session.close()
+
+    @classmethod
+    def resolve_bot_username(cls, bot_username: str | None = None) -> str | None:
+        explicit_username = (bot_username or "").strip().lstrip("@")
+        if explicit_username:
+            cls._cached_bot_username = explicit_username
+            return explicit_username
+
+        configured_username = (getattr(settings, "TELEGRAM_BOT_USERNAME", "") or "").strip().lstrip("@")
+        if configured_username:
+            cls._cached_bot_username = configured_username
+            return configured_username
+
+        if cls._cached_bot_username:
+            return cls._cached_bot_username
+
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        return loop.run_until_complete(cls._detect_bot_username_async())
 
     @classmethod
     def apply_referral(
@@ -82,7 +125,7 @@ class ReferralService:
     ) -> dict:
         code = cls.ensure_user_referral_code(user)
         site_base = (site_url or getattr(settings, "WEB_APP_URL", "") or "https://bentum.ru").rstrip("/")
-        env_bot_username = (bot_username or os.getenv("TELEGRAM_BOT_USERNAME", "")).strip().lstrip("@")
+        env_bot_username = cls.resolve_bot_username(bot_username)
         invited_count = user.referred_users.count()
 
         return {

@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
-import { Copy, Gift } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Check, Copy, Gift } from 'lucide-react';
 
-function ReferralCopyButton({ value, label }) {
+function ReferralCopyButton({ value, label, unavailableText = 'Ссылка недоступна' }) {
   const [copied, setCopied] = useState(false);
-
-  if (!value) {
-    return null;
-  }
+  const isAvailable = Boolean(value);
 
   const handleCopy = async () => {
+    if (!value) {
+      return;
+    }
+
     try {
       await navigator.clipboard.writeText(value);
       setCopied(true);
@@ -22,13 +23,55 @@ function ReferralCopyButton({ value, label }) {
     <button
       type="button"
       onClick={handleCopy}
-      className="flex w-full items-center justify-between rounded-2xl border border-slate-200/70 bg-slate-50/80 px-4 py-3 text-left text-sm font-medium text-slate-700 transition-colors hover:border-emerald-400 hover:text-emerald-600 dark:border-slate-700/60 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:border-emerald-500 dark:hover:text-emerald-300"
+      disabled={!isAvailable}
+      className={`app-cell-surface group flex min-h-[92px] w-full items-center justify-between gap-4 rounded-2xl border px-5 py-3 text-left transition-all duration-300 ${
+        copied
+          ? 'scale-[1.01] border-emerald-400 bg-emerald-50/80 shadow-[0_0_0_1px_rgba(16,185,129,0.18)] dark:border-emerald-500 dark:bg-emerald-500/10'
+          : isAvailable
+            ? 'hover:-translate-y-0.5 hover:border-emerald-400 dark:hover:border-emerald-500'
+            : 'cursor-default opacity-80'
+      }`}
     >
-      <div>
-        <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</span>
-        <span>{copied ? 'Ссылка скопирована' : 'Скопировать ссылку'}</span>
+      <div className="min-w-0 flex-1">
+        <span
+          className={`block text-base font-semibold leading-tight transition-colors duration-300 ${
+            copied
+              ? 'text-emerald-600 dark:text-emerald-300'
+              : isAvailable
+                ? 'text-slate-900 dark:text-white'
+                : 'text-slate-500 dark:text-slate-400'
+          }`}
+        >
+          {label}
+        </span>
+        <span
+          className={`mt-1 block text-sm transition-all duration-300 ${
+            copied
+              ? 'translate-y-0 text-emerald-600/90 opacity-100 dark:text-emerald-300/90'
+              : isAvailable
+                ? 'translate-y-0 text-slate-500 opacity-100 dark:text-slate-400'
+                : 'translate-y-0 text-slate-400 opacity-100 dark:text-slate-500'
+          }`}
+        >
+          {copied ? 'Ссылка скопирована' : isAvailable ? 'Нажмите, чтобы скопировать' : unavailableText}
+        </span>
       </div>
-      <Copy className="h-4 w-4 shrink-0" />
+
+      <span
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-300 ${
+          copied
+            ? 'border-emerald-400 bg-emerald-500 text-white dark:border-emerald-500 dark:bg-emerald-500'
+            : isAvailable
+              ? 'border-slate-200/80 bg-white/70 text-slate-500 group-hover:border-emerald-300 group-hover:text-emerald-500 dark:border-slate-700/70 dark:bg-slate-800/80 dark:text-slate-400 dark:group-hover:border-emerald-500/60 dark:group-hover:text-emerald-300'
+              : 'border-slate-200/80 bg-white/40 text-slate-400 dark:border-slate-700/70 dark:bg-slate-800/60 dark:text-slate-500'
+        }`}
+      >
+        {copied ? (
+          <Check className="h-4 w-4 scale-110 transition-transform duration-200" />
+        ) : (
+          <Copy className="h-4 w-4" />
+        )}
+      </span>
     </button>
   );
 }
@@ -41,6 +84,22 @@ export default function ReferralSettingsSection({ referral }) {
       </div>
     );
   }
+
+  const referralLinks = useMemo(
+    () => [
+      {
+        label: 'Ссылка для сайта',
+        value: referral.site_link,
+        unavailableText: 'Ссылка для сайта недоступна',
+      },
+      {
+        label: 'Ссылка для бота',
+        value: referral.telegram_link,
+        unavailableText: 'Укажите username Telegram-бота в настройках сервера',
+      },
+    ],
+    [referral.site_link, referral.telegram_link]
+  );
 
   return (
     <div className="rounded-2xl border border-gray-200/70 bg-white/70 p-4 text-left shadow-sm dark:border-slate-700/60 dark:bg-[#17202d] sm:p-5">
@@ -81,8 +140,14 @@ export default function ReferralSettingsSection({ referral }) {
       ) : null}
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <ReferralCopyButton value={referral.site_link} label="Ссылка для сайта" />
-        <ReferralCopyButton value={referral.telegram_link} label="Ссылка для Telegram" />
+        {referralLinks.map((item) => (
+          <ReferralCopyButton
+            key={item.label}
+            value={item.value}
+            label={item.label}
+            unavailableText={item.unavailableText}
+          />
+        ))}
       </div>
     </div>
   );

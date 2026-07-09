@@ -344,6 +344,88 @@ class MediaSessionAndEdgeCaseTests(TestCase):
         auth_check_response = self.client.get("/api/auth/check")
         self.assertEqual(auth_check_response.status_code, 401)
 
+    def test_close_other_session_requires_current_session_age_of_24_hours(self):
+        current_session_key = self.client.session.session_key
+        current_session = UserSession.objects.create(
+            student_code=self.user.student_code,
+            session_key=current_session_key,
+            browser="Current Browser",
+            os="Current OS",
+            ip_address="127.0.0.1",
+        )
+        other_session = UserSession.objects.create(
+            student_code=self.user.student_code,
+            session_key="other-session-key",
+            browser="Other Browser",
+            os="Other OS",
+            ip_address="127.0.0.2",
+        )
+
+        response = self.client.post(
+            "/api/sessions/close",
+            data=f'{{"session_id": {other_session.id}}}',
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(UserSession.objects.filter(id=current_session.id).exists())
+        self.assertTrue(UserSession.objects.filter(id=other_session.id).exists())
+
+    def test_close_other_session_succeeds_after_current_session_ages(self):
+        current_session_key = self.client.session.session_key
+        current_session = UserSession.objects.create(
+            student_code=self.user.student_code,
+            session_key=current_session_key,
+            browser="Current Browser",
+            os="Current OS",
+            ip_address="127.0.0.1",
+        )
+        UserSession.objects.filter(id=current_session.id).update(created_at=timezone.now() - timedelta(days=2))
+
+        other_session = UserSession.objects.create(
+            student_code=self.user.student_code,
+            session_key="aged-other-session-key",
+            browser="Other Browser",
+            os="Other OS",
+            ip_address="127.0.0.2",
+        )
+
+        response = self.client.post(
+            "/api/sessions/close",
+            data=f'{{"session_id": {other_session.id}}}',
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertFalse(response.json()["closed_current"])
+        self.assertTrue(UserSession.objects.filter(id=current_session.id).exists())
+        self.assertFalse(UserSession.objects.filter(id=other_session.id).exists())
+
+    def test_close_current_session_logs_user_out(self):
+        current_session_key = self.client.session.session_key
+        current_session = UserSession.objects.create(
+            student_code=self.user.student_code,
+            session_key=current_session_key,
+            browser="Current Browser",
+            os="Current OS",
+            ip_address="127.0.0.1",
+        )
+
+        response = self.client.post(
+            "/api/sessions/close",
+            data=f'{{"session_id": {current_session.id}}}',
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertTrue(response.json()["closed_current"])
+        self.assertFalse(UserSession.objects.filter(id=current_session.id).exists())
+
+        auth_check_response = self.client.get("/api/auth/check")
+        self.assertEqual(auth_check_response.status_code, 401)
+
     def test_support_request_rejects_empty_message(self):
         response = self.client.post(
             "/api/support/submit",

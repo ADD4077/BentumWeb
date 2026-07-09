@@ -8,6 +8,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 
 from ..common.drf import SessionUserAPIView
+from ..common.permissions import is_system_administrator
 from ..models import Event, EventParticipation, User
 from .serializers import (
     EventAttendanceSaveSerializer,
@@ -22,8 +23,16 @@ from .service import EventBannerStorage
 logger = logging.getLogger(__name__)
 
 
-def can_manage_events(user: User | None) -> bool:
-    return bool(user and (user.role == User.ROLE_CHAIRPERSON or getattr(user, "is_admin", False)))
+def can_create_events(user: User | None) -> bool:
+    return bool(user and (user.role == User.ROLE_CHAIRPERSON or is_system_administrator(user)))
+
+
+def can_manage_event(user: User | None, event: Event | None) -> bool:
+    if not user or not event:
+        return False
+    if is_system_administrator(user):
+        return True
+    return user.role == User.ROLE_CHAIRPERSON and event.created_by_id == user.id
 
 
 class EventListView(SessionUserAPIView, GenericAPIView):
@@ -65,6 +74,10 @@ class EventListView(SessionUserAPIView, GenericAPIView):
                 EventParticipation.objects.filter(user=user, event_id__in=[row.id for row in rows]).values_list("event_id", flat=True)
             )
             joined_map = {event_id: True for event_id in joined_ids}
+        can_create = can_create_events(user)
+        managed_event_ids = {
+            row.id for row in rows if can_manage_event(user, row)
+        }
 
         serializer = self.get_serializer(
             rows,
@@ -72,7 +85,8 @@ class EventListView(SessionUserAPIView, GenericAPIView):
             context={
                 "requesting_user": user,
                 "joined_map": joined_map,
-                "can_manage": can_manage_events(user),
+                "can_manage": can_create,
+                "managed_event_ids": managed_event_ids,
             },
         )
         return self.success_response(
@@ -81,14 +95,14 @@ class EventListView(SessionUserAPIView, GenericAPIView):
             page=page,
             page_size=page_size,
             has_more=offset + len(rows) < total,
-            can_manage=can_manage_events(user),
+            can_manage=can_create,
         )
 
     def post(self, request):
         user, error_response = self.get_session_user(request)
         if error_response:
             return error_response
-        if not can_manage_events(user):
+        if not can_create_events(user):
             return self.error_response("Недостаточно прав", http_status=status.HTTP_403_FORBIDDEN)
 
         serializer = EventCreateSerializer(data=request.data)
@@ -106,6 +120,7 @@ class EventListView(SessionUserAPIView, GenericAPIView):
             created_by=user,
             title=serializer.validated_data["title"],
             description=serializer.validated_data["description"],
+            location=serializer.validated_data.get("location", ""),
             starts_at=serializer.validated_data["starts_at"],
             max_participants=serializer.validated_data["max_participants"],
             status=Event.STATUS_ACTIVE,
@@ -123,7 +138,7 @@ class EventListView(SessionUserAPIView, GenericAPIView):
         )
         payload = self.get_serializer(
             event,
-            context={"requesting_user": user, "joined_map": {}, "can_manage": True},
+            context={"requesting_user": user, "joined_map": {}, "can_manage": True, "managed_event_ids": {event.id}},
         ).data
         return self.success_response(item=payload, http_status=status.HTTP_201_CREATED)
 
@@ -144,12 +159,11 @@ class EventDetailView(SessionUserAPIView, GenericAPIView):
         user, error_response = self.get_session_user(request)
         if error_response:
             return error_response
-        if not can_manage_events(user):
-            return self.error_response("Недостаточно прав", http_status=status.HTTP_403_FORBIDDEN)
-
         event = self.get_event(event_id)
         if not event:
             return self.error_response("Мероприятие не найдено", http_status=status.HTTP_404_NOT_FOUND)
+        if not can_manage_event(user, event):
+            return self.error_response("Недостаточно прав", http_status=status.HTTP_403_FORBIDDEN)
         if event.effective_status != Event.STATUS_ACTIVE:
             return self.error_response("Редактировать можно только активное мероприятие", http_status=status.HTTP_400_BAD_REQUEST)
 
@@ -157,7 +171,7 @@ class EventDetailView(SessionUserAPIView, GenericAPIView):
         serializer.is_valid(raise_exception=True)
         changes = serializer.validated_data
 
-        for field in ["title", "description", "starts_at", "max_participants"]:
+        for field in ["title", "description", "location", "starts_at", "max_participants"]:
             if field in changes:
                 setattr(event, field, changes[field])
 
@@ -181,7 +195,7 @@ class EventDetailView(SessionUserAPIView, GenericAPIView):
         event = self.get_event(event.id)
         payload = self.get_serializer(
             event,
-            context={"requesting_user": user, "joined_map": {}, "can_manage": True},
+            context={"requesting_user": user, "joined_map": {}, "can_manage": can_create_events(user), "managed_event_ids": {event.id}},
         ).data
         return self.success_response(item=payload)
 
@@ -189,12 +203,11 @@ class EventDetailView(SessionUserAPIView, GenericAPIView):
         user, error_response = self.get_session_user(request)
         if error_response:
             return error_response
-        if not can_manage_events(user):
-            return self.error_response("Недостаточно прав", http_status=status.HTTP_403_FORBIDDEN)
-
         event = Event.objects.filter(id=event_id).first()
         if not event:
             return self.error_response("Мероприятие не найдено", http_status=status.HTTP_404_NOT_FOUND)
+        if not can_manage_event(user, event):
+            return self.error_response("Недостаточно прав", http_status=status.HTTP_403_FORBIDDEN)
         if event.effective_status != Event.STATUS_ACTIVE:
             return self.error_response("Удалить можно только активное мероприятие", http_status=status.HTTP_400_BAD_REQUEST)
 
@@ -211,12 +224,11 @@ class EventParticipantsView(SessionUserAPIView, GenericAPIView):
         user, error_response = self.get_session_user(request)
         if error_response:
             return error_response
-        if not can_manage_events(user):
-            return self.error_response("Недостаточно прав", http_status=status.HTTP_403_FORBIDDEN)
-
         event = Event.objects.filter(id=event_id).first()
         if not event:
             return self.error_response("Мероприятие не найдено", http_status=status.HTTP_404_NOT_FOUND)
+        if not can_manage_event(user, event):
+            return self.error_response("Недостаточно прав", http_status=status.HTTP_403_FORBIDDEN)
 
         rows = list(EventParticipation.objects.filter(event=event).select_related("user").order_by("-created_at"))
         serializer = self.get_serializer(rows, many=True)
@@ -228,12 +240,11 @@ class EventCompleteView(SessionUserAPIView):
         user, error_response = self.get_session_user(request)
         if error_response:
             return error_response
-        if not can_manage_events(user):
-            return self.error_response("Недостаточно прав", http_status=status.HTTP_403_FORBIDDEN)
-
         event = Event.objects.filter(id=event_id).first()
         if not event:
             return self.error_response("Мероприятие не найдено", http_status=status.HTTP_404_NOT_FOUND)
+        if not can_manage_event(user, event):
+            return self.error_response("Недостаточно прав", http_status=status.HTTP_403_FORBIDDEN)
         if event.effective_status != Event.STATUS_IN_PROGRESS:
             return self.error_response("Завершить можно только мероприятие в процессе", http_status=status.HTTP_400_BAD_REQUEST)
 
@@ -247,12 +258,11 @@ class EventParticipantDeleteView(SessionUserAPIView):
         user, error_response = self.get_session_user(request)
         if error_response:
             return error_response
-        if not can_manage_events(user):
-            return self.error_response("Недостаточно прав", http_status=status.HTTP_403_FORBIDDEN)
-
         event = Event.objects.filter(id=event_id).first()
         if not event:
             return self.error_response("Мероприятие не найдено", http_status=status.HTTP_404_NOT_FOUND)
+        if not can_manage_event(user, event):
+            return self.error_response("Недостаточно прав", http_status=status.HTTP_403_FORBIDDEN)
         if event.status == Event.STATUS_COMPLETED:
             return self.error_response("Нельзя менять список участников завершённого мероприятия", http_status=status.HTTP_400_BAD_REQUEST)
 
@@ -276,12 +286,11 @@ class EventAttendanceSaveView(SessionUserAPIView, GenericAPIView):
         user, error_response = self.get_session_user(request)
         if error_response:
             return error_response
-        if not can_manage_events(user):
-            return self.error_response("Недостаточно прав", http_status=status.HTTP_403_FORBIDDEN)
-
         event = Event.objects.filter(id=event_id).first()
         if not event:
             return self.error_response("Мероприятие не найдено", http_status=status.HTTP_404_NOT_FOUND)
+        if not can_manage_event(user, event):
+            return self.error_response("Недостаточно прав", http_status=status.HTTP_403_FORBIDDEN)
         if event.effective_status != Event.STATUS_IN_PROGRESS:
             return self.error_response(
                 "Отмечать присутствие можно только для мероприятия в процессе",

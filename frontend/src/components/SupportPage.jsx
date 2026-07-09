@@ -500,7 +500,7 @@ export default function SupportPage({ setIsLoginModalOpen }) {
                     maxLength={maxMessageLength}
                     required
                     placeholder="Опишите проблему, вопрос или предложение..."
-                    className="w-full resize-none rounded-[24px] border border-slate-200 bg-slate-50/90 px-4 py-4 text-slate-900 placeholder-slate-500 outline-none transition focus:border-emerald-400 focus:bg-white dark:border-slate-700 dark:bg-slate-950/70 dark:text-white dark:placeholder-slate-400 dark:focus:bg-slate-950"
+                    className="w-full resize-none rounded-2xl border border-gray-200 bg-white px-4 py-3 text-slate-900 placeholder-slate-500 outline-none transition focus:border-emerald-400 dark:border-slate-600 dark:bg-slate-900/70 dark:text-white dark:placeholder-slate-400"
                   />
                 </div>
 

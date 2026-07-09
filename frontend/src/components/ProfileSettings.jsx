@@ -38,6 +38,7 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
   const [deleteModal, setDeleteModal] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
+  const [closingSessionId, setClosingSessionId] = useState(null);
   const [telegramBinding, setTelegramBinding] = useState(null);
   const [telegramLink, setTelegramLink] = useState(null);
   const [loadingTelegram, setLoadingTelegram] = useState(false);
@@ -150,6 +151,37 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
       }
     } finally {
       setLoadingSessions(false);
+    }
+  };
+
+  const closeSession = async (sessionId, { isCurrent = false } = {}) => {
+    setClosingSessionId(sessionId);
+    try {
+      const headers = await buildCsrfHeaders({ 'Content-Type': 'application/json' });
+      const response = await fetch(API_ENDPOINTS.SESSION_CLOSE, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.detail || 'Не удалось завершить сессию');
+      }
+
+      if (isCurrent) {
+        showSuccess('Текущая сессия завершена.');
+        handleLogout();
+        return;
+      }
+
+      showSuccess('Сессия завершена.');
+      await refreshSessions();
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Не удалось завершить сессию');
+    } finally {
+      setClosingSessionId(null);
     }
   };
 
@@ -579,6 +611,8 @@ function ProfileSettings({ darkMode, onBack, user, userMedia, onProfileUpdate, o
       refreshSessions={refreshSessions}
       loadingSessions={loadingSessions}
       sessions={sessions}
+      closeSession={closeSession}
+      closingSessionId={closingSessionId}
     />
   ) : activeTab === 'notifications' ? (
     <PreferenceSettingsSection

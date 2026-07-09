@@ -5,10 +5,10 @@
   --app-panel-dark: rgba(30, 41, 59, 0.5);
   --app-panel-border-light: rgba(229, 231, 235, 0.84);
   --app-panel-border-dark: rgba(51, 65, 85, 0.56);
-  --app-cell-light: rgba(255, 255, 255, 0.92);
-  --app-cell-dark: rgba(51, 65, 85, 0.78);
-  --app-cell-border-light: rgba(226, 232, 240, 0.9);
-  --app-cell-border-dark: rgba(71, 85, 105, 0.7);
+  --app-cell-light: rgba(241, 245, 249, 0.84);
+  --app-cell-dark: rgba(30, 41, 59, 0.9);
+  --app-cell-border-light: rgba(203, 213, 225, 0.82);
+  --app-cell-border-dark: rgba(71, 85, 105, 0.78);
   --app-input-light: rgba(255, 255, 255, 0.9);
   --app-input-dark: #17202d;
   --app-input-border-light: rgba(226, 232, 240, 0.9);
@@ -235,6 +235,11 @@ body {
 .dark .app-input-surface {
   border-color: var(--app-input-border-dark) !important;
   background-color: var(--app-input-dark) !important;
+}
+
+.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.25);
+  opacity: 0.88;
 }
 
 .app-shell-main > * {

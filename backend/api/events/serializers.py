@@ -11,14 +11,19 @@ class EventListQuerySerializer(serializers.Serializer):
 
 class EventMutationSerializer(serializers.Serializer):
     title = serializers.CharField(required=False, max_length=255)
-    description = serializers.CharField(required=False, max_length=2000)
+    description = serializers.CharField(required=False, max_length=1024)
+    location = serializers.CharField(required=False, allow_blank=True, max_length=255)
     starts_at = serializers.DateTimeField(required=False)
     max_participants = serializers.IntegerField(required=False, min_value=1, max_value=5000)
+
+    def validate_location(self, value):
+        return " ".join((value or "").splitlines()).strip()
 
 
 class EventCreateSerializer(EventMutationSerializer):
     title = serializers.CharField(required=True, max_length=255)
-    description = serializers.CharField(required=True, max_length=2000)
+    description = serializers.CharField(required=True, max_length=1024)
+    location = serializers.CharField(required=False, allow_blank=True, max_length=255)
     starts_at = serializers.DateTimeField(required=True)
     max_participants = serializers.IntegerField(required=True, min_value=1, max_value=5000)
 
@@ -54,6 +59,7 @@ class EventSerializer(serializers.ModelSerializer):
     can_join = serializers.SerializerMethodField()
     status_label = serializers.SerializerMethodField()
     created_by_name = serializers.CharField(source="created_by.fullname", read_only=True)
+    created_by_student_code = serializers.CharField(source="created_by.student_code", read_only=True)
     is_manageable = serializers.SerializerMethodField()
     can_edit = serializers.SerializerMethodField()
     can_delete = serializers.SerializerMethodField()
@@ -65,6 +71,7 @@ class EventSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "description",
+            "location",
             "starts_at",
             "max_participants",
             "status",
@@ -75,6 +82,7 @@ class EventSerializer(serializers.ModelSerializer):
             "user_joined",
             "can_join",
             "created_by_name",
+            "created_by_student_code",
             "is_manageable",
             "can_edit",
             "can_delete",
@@ -113,6 +121,9 @@ class EventSerializer(serializers.ModelSerializer):
         return obj.get_effective_status_display()
 
     def get_is_manageable(self, obj):
+        managed_event_ids = self.context.get("managed_event_ids")
+        if managed_event_ids is not None:
+            return obj.id in managed_event_ids
         return bool(self.context.get("can_manage"))
 
     def get_can_edit(self, obj):

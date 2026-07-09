@@ -4,6 +4,7 @@ Authentication and session services.
 
 import logging
 import re
+from datetime import timedelta
 from typing import Optional, Tuple
 
 from django.conf import settings
@@ -23,6 +24,7 @@ from ..user_agent_parser import UserAgentParser
 logger = logging.getLogger(__name__)
 
 SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
+SESSION_CLOSE_OTHERS_MIN_AGE = timedelta(hours=24)
 _CLIENT_KEY_UNSAFE_CHARS = re.compile(r"[^a-zA-Z0-9:._-]+")
 
 
@@ -269,7 +271,41 @@ class SessionService:
             UserSession.objects.filter(session_key=session_key).delete()
 
     @staticmethod
+    def can_close_other_sessions(current_session_key: Optional[str]) -> bool:
+        if not current_session_key:
+            return False
+
+        current_session = UserSession.objects.filter(session_key=current_session_key).first()
+        if not current_session or not current_session.created_at:
+            return False
+
+        return current_session.created_at <= timezone.now() - SESSION_CLOSE_OTHERS_MIN_AGE
+
+    @staticmethod
+    def close_user_session(
+        *,
+        student_code: str,
+        target_session_id: int,
+        current_session_key: Optional[str],
+    ) -> dict:
+        session = UserSession.objects.filter(id=target_session_id, student_code=student_code).first()
+        if not session:
+            raise UserSession.DoesNotExist
+
+        is_current = current_session_key is not None and session.session_key == current_session_key
+        if not is_current and not SessionService.can_close_other_sessions(current_session_key):
+            raise PermissionError("Текущая сессия должна быть активна не менее 24 часов, чтобы закрывать другие.")
+
+        Session.objects.filter(session_key=session.session_key).delete()
+        UserSession.objects.filter(id=session.id).delete()
+        return {
+            "closed_current": is_current,
+            "session_id": target_session_id,
+        }
+
+    @staticmethod
     def get_user_sessions(student_code: str, current_session_key: Optional[str] = None) -> list:
+        can_close_others = SessionService.can_close_other_sessions(current_session_key)
         sessions_data = []
         for session in UserSession.objects.filter(student_code=student_code).order_by("-last_activity"):
             is_current = current_session_key is not None and session.session_key == current_session_key
@@ -283,6 +319,7 @@ class SessionService:
                     "last_activity": session.last_activity.isoformat() if session.last_activity else None,
                     "is_current": is_current,
                     "status": "active" if is_current else "inactive",
+                    "can_close": is_current or can_close_others,
                 }
             )
         return sessions_data

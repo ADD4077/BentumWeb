@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Eye,
   EyeOff,
@@ -6,7 +6,25 @@ import {
   Lock,
   RefreshCw,
   Send,
+  Shield,
+  Smartphone,
+  X,
 } from 'lucide-react';
+
+function formatSessionDate(value) {
+  if (!value) return 'Неизвестно';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Неизвестно';
+
+  return date.toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 export default function SecuritySettingsSection({
   showPasswordForm,
@@ -33,7 +51,19 @@ export default function SecuritySettingsSection({
   refreshSessions,
   loadingSessions,
   sessions,
+  closeSession,
+  closingSessionId,
 }) {
+  const canCloseOtherSessions = useMemo(() => {
+    const currentSession = sessions.find((session) => session.is_current);
+    if (!currentSession?.created_at) return false;
+
+    const createdAt = new Date(currentSession.created_at);
+    if (Number.isNaN(createdAt.getTime())) return false;
+
+    return Date.now() - createdAt.getTime() >= 24 * 60 * 60 * 1000;
+  }, [sessions]);
+
   return (
     <div className="space-y-6">
       <div className="rounded-3xl border border-gray-200/70 bg-gray-100/50 p-6 shadow-lg shadow-gray-900/10 dark:border-slate-800/60 dark:bg-[#121927] dark:shadow-black/20 sm:p-8">
@@ -146,7 +176,12 @@ export default function SecuritySettingsSection({
 
       <div className="rounded-3xl border border-gray-200/70 bg-gray-100/50 p-6 shadow-lg shadow-gray-900/10 dark:border-slate-800/60 dark:bg-[#121927] dark:shadow-black/20">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Активные сессии</h3>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Активные сессии</h3>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              Другие устройства можно завершать только если текущей сессии больше 24 часов.
+            </p>
+          </div>
           <button
             onClick={refreshSessions}
             disabled={loadingSessions}
@@ -156,6 +191,13 @@ export default function SecuritySettingsSection({
             Обновить
           </button>
         </div>
+
+        {!canCloseOtherSessions && sessions.some((session) => !session.is_current) ? (
+          <div className="mb-4 rounded-2xl border border-amber-300/70 bg-amber-50/90 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+            Для завершения других сессий текущая сессия должна существовать не меньше 24 часов.
+          </div>
+        ) : null}
+
         {loadingSessions ? (
           <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -164,20 +206,69 @@ export default function SecuritySettingsSection({
         ) : (
           <div className="space-y-3">
             {sessions.length ? (
-              sessions.map((session, index) => (
-                <div
-                  key={session.session_key || index}
-                  className="rounded-2xl border border-gray-200/70 bg-white/82 px-4 py-3 text-sm dark:border-slate-800/60 dark:bg-[#17202d]"
-                >
-                  <div className="font-medium text-slate-900 dark:text-white">
-                    {[session.device, session.browser, session.os]
-                      .filter(Boolean)
-                      .filter((value, position, array) => array.indexOf(value) === position)
-                      .join(' • ') || 'Устройство'}
+              sessions.map((session, index) => {
+                const title = [session.device, session.browser, session.os]
+                  .filter(Boolean)
+                  .filter((value, position, array) => array.indexOf(value) === position)
+                  .join(' • ') || 'Устройство';
+                const canClose = Boolean(session.is_current || canCloseOtherSessions);
+                const isClosing = closingSessionId === session.id;
+
+                return (
+                  <div
+                    key={session.id || index}
+                    className="rounded-2xl border border-gray-200/70 bg-white/82 px-4 py-4 dark:border-slate-800/60 dark:bg-[#17202d]"
+                  >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="font-medium text-slate-900 dark:text-white">{title}</div>
+                          {session.is_current ? (
+                            <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-300">
+                              Текущая
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="mt-2 grid gap-1 text-sm text-slate-600 dark:text-slate-400">
+                          <div className="inline-flex items-center gap-2">
+                            <Smartphone className="h-4 w-4" />
+                            <span>{session.ip_address || 'IP не определён'}</span>
+                          </div>
+                          <div className="inline-flex items-center gap-2">
+                            <Shield className="h-4 w-4" />
+                            <span>Создана: {formatSessionDate(session.created_at)}</span>
+                          </div>
+                          <div className="inline-flex items-center gap-2">
+                            <RefreshCw className="h-4 w-4" />
+                            <span>Активность: {formatSessionDate(session.last_activity)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={!canClose || isClosing}
+                        onClick={() => closeSession(session.id, { isCurrent: session.is_current })}
+                        className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition ${
+                          canClose
+                            ? 'bg-rose-500/12 text-rose-600 hover:bg-rose-500/18 dark:text-rose-300'
+                            : 'cursor-not-allowed bg-slate-200/70 text-slate-400 dark:bg-slate-800/70 dark:text-slate-500'
+                        }`}
+                        title={
+                          canClose
+                            ? session.is_current
+                              ? 'Завершить текущую сессию'
+                              : 'Завершить эту сессию'
+                            : 'Другие сессии можно закрывать только спустя 24 часа'
+                        }
+                      >
+                        {isClosing ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                        {session.is_current ? 'Выйти' : 'Закрыть'}
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-slate-600 dark:text-slate-400">{session.ip_address || 'IP не определён'}</div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="text-sm text-slate-600 dark:text-slate-400">Сессии не найдены.</div>
             )}

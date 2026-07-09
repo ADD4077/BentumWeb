@@ -81,7 +81,7 @@ function AppContent() {
 
   const userMedia = useUserMedia(isAuthenticated, user, isProfileModalOpen);
   const { missionStats, isMissionLoading } = useMissionStats();
-  const isBanned = Boolean(!loading && isAuthenticated && user?.is_banned);
+  const isBanned = Boolean(!loading && user?.is_banned);
   const isAdmin = Boolean(isAuthenticated && user?.is_admin);
   const canModerate = Boolean(isAuthenticated && (user?.role === 'moderator' || user?.is_admin));
   const canOpenChairperson = Boolean(isAuthenticated && (user?.role === 'chairperson' || user?.is_admin));

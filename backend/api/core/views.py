@@ -16,7 +16,7 @@ from ..common.drf import SessionUserAPIView
 from ..common.permissions import is_system_administrator
 from ..common.utils import get_current_user, get_user_full_data, is_request_authenticated, serialize_datetime
 from ..func import authorize
-from ..models import User
+from ..models import User, UserSession
 from ..notification_service import NotificationService
 from ..referral_service import ReferralService
 from ..twofa_service import twofa_service
@@ -306,6 +306,45 @@ class UserSessionsView(SessionUserAPIView):
             logger.exception("Sessions error")
             return JsonResponse({"success": False, "detail": "Ошибка загрузки сессий"}, status=500)
 
+class CloseUserSessionView(SessionUserAPIView):
+    def post(self, request):
+        try:
+            user, error_response = self.get_session_user(request)
+            if error_response:
+                return error_response
+
+            session_id = request.data.get("session_id")
+            if session_id in (None, ""):
+                return self.error_response("Не указана сессия для завершения.")
+
+            try:
+                session_id = int(session_id)
+            except (TypeError, ValueError):
+                return self.error_response("Некорректный идентификатор сессии.")
+
+            current_session_key = request.session.session_key
+            result = SessionService.close_user_session(
+                student_code=user.student_code,
+                target_session_id=session_id,
+                current_session_key=current_session_key,
+            )
+
+            if result["closed_current"]:
+                SessionService.logout(request)
+
+            return self.success_response(
+                message="Сессия завершена.",
+                closed_current=result["closed_current"],
+                session_id=session_id,
+            )
+        except UserSession.DoesNotExist:
+            return self.error_response("Сессия не найдена.", http_status=404)
+        except PermissionError as error:
+            return self.error_response(str(error), http_status=403)
+        except Exception:
+            logger.exception("Close session error")
+            return self.error_response("Не удалось завершить сессию.", http_status=500)
+
 
 save_data = SaveDataView.as_view()
 dashboard = DashboardView.as_view()
@@ -313,3 +352,4 @@ auth_check = AuthCheckView.as_view()
 logout = LogoutView.as_view()
 theme = ThemeView.as_view()
 get_user_sessions = UserSessionsView.as_view()
+close_user_session = CloseUserSessionView.as_view()

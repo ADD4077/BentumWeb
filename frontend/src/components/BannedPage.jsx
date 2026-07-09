@@ -2,15 +2,108 @@ import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Clock, Mail, User } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api.js';
 import { useModal } from '../contexts/ModalContext.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
+
+function formatRemainingTime(seconds) {
+  if (seconds === null || seconds === undefined) {
+    return 'Навсегда';
+  }
+
+  const totalSeconds = Number(seconds);
+  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) {
+    return '0 мин.';
+  }
+
+  const days = Math.floor(totalSeconds / (24 * 60 * 60));
+  const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60));
+  const minutes = Math.floor((totalSeconds % (60 * 60)) / 60);
+  const parts = [];
+
+  if (days > 0) parts.push(`${days} дн.`);
+  if (hours > 0) parts.push(`${hours} ч.`);
+  if (minutes > 0) parts.push(`${minutes} мин.`);
+
+  return parts.join(' ') || '0 мин.';
+}
+
+function formatEndDate(endDate) {
+  if (!endDate) {
+    return 'Навсегда';
+  }
+
+  const parsed = new Date(endDate);
+  if (Number.isNaN(parsed.getTime())) {
+    return 'Навсегда';
+  }
+
+  return parsed.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+function formatDurationText(durationSeconds) {
+  if (durationSeconds === null || durationSeconds === undefined) {
+    return 'Навсегда';
+  }
+
+  const totalSeconds = Number(durationSeconds);
+  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) {
+    return 'Неизвестно';
+  }
+
+  const days = Math.floor(totalSeconds / (24 * 60 * 60));
+  if (days <= 0) {
+    return 'Менее суток';
+  }
+  if (days === 1) {
+    return '1 день';
+  }
+  if (days < 5) {
+    return `${days} дня`;
+  }
+  return `${days} дней`;
+}
+
+function normalizeBanInfo(rawBanInfo) {
+  if (!rawBanInfo) {
+    return null;
+  }
+
+  if (rawBanInfo.reason || rawBanInfo.duration_text) {
+    return rawBanInfo;
+  }
+
+  return {
+    reason: rawBanInfo.ban_reason,
+    duration_days: rawBanInfo.ban_duration_seconds ? Math.floor(rawBanInfo.ban_duration_seconds / (24 * 60 * 60)) : null,
+    duration_text: formatDurationText(rawBanInfo.ban_duration_seconds),
+    end_date: rawBanInfo.ban_end_date,
+    end_date_formatted: formatEndDate(rawBanInfo.ban_end_date),
+    remaining_seconds: rawBanInfo.remaining_seconds,
+    remaining_time_text: formatRemainingTime(rawBanInfo.remaining_seconds),
+    banned_by_id: rawBanInfo.banned_by_id,
+    ban_date: rawBanInfo.ban_date,
+  };
+}
 
 function BannedPage({ setActiveTab }) {
   const [banInfo, setBanInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { setIsProfileModalOpen } = useModal();
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchBanInfo = async () => {
+      const localBanInfo = normalizeBanInfo(user?.ban_info);
+      if (localBanInfo) {
+        setBanInfo(localBanInfo);
+        setLoading(false);
+        return;
+      }
+
       try {
         const response = await fetch(API_ENDPOINTS.BAN_INFO, {
           method: 'GET',
@@ -35,7 +128,7 @@ function BannedPage({ setActiveTab }) {
     };
 
     fetchBanInfo();
-  }, []);
+  }, [user?.ban_info]);
 
   const handleContactSupport = () => {
     setActiveTab?.('support');

@@ -246,4 +246,5 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 TELEGRAM_TOPIC_ID = 9
 TELEGRAM_NEW_USERS_TOPIC_ID = 3
 WEB_APP_URL = os.getenv("WEB_APP_URL", "https://bentum.ru")
+TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "").strip().lstrip("@") or None
 TELEGRAM_INTERNAL_API_TOKEN = os.getenv("TELEGRAM_INTERNAL_API_TOKEN", "").strip()

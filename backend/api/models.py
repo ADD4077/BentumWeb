@@ -596,6 +596,7 @@ class Event(models.Model):
 
     title = models.CharField(max_length=255)
     description = models.TextField()
+    location = models.CharField(max_length=255, blank=True, default="")
     starts_at = models.DateTimeField(db_index=True)
     max_participants = models.PositiveIntegerField(default=10)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE, db_index=True)

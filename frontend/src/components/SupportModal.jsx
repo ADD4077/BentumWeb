@@ -376,7 +376,7 @@ function SupportModal({ isOpen, onClose, onSuccess }) {
                 maxLength={maxMessageLength}
                 required
                 placeholder="Опишите проблему, вопрос или предложение..."
-                className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-slate-900 placeholder-slate-500 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:placeholder-slate-400"
+                className="w-full resize-none rounded-2xl border border-gray-200 bg-white px-4 py-3 text-slate-900 placeholder-slate-500 outline-none transition focus:border-emerald-400 dark:border-slate-600 dark:bg-slate-900/70 dark:text-white dark:placeholder-slate-400"
               />
               <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 {message.length}/{maxMessageLength} символов

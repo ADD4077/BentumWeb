@@ -20,6 +20,13 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
         setUser(auth.user);
         setRequires2FA(false);
+      } else if (auth?.is_banned) {
+        setIsAuthenticated(true);
+        setUser(auth.user ? { ...auth.user, is_banned: true, ban_info: auth.ban_info } : {
+          is_banned: true,
+          ban_info: auth.ban_info,
+        });
+        setRequires2FA(false);
       } else if (auth?.requires_2fa) {
         setIsAuthenticated(false);
         setUser(auth.user);
@@ -69,6 +76,18 @@ export const AuthProvider = ({ children }) => {
         setRequires2FA(false);
         setRemainingTime(300);
         return { success: true };
+      }
+
+      if (data?.is_banned) {
+        setIsAuthenticated(true);
+        setUser(data.user ? { ...data.user, is_banned: true, ban_info: data.ban_info } : {
+          is_banned: true,
+          ban_info: data.ban_info,
+        });
+        setRequires2FA(false);
+        setRemainingTime(300);
+        api.clearAuthCheckCache();
+        return { success: true, is_banned: true };
       }
 
       return { success: false, error: data.detail || 'Ошибка входа' };

@@ -55,6 +55,7 @@ export const API_ENDPOINTS = {
   TELEGRAM_UNLINK: `${API_BASE_URL}/api/telegram/unlink`,
   TELEGRAM_BIND: `${API_BASE_URL}/api/telegram/bind`,
   SESSIONS: `${API_BASE_URL}/api/sessions`,
+  SESSION_CLOSE: `${API_BASE_URL}/api/sessions/close`,
   TWO_FA_CONFIG: `${API_BASE_URL}/api/2fa/config`,
   TWO_FA_VERIFY: `${API_BASE_URL}/api/2fa/verify`,
   TWO_FA_RESEND: `${API_BASE_URL}/api/2fa/resend`,

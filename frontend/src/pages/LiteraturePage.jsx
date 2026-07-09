@@ -185,7 +185,7 @@ export function LiteraturePage({ searchQuery, setSearchQuery, activeTab }) {
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">
-      <div className="section-reveal mb-8 text-center sm:mb-10">
+      <div className="section-reveal mb-8 pt-[10px] text-center sm:mb-10">
         <h2 className="mb-3 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:mb-4 sm:text-4xl">
           Литература
         </h2>

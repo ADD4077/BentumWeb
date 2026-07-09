@@ -294,7 +294,7 @@ export function SchedulePage() {
     <div className="mx-auto max-w-7xl overflow-x-hidden px-3 sm:px-6">
       <div className="grid gap-4 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0">
-          <div className="section-reveal mb-5 sm:mb-8">
+          <div className="section-reveal mb-5 pt-[10px] sm:mb-8">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
               <div>
                 <h1 className="text-[2.15rem] font-semibold tracking-tight text-slate-950 dark:text-white sm:text-5xl">
